@@ -1,0 +1,1 @@
+from .adm_basic import admin
