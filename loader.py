@@ -11,5 +11,6 @@ async def get_info(bot):
     config.bot_info = await bot.get_me()
 
 dp = Dispatcher()
-db = DatabaseManager("data/database.db")
+
+db = DatabaseManager(config.DATABASE_PATH)
 scheduler = AsyncIOScheduler()
