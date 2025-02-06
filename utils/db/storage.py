@@ -12,10 +12,10 @@ class DatabaseManager(object):
 
 
     def create_tables(self):
-        self.query('CREATE TABLE IF NOT EXISTS users (idx INTEGER PRIMARY KEY, userid TEXT, fullname TEXT, username TEXT, regdate TEXT DEFAULT CURRENT_TIMESTAMP)')
+        self.query('CREATE TABLE IF NOT EXISTS users (idx INTEGER PRIMARY KEY, userid TEXT, fullname TEXT, username TEXT, regdate TEXT DEFAULT CURRENT_TIMESTAMP, allowed INTEGER DEFAULT 0)')
         self.query("CREATE TABLE IF NOT EXISTS folders (idx INTEGER PRIMARY KEY, title TEXT)")
         self.query("CREATE TABLE IF NOT EXISTS messages (idx INTEGER PRIMARY KEY, jid INTEGER, msgid TEXT DEFAULT NULL, status INTEGER DEFAULT 0, date TEXT)")
-        self.query("CREATE TABLE IF NOT EXISTS exams (idx INTEGER PRIMARY KEY, code TEXT, title TEXT, about TEXT DEFAULT NULL, num_questions INTEGER, correct TEXT, folder INTEGER DEFUALT NULL, sdate TEXT DEFAULT NULL, duration INTEGER DEFAULT NULL, running INTEGER DEFAULT 0, hide INTEGER DEFAULT 1)")
+        self.query("CREATE TABLE IF NOT EXISTS exams (idx INTEGER PRIMARY KEY, code TEXT, title TEXT, about TEXT DEFAULT NULL, num_questions INTEGER, correct TEXT, folder INTEGER DEFAULT NULL, sdate TEXT DEFAULT NULL, duration INTEGER DEFAULT NULL, running INTEGER DEFAULT 0, hide INTEGER DEFAULT 1)")
         self.query("CREATE TABLE IF NOT EXISTS submissions(idx INTEGER PRIMARY KEY, exid INTEGER, userid TEXT, date TEXT DEFAULT CURRENT_TIMESTAMP, corr INTEGER)")
         self.query("CREATE TABLE IF NOT EXISTS channel (idx INTEGER PRIMARY KEY, chid TEXT, title TEXT, link TEXT, post INTEGER DEFAULT 0)")
 
