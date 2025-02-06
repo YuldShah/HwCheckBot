@@ -1,19 +1,38 @@
 #!/bin/bash
 
-# Define paths
+# Define variables
 APP_NAME="hw-checker-bot"
 LOCAL_DB="data/database.db"
 ARCHIVE_DIR="data/archived"
+TIMESTAMP=$(date +"%Y%m%d_%H%M%S")
+BACKUP_DB="$ARCHIVE_DIR/database_$TIMESTAMP.db"
 
 # Ensure archive directory exists
 mkdir -p "$ARCHIVE_DIR"
 
-# Backup current database with timestamp
-echo "Current database being archived..."
-TIMESTAMP=$(date +"%Y%m%d_%H%M%S")
-PATH_NEW="$ARCHIVE_DIR/database_$TIMESTAMP.db"
+# Function to restore backup if interrupted
+cleanup() {
+    echo "Process interrupted! Restoring the previous database..."
+    if [ -f "$BACKUP_DB" ]; then
+        mv "$BACKUP_DB" "$LOCAL_DB"
+        echo "Database restored."
+    fi
+    echo "Stopping web dyno..."
+    heroku ps:scale web=0 --app "$APP_NAME"
+    exit 1
+}
+
+# Trap Ctrl+C (SIGINT) to run cleanup function
+trap cleanup SIGINT
+
+# Start the web worker
+echo "Starting web dyno..."
+heroku ps:scale web=1 --app "$APP_NAME"
+
+# Backup current database
 if [ -f "$LOCAL_DB" ]; then
-    mv "$LOCAL_DB" "$PATH_NEW"
+    echo "Archiving current database..."
+    mv "$LOCAL_DB" "$BACKUP_DB"
 fi
 
 # Download new database from Heroku
@@ -25,7 +44,12 @@ if [ -f "$LOCAL_DB" ]; then
     echo "Database successfully downloaded and replaced."
 else
     echo "Failed to download database!"
-    mv "$PATH_NEW" "$LOCAL_DB"
-    echo "Restored current datase."
+    mv "$BACKUP_DB" "$LOCAL_DB"
+    echo "Restored previous database."
 fi
 
+# Stop the web worker
+echo "Stopping web dyno..."
+heroku ps:scale web=0 --app "$APP_NAME"
+
+echo "Done!"
