@@ -19,24 +19,24 @@ set.callback_query.filter(IsAdminCallback())
 async def sett(message: types.Message, state: FSMContext):
     await state.set_state(sets.smenu)
     await message.answer(f"Menu: <b>{dict.settings}</b>", reply_markup=main_key)
-    response = "Here you can change some configuration settings and manage posting channel"
+    response = "Here you can change some configuration settings and manage permission giving chat"
     await message.answer(response, reply_markup=set_menu)
 
 @set.callback_query(CbData("post"), sets.smenu)
 async def post_c(callback: types.CallbackQuery, state: FSMContext):
     await state.set_state(sets.post)
-    response = "Here you can change or reset the posting channel"
+    response = "Here you can change or reset the permission giving chat"
     channel = db.fetchone("SELECT title, link FROM channel WHERE post > 0")
     print(channel)
     if not channel:
-        response = "Posting channel was not set, you can set it in two ways"
+        response = "The chat that users will be checked to give permission to the bot was not set, you can set a new one"
     await callback.message.edit_text(response, reply_markup=post_chan(channel))
 
 @set.callback_query(CbData("back"), sets.post)
 async def back_to_s(callback: types.CallbackQuery, state: FSMContext):
     await state.set_state(sets.smenu)
     # await callback.message.answer(f"Menu: <b>{dict.settings}</b>", reply_markup=main_key)
-    response = "Here you can change some configuration settings and manage posting channel"
+    response = "Here you can change some configuration settings and manage permission giving chat"
     await callback.message.edit_text(response, reply_markup=set_menu)
     await callback.answer("Back to settings menu")
 
@@ -50,7 +50,7 @@ async def setnew(callback: types.CallbackQuery, state: FSMContext):
 async def back_to_c(message: types.Message, state: FSMContext):
     await state.set_state(sets.post)
     await message.answer("Back to posting channel menu", reply_markup=main_key)
-    response = "Here you can change or reset the posting channel"
+    response = "Here you can change or reset the permission giving chat"
     channel = db.fetchone("SELECT title, link FROM channel WHERE post > 0")
     if not channel:
         response = "Posting channel was not set, you can set it in two ways"
@@ -183,5 +183,5 @@ async def refresh_ping(callback: types.CallbackQuery, state: FSMContext) -> None
 @set.callback_query(CbData("back"), sets.ping)
 async def back_to_s(callback: types.CallbackQuery, state: FSMContext) -> None:
     await state.set_state(sets.smenu)
-    await callback.message.edit_text("Back to settings menu", reply_markup=set_menu)
+    await callback.message.edit_text("Here you can change some configuration settings and manage permission giving chat", reply_markup=set_menu)
     await callback.answer("Back to settings menu")
