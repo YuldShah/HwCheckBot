@@ -1,7 +1,7 @@
 skip = "⏭ Skip"
 back = "👈 Back"
 main_menu = "🏠 Main menu"
-cr_test = "📚 Bugunga vazifa qo'shish"
+cr_test = "➕ Add homework for today"
 add_chat = "➕ Add chat"
 nm_ans = "👨‍🎓 Show results"
 man_access = "📲 Manage access"
