@@ -4,6 +4,7 @@ from aiogram import types, Router, html
 from filters import IsNotRegistered, IsUser, IsNotSubscriber, IsUserCallback, CbData, CbDataStartsWith
 from loader import db
 from aiogram.filters import or_f
+from keyboards.regular import user_markup
 from keyboards.inline import elbek, goto_bot
 from data import config
 # from utils.yau import notsubbed
@@ -28,4 +29,9 @@ async def get_perm(callback: types.CallbackQuery):
         db.query("INSERT INTO users (userid, fullname, username, allowed) VALUES (%s, %s, %s, 1)", (callback.from_user.id, callback.from_user.full_name, callback.from_user.username))
     else:
         db.query("UPDATE users SET allowed=1 WHERE userid=%s::text", (callback.from_user.id,))
-    await callback.bot.edit_message_text(text="Ruxsat berildi. Endi bemalol botga kirib ishlatishingiz mumkin.", inline_message_id=callback.inline_message_id, reply_markup=goto_bot(config.bot_info.username))
+    try:
+        await callback.bot.send_message(callback.from_user.id, "🎉 Tabriklaymiz, sizga botdan foydalanish ruxsati berildi.", reply_markup=user_markup)
+    except:
+        await callback.answer("🎉 Ruxsat berildi. Sizga xabar jo'natib bo'lmadi.")
+    await callback.bot.edit_message_text(text="🎉 Tabriklaymiz, sizga botdan foydalanish ruxsati berildi. Endi bemalol botga kirib ishlatishingiz mumkin.", inline_message_id=callback.inline_message_id, reply_markup=goto_bot(config.bot_info.username))
+    await callback.answer("🎉 Ruxsat berildi")
