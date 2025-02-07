@@ -70,7 +70,7 @@ class IsAdminCallback(BaseFilter):
 
 class IsAdminInline(BaseFilter):
     async def __call__(self, inline: InlineQuery) -> bool:
-        return inline.from_user.id in config.ADMINS and inline.message.chat.type == "private"
+        return inline.from_user.id in config.ADMINS and inline.chat_type == "private"
 
 class IsUser(BaseFilter):
     async def __call__(self, message: Message) -> bool:
