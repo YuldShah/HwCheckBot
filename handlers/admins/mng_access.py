@@ -37,7 +37,7 @@ async def back_to_s(callback: types.CallbackQuery, state: FSMContext):
     # await callback.message.answer(f"Menu: <b>{dict.settings}</b>", reply_markup=main_key)
     response = "Here you can manage the access of users to the bot"
     await callback.message.edit_text(response, reply_markup=access_menu)
-    await callback.answer("Back to settings menu")
+    await callback.answer(f"Back to {dict.man_access} menu")
 
 @access.callback_query(CbData("set_new"), accstates.post)
 async def setnew(callback: types.CallbackQuery, state: FSMContext):
