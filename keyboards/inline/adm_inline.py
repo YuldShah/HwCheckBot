@@ -100,10 +100,30 @@ def obom(cur, numq, donel, mcqnum=config.MULTIPLE_CHOICE_DEF, page=1):
     btns.append(row)
     return InlineKeyboardMarkup(inline_keyboard=btns)
 
-def perm_inl(name, userid):
+
+btns4 = [
+    [
+        InlineKeyboardButton(text="Fetch data", callback_data="fetch_data"),
+        InlineKeyboardButton(text="Cancel", callback_data="cancel_perm")
+    ]
+]
+perm_inl = InlineKeyboardMarkup(inline_keyboard=btns4)
+
+def grant_perm_to(userid, mention):
     btns = [
         [
-            InlineKeyboardButton(text=f"Press here to grant {name} permission", callback_data=f"grant_{userid}")
+            InlineKeyboardButton(text="Grant permission", callback_data=f"grant_{userid}_{mention}")
+        ],
+        [
+            InlineKeyboardButton(text="Cancel", callback_data="cancel_perm")
         ]
     ]
-    return InlineKeyboardMarkup(inline_keyboard=btns)
+
+
+btns5 = [
+    [
+        InlineKeyboardButton(text="Go to bot", url=f"https://t.me/{config.bot_info.username}")
+    ]
+]
+
+goto_bot = InlineKeyboardMarkup(inline_keyboard=btns5)
