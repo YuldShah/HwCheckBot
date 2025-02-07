@@ -12,6 +12,8 @@ allow.callback_query.filter(IsAdminCallback())
 allow.inline_query.filter(IsAdminInline())
 
 
+
+
 @allow.inline_query(InlineData("allow"))
 async def allow_inline(inline: types.InlineQuery):
     # unique_id = hashlib.md5(str(inline.from_user.id).encode()).hexdigest()
