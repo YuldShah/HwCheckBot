@@ -20,7 +20,7 @@ async def process_command(message: types.Message) -> None:
     db.query("INSERT INTO users (userid, fullname, username) VALUES (%s, %s, %s)", (message.from_user.id, message.from_user.full_name, message.from_user.username))
     # response = f"👋 Heyy, <b>{message.from_user.first_name}</b>."
     # channels = await notsubbed(message.from_user.id)
-    await message.answer(f"👋 Salom, {html.bold(message.from_user.mention_html())}. Siz kursga ro'yxatdan o'tganlar orasidan topilmadingiz iltimos adminga yozib ro'yxatdan o'ting.", reply_markup=elbek)
+    await message.answer(f"👋 Salom, {html.bold(message.from_user.mention_html())}. Siz hali botdan foydalanish uchun ruxsat olganingiz yo'q yoki kursga ro'yxatdan o'tganlar orasidan topilmadingiz iltimos adminga yozib ro'yxatdan o'ting.", reply_markup=elbek)
 
 @reger.callback_query(CbData("get_perm"))
 async def get_perm(callback: types.CallbackQuery):

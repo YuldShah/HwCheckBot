@@ -16,6 +16,12 @@ set.message.filter(IsAdmin())
 set.callback_query.filter(IsAdminCallback())
 # bot.send_message(config.ADMINS[0], "Settings handler loaded", reply_parameters=)
 
+@set.message(F.text == dict.settings)
+async def sett(message: types.Message, state: FSMContext):
+    await state.set_state(sets.smenu)
+    await message.answer(f"Menu: <b>{dict.settings}</b>", reply_markup=main_key)
+    response = "Here you can change some configuration settings and manage permission giving chat"
+    await message.answer(response, reply_markup=set_menu)
 
 @set.callback_query(CbData("post"), sets.smenu)
 async def post_c(callback: types.CallbackQuery, state: FSMContext):
