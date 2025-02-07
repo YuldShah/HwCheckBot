@@ -11,7 +11,7 @@ from data import config
 
 reger = Router()
 
-reger.message.filter(IsUser())
+reger.message.filter(or_f(IsNotRegistered(), IsNotSubscriber()), IsUser())
 reger.callback_query.filter(or_f(IsNotRegistered(), IsNotSubscriber()), IsUserCallback())
 
 @reger.message()
