@@ -36,13 +36,13 @@ async def default_inline(inline: types.InlineQuery):
             id = "1",
             title = "allow",
             description = "Used to permission to user",
-            input_message_content = types.InputTextMessageContent("/allow")
+            input_message_content = types.InputTextMessageContent(message_text="/allow")
         ),
         types.InlineQueryResultArticle(
             id = "2",
             title = "remove",
             description = "Used to remove access from user",
-            input_message_content = types.InputTextMessageContent("/remove")
+            input_message_content = types.InputTextMessageContent(message_text="/remove")
         )
     ]
     await inline.answer(res, cache_time=1, is_personal=True)
