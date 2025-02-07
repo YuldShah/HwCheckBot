@@ -39,4 +39,4 @@ async def get_perm(callback: types.CallbackQuery):
 @reger.callback_query()
 async def nah_uh(callback: types.CallbackQuery):
     await callback.answer("Botdan foydalana olmaysiz!")
-    await callback.message.answer(f"👋 Salom, {html.bold(callback.message.from_user.mention_html())}!\n\n❌ Siz hali botdan foydalanish uchun ruxsat olganingiz yo'q yoki kursga ro'yxatdan o'tganlar orasidan topilmadingiz.\n\n✍️Iltimos, adminga yozib ro'yxatdan o'ting.", reply_markup=elbek)
+    await callback.message.answer(f"👋 Salom, {html.bold(callback.from_user.mention_html())}!\n\n❌ Siz hali botdan foydalanish uchun ruxsat olganingiz yo'q yoki kursga ro'yxatdan o'tganlar orasidan topilmadingiz.\n\n✍️Iltimos, adminga yozib ro'yxatdan o'ting.", reply_markup=elbek)
