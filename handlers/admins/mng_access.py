@@ -1,6 +1,6 @@
 from aiogram import types, Router, F, html
 from data import config, dict
-from keyboards.inline import access_menu, post_chan, mandconfirm
+from keyboards.inline import access_menu, post_chan, mandconfirm, man_access
 from keyboards.regular import main_key, back_key
 from time import sleep
 from states import accstates
@@ -24,18 +24,22 @@ async def manage_access(message: types.Message, state: FSMContext):
 @access.callback_query(CbData("post"), accstates.acmenu)
 async def post_c(callback: types.CallbackQuery, state: FSMContext):
     await state.set_state(accstates.post)
-    response = "Here you can change or reset the permission giving chat"
-    channel = db.fetchone("SELECT title, link FROM channel WHERE post > 0")
+    response = "Here you can change or reset the permission giving chat."
+    channel = db.fetchone("SELECT title, link FROM channel")
     print(channel)
     if not channel:
-        response = "The chat that users will be checked to give permission to the bot was not set, you can set a new one"
+        response = "The chat that users will be checked to give automatic permission to the bot was not set, you can set a new one\n\nOnce you set a chat, the bot will automatically give permissions to members of that chat"
     await callback.message.edit_text(response, reply_markup=post_chan(channel))
 
 @access.callback_query(CbData("back"), accstates.post)
 async def back_to_s(callback: types.CallbackQuery, state: FSMContext):
     await state.set_state(accstates.acmenu)
     # await callback.message.answer(f"Menu: <b>{dict.settings}</b>", reply_markup=main_key)
-    response = "Here you can change some configuration settings and manage permission giving chat"
+    response = "Here you can change or reset the permission giving chat."
+    channel = db.fetchone("SELECT title, link FROM channel")
+    print(channel)
+    if not channel:
+        response = "The chat that users will be checked to give automatic permission to the bot was not set, you can set a new one\n\nOnce you set a chat, the bot will automatically give permissions to members of that chat"
     await callback.message.edit_text(response, reply_markup=access_menu)
     await callback.answer("Back to settings menu")
 
@@ -49,10 +53,11 @@ async def setnew(callback: types.CallbackQuery, state: FSMContext):
 async def back_to_c(message: types.Message, state: FSMContext):
     await state.set_state(accstates.post)
     await message.answer("Back to posting channel menu", reply_markup=main_key)
-    response = "Here you can change or reset the permission giving chat"
-    channel = db.fetchone("SELECT title, link FROM channel WHERE post > 0")
+    response = "Here you can change or reset the permission giving chat."
+    channel = db.fetchone("SELECT title, link FROM channel")
+    print(channel)
     if not channel:
-        response = "Posting channel was not set, you can set it in two ways"
+        response = "The chat that users will be checked to give automatic permission to the bot was not set, you can set a new one\n\nOnce you set a chat, the bot will automatically give permissions to members of that chat"
     await message.answer(response, reply_markup=accstates(channel))
 
 @access.message(accstates.link)
@@ -77,7 +82,7 @@ async def get_link(message: types.Message, state: FSMContext):
         else:
             lk = f"https://t.me/{message.forward_from_chat.username}"
     else:
-        await message.answer("This message isn't forwarded from any chat. Forward a message from the private chat to here")
+        await message.answer("This message isn't forwarded from private chat. Forward a message from the private chat to here")
         return
         # data = await state.get_data()
     try:
@@ -105,15 +110,13 @@ async def get_link(message: types.Message, state: FSMContext):
 @access.message(F.text == dict.back, accstates.confirm)
 async def back_to_link(message: types.Message, state: FSMContext) -> None:
     await state.set_state(accstates.link)
-    await message.answer("Now send the right link", reply_markup=back_key)
+    await message.answer("This time do it correctly. Forward a message from the private chat", reply_markup=back_key)
 
 @access.callback_query(CbData("reset"), accstates.post)
 async def reset(callback: types.CallbackQuery, state: FSMContext) -> None:
-    old = db.fetchone("SELECT title, link, chid, post FROM channel WHERE post > 0")
-    if old and old[3]==1:
-        db.query("DELETE FROM channel WHERE chid = %s", (old[2],))
-    else:
-        db.query("UPDATE channel SET post = 0 WHERE chid = %s", (old[2],))
+    # old = db.fetchone("SELECT title, link, chid FROM channel")
+    db.query("DELETE FROM channel")
+    # db.query("INSERT INTO channel (chid, title, link) VALUES (%s, %s, %s)", (config.bot_info.id, config.bot_info.username, f"https://t.me/{config.bot_info.username}"))
     await callback.answer("Reset successfull")
     await post_c(callback, state)
 
@@ -121,7 +124,7 @@ async def reset(callback: types.CallbackQuery, state: FSMContext) -> None:
 async def confirm(callback: types.CallbackQuery, state: FSMContext) -> None:
     if callback.data == "cancel":
         await callback.answer("Cancelled")
-        await callback.message.answer("Back to posting channel menu", reply_markup=main_key)
+        await callback.message.answer("Back to auto-permit menu", reply_markup=main_key)
         await post_c(callback, state)
         # await callback.message.delete()
         return
@@ -129,32 +132,26 @@ async def confirm(callback: types.CallbackQuery, state: FSMContext) -> None:
     chid = data.get("chid")
     title = data.get("title")
     link = data.get("link")
-    chck = db.fetchone("SELECT title FROM channel WHERE chid = %s AND post > 0", (chid,))
+    chck = db.fetchone("SELECT title FROM channel WHERE chid = %s", (chid,))
     if chck:
-        msg = await callback.message.answer(f"This channel already has been set as the posting channel")
-        await callback.answer("Already posting channel")
-        await callback.message.answer("Back to posting channel menu", reply_markup=main_key)
+        msg = await callback.message.answer(f"This channel already has been set as the permission giving chat")
+        await callback.answer("Already this one")
+        await callback.message.answer("Back to auto-permit menu", reply_markup=main_key)
         await post_c(callback, state)
         sleep(2)
         await msg.delete()
         # await callback.message.delete()
         return
-    # channel_info = await bot.get_chat(link)
-    old = db.fetchone("SELECT title, link, chid, post FROM channel WHERE post > 0")
-    print(old)
-    if old:
-        if old[3]==1:
-            db.query("DELETE FROM channel WHERE chid = %s", (old[2],))
-        else:
-            db.query("UPDATE channel SET post = 0 WHERE chid = %s", (old[2],))
-    sme = db.fetchone("SELECT post FROM channel WHERE chid = %s", (chid,))
-    print(sme)
-    if sme:
-        print("Updating")
-        db.query("UPDATE channel SET post = 2 WHERE chid = %s", (chid,))
-    else:
-        db.query("INSERT INTO channel (chid, title, link, post) VALUES (%s, %s, %s, 1)", (chid, title, link))
+    db.query("DELETE FROM channel")
+    db.query("INSERT INTO channel (chid, title, link) VALUES (%s, %s, %s)", (chid, title, link))
     await callback.answer(f"Successfully set")
     await callback.message.answer("Back to posting channel menu", reply_markup=main_key)
     await post_c(callback, state)
     # await callback.message.delete()
+
+
+@access.callback_query(CbData("manually"))
+async def manually(callback: types.CallbackQuery, state: FSMContext) -> None:
+    await state.set_state(accstates.manl)
+    await callback.message.answer("You can give or remove access to users manually here", reply_markup=man_access)
+

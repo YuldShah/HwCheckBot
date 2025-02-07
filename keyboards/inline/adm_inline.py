@@ -124,3 +124,11 @@ btns5 = [
     ]
 ]
 access_menu = InlineKeyboardMarkup(inline_keyboard=btns5)
+
+btns6 = [
+    [
+        InlineKeyboardButton(text=dict.add_access, callback_data="add_access"),
+        InlineKeyboardButton(text=dict.del_access, callback_data="remove_access")
+    ]
+]
+man_access = InlineKeyboardMarkup(inline_keyboard=btns6)

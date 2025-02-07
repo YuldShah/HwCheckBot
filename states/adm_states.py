@@ -20,7 +20,12 @@ class accstates(StatesGroup):
     confirm = State()
     fmans = State()
     del_con = State()
+    
     manl = State()
+    adda = State()
+    dela = State()
+    confirm_add = State()
+    confirm_del = State()
 
 class creates(StatesGroup):
     title = State()

@@ -20,7 +20,7 @@ set.callback_query.filter(IsAdminCallback())
 async def sett(message: types.Message, state: FSMContext):
     await state.set_state(sets.smenu)
     await message.answer(f"Menu: <b>{dict.settings}</b>", reply_markup=main_key)
-    response = "Here you can change some configuration settings and manage permission giving chat"
+    response = "Here you can change some configuration settings, check the ping with the Telegram servers"
     await message.answer(response, reply_markup=set_menu)
 
 @set.callback_query(CbData("ping"), sets.smenu)
@@ -47,5 +47,5 @@ async def refresh_ping(callback: types.CallbackQuery, state: FSMContext) -> None
 @set.callback_query(CbData("back"), sets.ping)
 async def back_to_s(callback: types.CallbackQuery, state: FSMContext) -> None:
     await state.set_state(sets.smenu)
-    await callback.message.edit_text("Here you can change some configuration settings and manage permission giving chat", reply_markup=set_menu)
+    await callback.message.edit_text("Here you can change some configuration settings, check the ping with the Telegram servers", reply_markup=set_menu)
     await callback.answer("Back to settings menu")
