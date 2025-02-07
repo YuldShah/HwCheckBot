@@ -15,22 +15,22 @@ class IsNotRegistered(BaseFilter):
 
 class IsSubscriber(BaseFilter):
     async def __call__(self, message: Message) -> bool:
-        allowed = int(db.fetchall("SELECT allowed FROM users WHERE userid=%s::text", (message.from_user.id,))[0])
+        allowed = int(db.fetchone("SELECT allowed FROM users WHERE userid=%s::text", (message.from_user.id,))[0])
         return bool(allowed)
 
 class IsNotSubscriber(BaseFilter):
     async def __call__(self, message: Message) -> bool:
-        allowed = int(db.fetchall("SELECT allowed FROM users WHERE userid=%s::text", (message.from_user.id,))[0])
+        allowed = int(db.fetchone("SELECT allowed FROM users WHERE userid=%s::text", (message.from_user.id,))[0])
         return not bool(allowed)
 
 class IsSubscriberCallback(BaseFilter):
     async def __call__(self, callback: CallbackQuery) -> bool:
-        allowed = int(db.fetchall("SELECT allowed FROM users WHERE userid=%s::text", (callback.from_user.id,))[0])
+        allowed = int(db.fetchone("SELECT allowed FROM users WHERE userid=%s::text", (callback.from_user.id,))[0])
         return bool(allowed)
 
 class IsNotSubscriberCallback(BaseFilter):
     async def __call__(self, callback: CallbackQuery) -> bool:
-        allowed = int(db.fetchall("SELECT allowed FROM users WHERE userid=%s::text", (callback.from_user.id,))[0])
+        allowed = int(db.fetchone("SELECT allowed FROM users WHERE userid=%s::text", (callback.from_user.id,))[0])
         return not bool(allowed)
 
 class IsAdmin(BaseFilter):
