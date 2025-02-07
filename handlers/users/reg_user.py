@@ -20,7 +20,7 @@ async def process_command(message: types.Message) -> None:
     db.query("INSERT INTO users (userid, fullname, username) VALUES (%s, %s, %s)", (message.from_user.id, message.from_user.full_name, message.from_user.username))
     # response = f"👋 Heyy, <b>{message.from_user.first_name}</b>."
     # channels = await notsubbed(message.from_user.id)
-    await message.answer(f"👋 Salom, {html.bold(message.from_user.mention_html())}!\n\n❌ Siz hali botdan foydalanish uchun ruxsat olganingiz yo'q yoki kursga ro'yxatdan o'tganlar orasidan topilmadingiz\n\n✍️Iltimos, adminga yozib ro'yxatdan o'ting.", reply_markup=elbek)
+    await message.answer(f"👋 Salom, {html.bold(message.from_user.mention_html())}!\n\n❌ Siz hali botdan foydalanish uchun ruxsat olganingiz yo'q yoki kursga ro'yxatdan o'tganlar orasidan topilmadingiz.\n\n✍️Iltimos, adminga yozib ro'yxatdan o'ting.", reply_markup=elbek)
 
 @reger.callback_query(CbData("get_perm"))
 async def get_perm(callback: types.CallbackQuery):
@@ -35,3 +35,8 @@ async def get_perm(callback: types.CallbackQuery):
         await callback.answer("🎉 Ruxsat berildi. Sizga xabar jo'natib bo'lmadi.")
     await callback.bot.edit_message_text(text="🎉 Tabriklaymiz, sizga botdan foydalanish ruxsati berildi. Endi bemalol botga kirib ishlatishingiz mumkin.", inline_message_id=callback.inline_message_id, reply_markup=goto_bot(config.bot_info.username))
     await callback.answer("🎉 Ruxsat berildi")
+
+@reger.callback_query()
+async def nah_uh(callback: types.CallbackQuery):
+    await callback.answer("Botdan foydalana olmaysiz!")
+    await callback.message.answer(f"👋 Salom, {html.bold(callback.message.from_user.mention_html())}!\n\n❌ Siz hali botdan foydalanish uchun ruxsat olganingiz yo'q yoki kursga ro'yxatdan o'tganlar orasidan topilmadingiz.\n\n✍️Iltimos, adminga yozib ro'yxatdan o'ting.", reply_markup=elbek)
