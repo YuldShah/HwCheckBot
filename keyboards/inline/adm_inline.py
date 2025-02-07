@@ -120,10 +120,11 @@ def grant_perm_to(userid, mention):
     ]
 
 
-btns5 = [
-    [
-        InlineKeyboardButton(text="Go to bot", url=f"https://t.me/{config.bot_info.username}")
-    ]
-]
+def goto_bot(username):
 
-goto_bot = InlineKeyboardMarkup(inline_keyboard=btns5)
+    btns = [
+        [
+            InlineKeyboardButton(text="Go to bot", url=f"https://t.me/{username}")
+        ]
+    ]
+    return InlineKeyboardMarkup(inline_keyboard=btns)

@@ -46,7 +46,7 @@ async def grant_perm(callback: types.CallbackQuery):
     userid = int(callback.data.split("_")[1])
     mention = callback.data.split("_")[2]
     # db.execute("INSERT INTO user (userid, perm) VALUES (?, 1)", (userid,))
-    await callback.message.edit_text(f"Congratulations, {mention}! You have been given permission to use the bot.", reply_markup=goto_bot)
+    await callback.message.edit_text(f"Congratulations, {mention}! You have been given permission to use the bot.", reply_markup=goto_bot(config.bot_info.username))
     # sleep(3)
     # await callback.message.delete()
 

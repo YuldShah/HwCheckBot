@@ -79,7 +79,7 @@ async def get_link(message: types.Message, state: FSMContext):
     try:
         channel_info = await bot.get_chat(chanid)
         mb_cnt = await bot.get_chat_member_count(chanid)
-        mebot = await bot.get_chat_member(chat_id=chanid, user_id=config.bot_info.id)
+        # mebot = await bot.get_chat_member(chat_id=chanid, user_id=config.bot_info.id)
     except Exception as e:
         print(e)
         print(lk)
