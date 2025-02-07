@@ -103,21 +103,11 @@ def obom(cur, numq, donel, mcqnum=config.MULTIPLE_CHOICE_DEF, page=1):
 
 btns4 = [
     [
-        InlineKeyboardButton(text="Fetch data", callback_data="fetch_data"),
-        InlineKeyboardButton(text="Cancel", callback_data="cancel_perm")
+        InlineKeyboardButton(text="Ruxsat olish", callback_data="get_perm"),
     ]
 ]
 perm_inl = InlineKeyboardMarkup(inline_keyboard=btns4)
 
-def grant_perm_to(userid, mention):
-    btns = [
-        [
-            InlineKeyboardButton(text="Grant permission", callback_data=f"grant_{userid}_{mention}")
-        ],
-        [
-            InlineKeyboardButton(text="Cancel", callback_data="cancel_perm")
-        ]
-    ]
 
 
 def goto_bot(username):

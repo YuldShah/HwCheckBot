@@ -11,7 +11,7 @@ def mand_chans(channels) -> InlineKeyboardMarkup:
 
 btns1 = [
     [
-        InlineKeyboardButton(text="🖋 Adminga yozish", url=config.ADMIN_URL, switch_inline_query="ask")
+        InlineKeyboardButton(text="🖋 Adminga yozish", url=config.ADMIN_URL)
     ]
 ]
 
