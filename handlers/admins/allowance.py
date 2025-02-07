@@ -1,13 +1,13 @@
 from aiogram import types, Router, F, html
 from data import config
 from keyboards.inline import perm_inl
-from filters import InlineData, InlineDataStartsWith, IsAdmin, IsAdminCallback
+from filters import InlineData, InlineDataStartsWith, IsAdmin, IsAdminCallback, IsAdminInline
 
 allow = Router()
 
 allow.message.filter(IsAdmin())
 allow.callback_query.filter(IsAdminCallback())
-allow.inline_query.filter()
+allow.inline_query.filter(IsAdminInline())
 
 @allow.inline_query(InlineData("allow"))
 async def allow_inline(inline: types.InlineQuery):
