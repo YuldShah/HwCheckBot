@@ -159,7 +159,7 @@ async def confirm(callback: types.CallbackQuery, state: FSMContext) -> None:
     await post_c(callback, state)
     # await callback.message.delete()
 
-@set.message(CbData("ping"), sets.smenu)
+@set.callback_query(CbData("ping"), sets.smenu)
 async def ping(callback: types.CallbackQuery, state: FSMContext) -> None:
     await state.set_state(sets.ping)
     start_time = monotonic()
