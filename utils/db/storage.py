@@ -19,7 +19,7 @@ class DatabaseManager:
         self.query("CREATE TABLE IF NOT EXISTS messages (idx SERIAL PRIMARY KEY, jid INTEGER, msgid TEXT DEFAULT NULL, status INTEGER DEFAULT 0, date TEXT)")
         self.query("CREATE TABLE IF NOT EXISTS exams (idx SERIAL PRIMARY KEY, code TEXT, title TEXT, about TEXT DEFAULT NULL, num_questions INTEGER, correct TEXT, folder INTEGER DEFAULT NULL, sdate TEXT DEFAULT NULL, duration INTEGER DEFAULT NULL, running INTEGER DEFAULT 0, hide INTEGER DEFAULT 1)")
         self.query("CREATE TABLE IF NOT EXISTS submissions(idx SERIAL PRIMARY KEY, exid INTEGER, userid TEXT, date TIMESTAMP DEFAULT CURRENT_TIMESTAMP, corr INTEGER)")
-        self.query("CREATE TABLE IF NOT EXISTS channel (idx SERIAL PRIMARY KEY, chid TEXT, title TEXT, link TEXT, post INTEGER DEFAULT 0)")
+        self.query("CREATE TABLE IF NOT EXISTS channel (idx SERIAL PRIMARY KEY, chid INTEGER, title TEXT, link TEXT, post INTEGER DEFAULT 0)")
 
     def query(self, arg, values=None):
         self.cur.execute(arg, values or ())
