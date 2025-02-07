@@ -8,6 +8,9 @@ remover = Router()
 async def remove(message: Message) -> None:
     await message.reply("Not recognized", reply_markup=main_menu_in)
     # print(f"Not handled message: {message}")
+
+
+
 @remover.callback_query()
 async def remove_callback(callback: CallbackQuery) -> None:
     await callback.message.answer("Not recognized", reply_markup=main_menu_in)
