@@ -3,6 +3,7 @@
 from aiogram import types, Router, html
 from filters import IsNotRegistered, IsUser, IsNotSubscriber, IsUserCallback, CbData, CbDataStartsWith
 from loader import db
+from aiogram.filters import or_f
 from keyboards.inline import elbek, goto_bot
 from data import config
 # from utils.yau import notsubbed
@@ -11,7 +12,7 @@ from data import config
 reger = Router()
 
 reger.message.filter(IsUser())
-reger.callback_query.filter(IsNotRegistered() | IsNotSubscriber(), IsUserCallback())
+reger.callback_query.filter(or_f(IsNotRegistered(), IsNotSubscriber()), IsUserCallback())
 
 @reger.message()
 async def process_command(message: types.Message) -> None:
