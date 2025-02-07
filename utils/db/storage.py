@@ -1,45 +1,42 @@
-import sqlite3 as lite
+import psycopg2
+from psycopg2 import sql
 
-class DatabaseManager(object):
-    def __init__(self, path):
-        self.conn = lite.connect(path)
-        self.conn.execute('pragma foreign_keys = on')
-        self.conn.commit()
+class DatabaseManager:
+    def __init__(self, DB_URL):
+        self.conn = psycopg2.connect(DB_URL, sslmode="require")
         self.cur = self.conn.cursor()
 
     def create_tables(self):
-        self.query('CREATE TABLE IF NOT EXISTS users (idx INTEGER PRIMARY KEY, userid TEXT, fullname TEXT, username TEXT, regdate TEXT DEFAULT CURRENT_TIMESTAMP, allowed INTEGER DEFAULT 0)')
-        self.query("CREATE TABLE IF NOT EXISTS folders (idx INTEGER PRIMARY KEY, title TEXT)")
-        self.query("CREATE TABLE IF NOT EXISTS messages (idx INTEGER PRIMARY KEY, jid INTEGER, msgid TEXT DEFAULT NULL, status INTEGER DEFAULT 0, date TEXT)")
-        self.query("CREATE TABLE IF NOT EXISTS exams (idx INTEGER PRIMARY KEY, code TEXT, title TEXT, about TEXT DEFAULT NULL, num_questions INTEGER, correct TEXT, folder INTEGER DEFAULT NULL, sdate TEXT DEFAULT NULL, duration INTEGER DEFAULT NULL, running INTEGER DEFAULT 0, hide INTEGER DEFAULT 1)")
-        self.query("CREATE TABLE IF NOT EXISTS submissions(idx INTEGER PRIMARY KEY, exid INTEGER, userid TEXT, date TEXT DEFAULT CURRENT_TIMESTAMP, corr INTEGER)")
-        self.query("CREATE TABLE IF NOT EXISTS channel (idx INTEGER PRIMARY KEY, chid TEXT, title TEXT, link TEXT, post INTEGER DEFAULT 0)")
+        self.query('''CREATE TABLE IF NOT EXISTS users (
+            idx SERIAL PRIMARY KEY,
+            userid TEXT,
+            fullname TEXT,
+            username TEXT,
+            regdate TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            allowed INTEGER DEFAULT 0
+        )''')
+        self.query("CREATE TABLE IF NOT EXISTS folders (idx SERIAL PRIMARY KEY, title TEXT)")
+        self.query("CREATE TABLE IF NOT EXISTS messages (idx SERIAL PRIMARY KEY, jid INTEGER, msgid TEXT DEFAULT NULL, status INTEGER DEFAULT 0, date TEXT)")
+        self.query("CREATE TABLE IF NOT EXISTS exams (idx SERIAL PRIMARY KEY, code TEXT, title TEXT, about TEXT DEFAULT NULL, num_questions INTEGER, correct TEXT, folder INTEGER DEFAULT NULL, sdate TEXT DEFAULT NULL, duration INTEGER DEFAULT NULL, running INTEGER DEFAULT 0, hide INTEGER DEFAULT 1)")
+        self.query("CREATE TABLE IF NOT EXISTS submissions(idx SERIAL PRIMARY KEY, exid INTEGER, userid TEXT, date TIMESTAMP DEFAULT CURRENT_TIMESTAMP, corr INTEGER)")
+        self.query("CREATE TABLE IF NOT EXISTS channel (idx SERIAL PRIMARY KEY, chid TEXT, title TEXT, link TEXT, post INTEGER DEFAULT 0)")
 
     def query(self, arg, values=None):
-        if values is None:
-            self.cur.execute(arg)
-        else:
-            self.cur.execute(arg, values)
+        self.cur.execute(arg, values or ())
         self.conn.commit()
 
     def fetchone(self, arg, values=None):
-        if values is None:
-            self.cur.execute(arg)
-        else:
-            self.cur.execute(arg, values)
+        self.cur.execute(arg, values or ())
         return self.cur.fetchone()
 
     def fetchall(self, arg, values=None):
-        if values is None:
-            self.cur.execute(arg)
-        else:
-            self.cur.execute(arg, values)
+        self.cur.execute(arg, values or ())
         return self.cur.fetchall()
 
     def get_tables(self):
         """Returns a list of table names in the database."""
         try:
-            tables = self.fetchall("SELECT name FROM sqlite_master WHERE type='table';")
+            tables = self.fetchall("SELECT tablename FROM pg_catalog.pg_tables WHERE schemaname = 'public';")
             return [table[0] for table in tables] if tables else []
         except Exception as e:
             print(f"Error fetching tables: {e}")
@@ -60,8 +57,8 @@ class DatabaseManager(object):
     def get_last_n_rows(self, table, n):
         """Fetches the last N rows from a given table."""
         try:
-            result = self.fetchall(f"SELECT * FROM {table} ORDER BY ROWID DESC LIMIT {n}")
-            return result
+            self.cur.execute(sql.SQL("SELECT * FROM {} ORDER BY idx DESC LIMIT %s").format(sql.Identifier(table)), (n,))
+            return self.cur.fetchall()
         except Exception as e:
             return f"SQL Error: {e}"
 
