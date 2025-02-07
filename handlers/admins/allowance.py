@@ -31,6 +31,11 @@ async def allow_inline(inline: types.InlineQuery):
 
 @allow.callback_query(CbData("fetch_data"))
 async def fetch_data(callback: types.CallbackQuery):
+    msg = await callback.bot.edit_message_text(text="Fetching data", inline_message_id=callback.inline_message_id, reply_markup=types.ReplyKeyboardRemove())
+    if not msg.reply_to_message:
+        await callback.answer("No message found from inline message")
+        return
+    await callback.inline_message_id
     if not callback.message:
         await callback.answer("No message found")
         return
