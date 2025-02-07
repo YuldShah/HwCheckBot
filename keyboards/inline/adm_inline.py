@@ -28,10 +28,7 @@ def mandconfirm(channel):
 
 btns1 = [
     [
-        InlineKeyboardButton(text=dict.post, callback_data="post"), 
-        InlineKeyboardButton(text=dict.defaults, callback_data="defaults")
-    ],
-    [
+        InlineKeyboardButton(text=dict.defaults, callback_data="defaults"),
         InlineKeyboardButton(text=dict.ping, callback_data="ping")
     ]
 ]
@@ -118,3 +115,11 @@ def goto_bot(username):
         ]
     ]
     return InlineKeyboardMarkup(inline_keyboard=btns)
+
+
+btns5 = [
+    [
+        InlineKeyboardButton(text=dict.post, callback_data="post"),
+        InlineKeyboardButton(text=dict.manually, callback_data="manually")
+    ]
+]

@@ -14,7 +14,7 @@ user.callback_query.filter(IsUserCallback(), IsSubscriber())
 @user.message(F.text == dict.main_menu)
 async def start(message: types.Message, state: FSMContext):
     await state.clear()
-    await message.answer_sticker("CAACAgIAAxkBAANHZ6OBeJYZztktbr8YZHZ3muuKlr0AAqYCAAJWnb0K5jqXX4k9st02BA")
+    await message.answer_sticker("CAACAgIAAxkBAAIBt2emDv__wEe3FxrexsQkuXhfqM63AAJAAQACVp29CmzpW0AsSdYlNgQ")
     await message.answer(f"👋 Salom, {html.bold(message.from_user.mention_html())}! Botga xush kelibsiz!", reply_markup=user_markup)
 
 @user.message(F.text == dict.do_todays_hw)

@@ -6,8 +6,7 @@ btns1 = [
         KeyboardButton(text=dict.cr_test)
     ],
     [
-        KeyboardButton(text=dict.exams),
-        KeyboardButton(text=dict.mands)
+        KeyboardButton(text=dict.exams)
     ],
     [
         KeyboardButton(text=dict.settings), 
