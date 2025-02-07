@@ -2,7 +2,8 @@ from aiogram import Router, types, F, html
 from data import config
 from aiogram.fsm.context import FSMContext
 from states import sets
-from keyboards.regular import main_key, set_menu
+from keyboards.regular import main_key
+from keyboards.inline import set_menu
 from filters import IsAdmin, IsAdminCallback, CbData, CbDataStartsWith
 
 
