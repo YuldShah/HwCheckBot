@@ -18,7 +18,6 @@ async def on_startup():
 async def on_shutdown():
     logging.warning("Shutting down..")
     await dp.storage.close()
-    await dp.storage.wait_closed()
     logging.warning("Bot down")
 
 async def main():

@@ -56,3 +56,19 @@ class IsUserCallback(BaseFilter):
     async def __call__(self, callback: CallbackQuery) -> bool:
         res = callback.from_user.id not in config.ADMINS
         return res and callback.message.chat.type == "private"
+
+class IsPrivateCallback(BaseFilter):
+    async def __call__(self, callback: CallbackQuery) -> bool:
+        return callback.message.chat.type == "private"
+
+class IsNotPrivateCallback(BaseFilter):
+    async def __call__(self, callback: CallbackQuery) -> bool:
+        return callback.message.chat.type != "private"
+
+class IsFromInlineMessageCallback(BaseFilter):
+    async def __call__(self, callback: CallbackQuery) -> bool:
+        return callback.inline_message_id != None
+
+class IsNotFromInlineMessageCallback(BaseFilter):
+    async def __call__(self, callback: CallbackQuery) -> bool:
+        return callback.inline_message_id == None
