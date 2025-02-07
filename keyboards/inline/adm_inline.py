@@ -29,7 +29,8 @@ def mandconfirm(channel):
 btns1 = [
     [
         InlineKeyboardButton(text=dict.post, callback_data="post"), 
-        InlineKeyboardButton(text=dict.defaults, callback_data="defaults")
+        InlineKeyboardButton(text=dict.defaults, callback_data="defaults"),
+        InlineKeyboardButton(text=dict.ping, callback_data="ping")
     ]
 ]
 set_menu = InlineKeyboardMarkup(inline_keyboard=btns1)
