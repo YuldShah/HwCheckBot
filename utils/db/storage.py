@@ -7,17 +7,9 @@ class DatabaseManager:
         self.cur = self.conn.cursor()
 
     def create_tables(self):
-        self.query('''CREATE TABLE IF NOT EXISTS users (
-            idx SERIAL PRIMARY KEY,
-            userid TEXT,
-            fullname TEXT,
-            username TEXT,
-            regdate TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            allowed INTEGER DEFAULT 0
-        )''')
+        self.query('''CREATE TABLE IF NOT EXISTS users (idx SERIAL PRIMARY KEY, userid TEXT, fullname TEXT, username TEXT, regdate TIMESTAMP DEFAULT CURRENT_TIMESTAMP, allowed INTEGER DEFAULT 0)''')
         self.query("CREATE TABLE IF NOT EXISTS folders (idx SERIAL PRIMARY KEY, title TEXT)")
-        self.query("CREATE TABLE IF NOT EXISTS messages (idx SERIAL PRIMARY KEY, jid INTEGER, msgid TEXT DEFAULT NULL, status INTEGER DEFAULT 0, date TEXT)")
-        self.query("CREATE TABLE IF NOT EXISTS exams (idx SERIAL PRIMARY KEY, code TEXT, title TEXT, about TEXT DEFAULT NULL, num_questions INTEGER, correct TEXT, folder INTEGER DEFAULT NULL, sdate TEXT DEFAULT NULL, duration INTEGER DEFAULT NULL, running INTEGER DEFAULT 0, hide INTEGER DEFAULT 1)")
+        self.query("CREATE TABLE IF NOT EXISTS exams (idx SERIAL PRIMARY KEY, title TEXT, about TEXT DEFAULT NULL, instructions TEXT, num_questions INTEGER, correct TEXT, sdate TEXT DEFAULT NULL, duration INTEGER DEFAULT NULL, resub INTEGER DEFAULT 1, folder INTEGER DEFAULT NULL, hide INTEGER DEFAULT 0)")
         self.query("CREATE TABLE IF NOT EXISTS submissions(idx SERIAL PRIMARY KEY, exid INTEGER, userid TEXT, date TIMESTAMP DEFAULT CURRENT_TIMESTAMP, corr INTEGER)")
         self.query("CREATE TABLE IF NOT EXISTS channel (idx SERIAL PRIMARY KEY, chid INTEGER, title TEXT, link TEXT)")
 
