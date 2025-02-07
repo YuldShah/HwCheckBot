@@ -3,7 +3,7 @@ from aiogram import Router, types, F
 from data import dict, config
 from filters import IsAdmin, IsAdminCallback, CbData, CbDataStartsWith
 from states import sets
-from keyboards.inline import post_chan, set_menu, mandconfirm, ping_set
+from keyboards.inline import post_chan, set_menu, mandconfirm, ping_set, back_inl_key
 from keyboards.regular import main_key, back_key
 from aiogram.fsm.context import FSMContext
 from loader import db, bot
@@ -163,7 +163,7 @@ async def confirm(callback: types.CallbackQuery, state: FSMContext) -> None:
 async def ping(callback: types.CallbackQuery, state: FSMContext) -> None:
     await state.set_state(sets.ping)
     start_time = monotonic()
-    sent_message = await callback.message.edit_text("Pinging... 🏓", reply_markup=back_key)
+    sent_message = await callback.message.edit_text("Pinging... 🏓", reply_markup=back_inl_key)
     end_time = monotonic()
     
     ping_ms = (end_time - start_time) * 1000  # Convert to milliseconds
@@ -173,7 +173,7 @@ async def ping(callback: types.CallbackQuery, state: FSMContext) -> None:
 @set.callback_query(CbData("refresh_ping"), sets.ping)
 async def refresh_ping(callback: types.CallbackQuery, state: FSMContext) -> None:
     start_time = monotonic()
-    sent_message = await callback.message.edit_text("Pinging... 🏓", reply_markup=back_key)
+    sent_message = await callback.message.edit_text("Pinging... 🏓", reply_markup=back_inl_key)
     end_time = monotonic()
     
     ping_ms = (end_time - start_time) * 1000  # Convert to milliseconds

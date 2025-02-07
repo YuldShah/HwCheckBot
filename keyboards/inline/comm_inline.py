@@ -7,3 +7,10 @@ btns = [
     ]
 ]
 main_menu_in = InlineKeyboardMarkup(inline_keyboard=btns)
+
+btns1 = [
+    [
+        InlineKeyboardButton(text=dict.back, callback_data="back"),
+    ]
+]
+back_inl_key = InlineKeyboardMarkup(inline_keyboard=btns1)
