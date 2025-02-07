@@ -12,11 +12,15 @@ class dels(StatesGroup):
 class sets(StatesGroup):
     smenu = State()
     ping = State()
+
+class accstates(StatesGroup):
+    acmenu = State()
     post = State()
     link = State()
     confirm = State()
     fmans = State()
     del_con = State()
+    manl = State()
 
 class creates(StatesGroup):
     title = State()

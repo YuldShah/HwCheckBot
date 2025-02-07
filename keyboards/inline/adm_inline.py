@@ -123,3 +123,4 @@ btns5 = [
         InlineKeyboardButton(text=dict.manually, callback_data="manually")
     ]
 ]
+access_menu = InlineKeyboardMarkup(inline_keyboard=btns5)
