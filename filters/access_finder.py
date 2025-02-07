@@ -41,7 +41,7 @@ class IsAdmin(BaseFilter):
     
 class IsAdminCallback(BaseFilter):
     async def __call__(self, callback: CallbackQuery) -> bool:
-        return callback.from_user.id in config.ADMINS #and callback.message.chat.type == "private"
+        return callback.from_user.id in config.ADMINS and not callback.inline_message_id and callback.message.chat.type == "private"
 
 class IsAdminInline(BaseFilter):
     async def __call__(self, inline: InlineQuery) -> bool:
@@ -55,7 +55,7 @@ class IsUser(BaseFilter):
 class IsUserCallback(BaseFilter):
     async def __call__(self, callback: CallbackQuery) -> bool:
         res = callback.from_user.id not in config.ADMINS
-        return res and callback.message.chat.type == "private"
+        return res and not callback.inline_message_id and callback.message.chat.type == "private"
 
 class IsPrivateCallback(BaseFilter):
     async def __call__(self, callback: CallbackQuery) -> bool:
