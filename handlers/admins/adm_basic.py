@@ -22,16 +22,6 @@ async def adminstart(message: types.Message, state: FSMContext) -> None:
     await message.answer_sticker("CAACAgIAAxkBAANHZ6OBeJYZztktbr8YZHZ3muuKlr0AAqYCAAJWnb0K5jqXX4k9st02BA")
     await message.answer(f"👋 Salom, {html.bold(message.from_user.mention_html())}", reply_markup=adm_default)
 
-@admin.message(Command("ping"))
-async def ping(message: types.Message) -> None:
-    start_time = time.monotonic()
-    sent_message = await message.answer("Pinging... 🏓")
-    end_time = time.monotonic()
-    
-    ping_ms = (end_time - start_time) * 1000  # Convert to milliseconds
-    await sent_message.edit_text(f"Pong! 🏓\n\nPing: {html.code(f"{ping_ms:.2f} ms")}")
-
-
 
 @admin.callback_query(CbData("main_menu"))
 async def adminmenu(callback: types.CallbackQuery, state: FSMContext) -> None:
