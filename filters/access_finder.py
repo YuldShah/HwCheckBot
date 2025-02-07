@@ -1,5 +1,5 @@
 from aiogram.filters import BaseFilter
-from aiogram.types import Message, CallbackQuery
+from aiogram.types import Message, CallbackQuery, InlineQuery
 from data import config
 from loader import db, bot
 from utils.chat_info import checksub
@@ -67,6 +67,10 @@ class IsAdmin(BaseFilter):
 class IsAdminCallback(BaseFilter):
     async def __call__(self, callback: CallbackQuery) -> bool:
         return callback.from_user.id in config.ADMINS and callback.message.chat.type == "private"
+
+class IsAdminInline(BaseFilter):
+    async def __call__(self, inline: InlineQuery) -> bool:
+        return inline.from_user.id in config.ADMINS and inline.message.chat.type == "private"
 
 class IsUser(BaseFilter):
     async def __call__(self, message: Message) -> bool:

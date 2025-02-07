@@ -99,3 +99,11 @@ def obom(cur, numq, donel, mcqnum=config.MULTIPLE_CHOICE_DEF, page=1):
     ]
     btns.append(row)
     return InlineKeyboardMarkup(inline_keyboard=btns)
+
+def perm_inl(name, userid):
+    btns = [
+        [
+            InlineKeyboardButton(text=f"Press here to grant {name} permission", callback_data=f"grant_{userid}")
+        ]
+    ]
+    return InlineKeyboardMarkup(inline_keyboard=btns)
