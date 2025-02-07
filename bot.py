@@ -1,6 +1,6 @@
 import logging
 import sys
-from loader import dp, db, bot, get_info
+from loader import dp, db, bot
 import asyncio
 from data import config
 from handlers import register_handlers
