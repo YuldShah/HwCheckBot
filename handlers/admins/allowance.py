@@ -15,6 +15,7 @@ allow.inline_query.filter(IsAdminInline())
 
 @allow.inline_query(InlineData("allow"))
 async def allow_inline(inline: types.InlineQuery):
+    print("allow")
     # unique_id = hashlib.md5(str(inline.from_user.id).encode()).hexdigest()
     res = types.InlineQueryResultArticle(
         id="wtf",
@@ -25,10 +26,11 @@ async def allow_inline(inline: types.InlineQuery):
         ),
         reply_markup=perm_inl
     )
-    msg = await inline.answer([res], cache_time=1, is_personal=True)
+    await inline.answer([res], cache_time=1, is_personal=True)
 
 @allow.inline_query()
 async def default_inline(inline: types.InlineQuery):
+    print("inline")
     res = [
         types.InlineQueryResultArticle(
             id = "1",
