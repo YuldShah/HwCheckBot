@@ -12,6 +12,7 @@ allow.inline_query.filter(IsAdminInline())
 @allow.inline_query()
 async def allow_inline(inline: types.InlineQuery):
     res = types.InlineQueryResultArticle(
+        id="allow"
         title="Allow",
         description="Allow new user to use the bot",
         input_message_content=types.InputTextMessageContent(
