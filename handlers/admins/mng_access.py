@@ -42,7 +42,7 @@ async def back_to_s(callback: types.CallbackQuery, state: FSMContext):
 @access.callback_query(CbData("set_new"), accstates.post)
 async def setnew(callback: types.CallbackQuery, state: FSMContext):
     await state.set_state(accstates.link)
-    await callback.message.answer("Forward a message from the private chat to here", reply_markup=back_key)
+    await callback.message.answer("Forward a message from the private chat to here (Make sure the message was sent by the group as anonymous)\n\nOr send the chat id", reply_markup=back_key)
     await callback.message.delete()
 
 @access.message(F.text == dict.back, accstates.link)
@@ -78,8 +78,14 @@ async def get_link(message: types.Message, state: FSMContext):
         else:
             lk = f"https://t.me/{message.forward_from_chat.username}"
     else:
-        await message.answer("This message isn't forwarded from private chat. Forward a message from the private chat to here")
-        return
+        # chatid = None
+        print(message.text)
+        if message.text.isnumeric():
+            chanid = message.text
+
+        else:
+            await message.answer("This message neither forwarded from private chat nor includes a valid chat id. Forward a message from the private chat to here (Make sure the message was sent by the group as anonymous)\n\nOr send the chat id")
+            return
         # data = await state.get_data()
     try:
         channel_info = await bot.get_chat(chanid)
@@ -106,7 +112,7 @@ async def get_link(message: types.Message, state: FSMContext):
 @access.message(F.text == dict.back, accstates.confirm)
 async def back_to_link(message: types.Message, state: FSMContext) -> None:
     await state.set_state(accstates.link)
-    await message.answer("This time do it correctly. Forward a message from the private chat", reply_markup=back_key)
+    await message.answer("This time do it correctly.\n\nForward a message from the private chat to here (Make sure the message was sent by the group as anonymous)\n\nOr send the chat id", reply_markup=back_key)
 
 @access.callback_query(CbData("reset"), accstates.post)
 async def reset(callback: types.CallbackQuery, state: FSMContext) -> None:
