@@ -9,7 +9,7 @@ allow.message.filter(IsAdmin())
 allow.callback_query.filter(IsAdminCallback())
 allow.inline_query.filter(IsAdminInline())
 
-@allow.inline_query(InlineData("allow"))
+@allow.inline_query()
 async def allow_inline(inline: types.InlineQuery):
     res = types.InlineQueryResultArticle(
         title="Allow",
