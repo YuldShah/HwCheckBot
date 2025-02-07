@@ -1,5 +1,5 @@
 from aiogram import Router, types, F, html
-from data import config
+from data import config, dict
 from aiogram.fsm.context import FSMContext
 from states import sets
 from keyboards.regular import main_key
