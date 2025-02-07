@@ -31,6 +31,9 @@ async def allow_inline(inline: types.InlineQuery):
 
 @allow.callback_query(CbData("fetch_data"))
 async def fetch_data(callback: types.CallbackQuery):
+    if not callback.message:
+        await callback.answer("No message found")
+        return
     if callback.message.reply_to_message:
         userid = callback.message.reply_to_message.from_user.id
         mention = callback.message.reply_to_message.from_user.mention_html()
