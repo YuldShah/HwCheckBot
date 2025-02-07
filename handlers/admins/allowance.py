@@ -1,6 +1,7 @@
 from aiogram import types, Router, F, html
 from data import config
 from keyboards.inline import perm_inl
+# import hashlib
 from filters import InlineData, InlineDataStartsWith, IsAdmin, IsAdminCallback, IsAdminInline
 
 allow = Router()
@@ -11,8 +12,9 @@ allow.inline_query.filter(IsAdminInline())
 
 @allow.inline_query()
 async def allow_inline(inline: types.InlineQuery):
+    # unique_id = hashlib.md5(str(inline.from_user.id).encode()).hexdigest()
     res = types.InlineQueryResultArticle(
-        id="allow"
+        id="allow",
         title="Allow",
         description="Allow new user to use the bot",
         input_message_content=types.InputTextMessageContent(
