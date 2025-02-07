@@ -1,4 +1,4 @@
-from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup
+from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup, SwitchInlineQueryChosenChat
 from data.dict import check_subs
 from data import config
 
@@ -11,7 +11,7 @@ def mand_chans(channels) -> InlineKeyboardMarkup:
 
 btns1 = [
     [
-        InlineKeyboardButton(text="🖋 Adminga yozish", url=config.ADMIN_URL)
+        InlineKeyboardButton(text="🖋 Adminga yozish", url=config.ADMIN_URL, switch_inline_query="ask")
     ]
 ]
 
