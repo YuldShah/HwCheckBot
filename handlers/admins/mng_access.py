@@ -28,18 +28,14 @@ async def post_c(callback: types.CallbackQuery, state: FSMContext):
     channel = db.fetchone("SELECT title, link FROM channel")
     print(channel)
     if not channel:
-        response = "The chat that users will be checked to give automatic permission to the bot was not set, you can set a new one\n\nOnce you set a chat, the bot will automatically give permissions to members of that chat"
+        response = "The chat that users will be checked to give permission to the bot was not set, you can set a new one\n\nOnce you set a chat, the bot will automatically give permissions to members of that chat"
     await callback.message.edit_text(response, reply_markup=post_chan(channel))
 
 @access.callback_query(CbData("back"), accstates.post)
 async def back_to_s(callback: types.CallbackQuery, state: FSMContext):
     await state.set_state(accstates.acmenu)
     # await callback.message.answer(f"Menu: <b>{dict.settings}</b>", reply_markup=main_key)
-    response = "Here you can change or reset the permission giving chat."
-    channel = db.fetchone("SELECT title, link FROM channel")
-    print(channel)
-    if not channel:
-        response = "The chat that users will be checked to give automatic permission to the bot was not set, you can set a new one\n\nOnce you set a chat, the bot will automatically give permissions to members of that chat"
+    response = "Here you can manage the access of users to the bot"
     await callback.message.edit_text(response, reply_markup=access_menu)
     await callback.answer("Back to settings menu")
 
@@ -57,7 +53,7 @@ async def back_to_c(message: types.Message, state: FSMContext):
     channel = db.fetchone("SELECT title, link FROM channel")
     print(channel)
     if not channel:
-        response = "The chat that users will be checked to give automatic permission to the bot was not set, you can set a new one\n\nOnce you set a chat, the bot will automatically give permissions to members of that chat"
+        response = "The chat that users will be checked to give permission to the bot was not set, you can set a new one\n\nOnce you set a chat, the bot will automatically give permissions to members of that chat"
     await message.answer(response, reply_markup=accstates(channel))
 
 @access.message(accstates.link)
@@ -154,4 +150,4 @@ async def confirm(callback: types.CallbackQuery, state: FSMContext) -> None:
 async def manually(callback: types.CallbackQuery, state: FSMContext) -> None:
     await state.set_state(accstates.manl)
     await callback.message.answer("You can give or remove access to users manually here", reply_markup=man_access)
-
+    await callback.message.delete()
