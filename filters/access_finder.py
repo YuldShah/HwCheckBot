@@ -6,12 +6,12 @@ from utils.chat_info import checksub
 
 class IsRegistered(BaseFilter):
     async def __call__(self, message: Message) -> bool:
-        return db.fetchone("SELECT idx FROM users WHERE userid=?", (message.from_user.id,)) != None
+        return db.fetchone("SELECT idx FROM users WHERE userid=%s", (message.from_user.id,)) != None
 
 class IsNotRegistered(BaseFilter):
     async def __call__(self, message: Message) -> bool:
-        # print(db.fetchone("SELECT idx FROM users WHERE userid=?", (message.from_user.id,)))
-        return db.fetchone("SELECT idx FROM users WHERE userid=?", (message.from_user.id,)) == None
+        # print(db.fetchone("SELECT idx FROM users WHERE userid=%s", (message.from_user.id,)))
+        return db.fetchone("SELECT idx FROM users WHERE userid=%s", (message.from_user.id,)) == None
 
 class IsSubscriber(BaseFilter):
     async def __call__(self, message: Message) -> bool:
