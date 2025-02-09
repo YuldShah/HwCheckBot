@@ -39,6 +39,7 @@ async def get_title(message: types.Message, state: FSMContext):
 
 @test.message(creates.about, F.text == dict.skip)
 async def get_about(message: types.Message, state: FSMContext):
+    await state.update_data(about=None)
     await message.answer(f"{await get_text(state)}\nPlease, send the instructions.", reply_markup=skip_desc)
     await state.set_state(creates.instructions)
 
@@ -55,12 +56,13 @@ async def get_about(message: types.Message, state: FSMContext):
 
 @test.message(creates.instructions, F.text == dict.skip)
 async def get_instructions(message: types.Message, state: FSMContext):
+    await state.update_data(instructions=None)
     await message.answer(f"{await get_text(state)}\nPlease, send the number of questions.", reply_markup=back_key)
     await state.set_state(creates.number)
 
 @test.message(creates.instructions, F.text == dict.back)
 async def back_to_about(message: types.Message, state: FSMContext):
-    await message.answer(f"{await get_text(state)}\nPlease, send the description.", reply_markup=skip_desc)
+    await message.answer(f"{await get_text(state)}\nPlease, send the new description.", reply_markup=skip_desc)
     await state.set_state(creates.about)
 
 @test.message(creates.instructions)
