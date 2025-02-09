@@ -18,6 +18,18 @@ test.callback_query.filter(IsAdminCallback())
 async def create_test(message: types.Message, state: FSMContext):
     await message.answer(f"Please, send the title.", reply_markup=main_key)
     await state.set_state(creates.title)
+    await state.update_data(title=None)
+    await state.update_data(about=None)
+    await state.update_data(instructions=None)
+    await state.update_data(numquest=None)
+    await state.update_data(sdate=None)
+    await state.update_data(duration=None)
+    # title=data.get("title")
+    # about=data.get("about")
+    # instructions=data.get("instructions")
+    # numquest=data.get("numquest")
+    # sdate=data.get("sdate")
+    # duration=data.get("duration")
 
 @test.message(creates.title)
 async def get_title(message: types.Message, state: FSMContext):
