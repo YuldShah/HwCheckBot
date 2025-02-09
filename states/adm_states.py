@@ -34,6 +34,8 @@ class creates(StatesGroup):
     number = State()
     way = State()
     ans = State()
+    setts = State()
+    confirm = State()
 
 class edits(StatesGroup):
     emenu = State()
