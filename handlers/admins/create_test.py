@@ -1,7 +1,7 @@
 from aiogram import Router, types, F, html
 from filters import IsAdmin, IsAdminCallback, CbData, CbDataStartsWith
 from loader import db
-from keyboards.inline import test_key
+# from keyboards.inline import test_key
 from keyboards.regular import main_key, back_key, skip_desc
 from data import dict
 from states import creates
