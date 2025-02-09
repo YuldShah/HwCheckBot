@@ -32,6 +32,8 @@ class creates(StatesGroup):
     about = State()
     instructions = State()  # New state added
     number = State()
+    sdate = State()
+    duration = State()
     way = State()
     ans = State()
     setts = State()
