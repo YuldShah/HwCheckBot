@@ -15,6 +15,7 @@ async def checksub(userid, chid):
 
 async def get_text(state: FSMContext):
     data=await state.get_data()
+    print(data)
     title=data.get("title")
     about=data.get("about")
     instructions=data.get("instructions")
