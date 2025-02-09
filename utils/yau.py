@@ -13,8 +13,8 @@ async def checksub(userid, chid):
         return True
     return member.status in ["member", "creator", "owner", "administrator"]
 
-def get_text(state: FSMContext):
-    data=state.get_data()
+async def get_text(state: FSMContext):
+    data=await state.get_data()
     title=data.get("title")
     about=data.get("about")
     instructions=data.get("instructions")
