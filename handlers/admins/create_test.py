@@ -185,7 +185,7 @@ async def test_plus(query: types.CallbackQuery, state: FSMContext):
     await state.update_data(mcqnum=mcqnum)
     typesl[curq] = mcqnum
     await state.update_data(typesl=typesl)
-    await query.message.edit_text(f"Please, {html.underline("choose")} the right answer for question {html.bold(f'#{curq+1}/{numq}')}:\n\n{html.blockquote("ps. 🟢 - done, 🟡 - current, 🔴 - not done (yes, traffic lights, you dumb*ss)")}", reply_markup=obom(curq, numq, donel, type, typesl, mcqnum, page))
+    await query.message.edit_text(f"Please, {html.underline("choose")} the right answer for question {html.bold(f'#{curq}/{numq}')}:\n\n{html.blockquote("ps. 🟢 - done, 🟡 - current, 🔴 - not done (yes, traffic lights, you dumb*ss)")}", reply_markup=obom(curq, numq, donel, type, typesl, mcqnum, page))
 
 @test.callback_query(creates.ans, CbDataStartsWith("page_"))
 async def browse_page(query: types.CallbackQuery, state: FSMContext):
@@ -208,6 +208,9 @@ async def browse_page(query: types.CallbackQuery, state: FSMContext):
             await query.answer("You are already on the first page.")
             return
         page -= 1
+    else:
+        await query.answer("There just for decoration ;)")
+        return
     await state.update_data(page=page)
     await query.message.edit_text(f"Please, {html.underline("choose")} the right answer for question {html.bold(f'#{curq}/{numq}')}:\n\n{html.blockquote("ps. 🟢 - done, 🟡 - current, 🔴 - not done (yes, traffic lights, you dumb*ss)")}", reply_markup=obom(curq, numq, donel, type, typesl, mcqnum, page))
 
