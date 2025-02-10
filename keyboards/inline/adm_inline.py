@@ -91,7 +91,7 @@ def obom(cur, numq, donel, type, typesl, mcqnum=config.MULTIPLE_CHOICE_DEF, page
             now = (page-1)*config.MAX_QUESTION_IN_A_PAGE+i*5+j+1
             if now == cur:
                 row.append(InlineKeyboardButton(text=f"🟡{now}", callback_data=f"jump_{now}"))
-            elif donel[now]:
+            elif donel[now-1]:
                 row.append(InlineKeyboardButton(text=f"🟢{now}", callback_data=f"jump_{now}"))
             else:
                 row.append(InlineKeyboardButton(text=f"🔴{now}", callback_data=f"jump_{now}"))

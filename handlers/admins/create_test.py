@@ -151,7 +151,7 @@ async def set_mcq(query: types.CallbackQuery, state: FSMContext):
     mcqnum = data.get("mcqnum")
     # await state.update_data(ans=query.data.split("_")[1])
     cur_ans = query.data.split("_")[1]
-    donel[curq] = cur_ans
+    donel[curq-1] = cur_ans
     await query.answer(f"🟢 #{curq} is {cur_ans}")
     curq += 1
     await state.update_data(curq=curq)
@@ -273,7 +273,7 @@ async def get_open_ans(message: types.Message, state: FSMContext): # get open en
     donel = data.get("donel")
     mcqnum = data.get("mcqnum")
     if type == 0:
-        donel[curq] = message.text
+        donel[curq-1] = message.text
         typesl[curq] = 0
         curq += 1
         if curq == numq:
