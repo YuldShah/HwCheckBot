@@ -141,6 +141,7 @@ async def set_way_one(query: types.CallbackQuery, state: FSMContext):
 @test.callback_query(CbDataStartsWith("mcq_"), creates.ans)
 async def set_mcq(query: types.CallbackQuery, state: FSMContext):
     data = await state.get_data()
+    print(data)
     curq = data.get("curq")
     type = data.get("type")
     typesl = data.get("typesl")
