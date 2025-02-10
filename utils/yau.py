@@ -38,7 +38,10 @@ def get_ans_text(donel, typesl):
     for i in range(numq):
         res += f"{html.bold(f"{i+1}.")}"
         if donel[i]:
-            res += f" {html.code(f"{donel[i]}")} "
+            if type(donel[i]) == list:
+                res += f" {html.code(f"{','.join(donel[i])}")} "
+            else:
+                res += f" {html.code(f"{donel[i]}")} "
             if typesl[i] == 0:
                 res += "| OE"
             else:

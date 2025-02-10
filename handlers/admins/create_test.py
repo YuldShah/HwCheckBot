@@ -122,6 +122,7 @@ async def back_to_date(message: types.Message, state: FSMContext):
 async def set_way_all(query: types.CallbackQuery, state: FSMContext):
     # await state.update_data(duration=None)
     # await state.update_data(ans=None)
+    await state.update_data(entering="all")
     await query.message.edit_text(f"{await get_text(state)}\nPlease, send the answers in the following format:\n{html.code('Answer1\nAnswer2\nAnswer3,AgainAnswer3')}")
     await state.set_state(creates.ans)
 
@@ -135,9 +136,9 @@ async def set_way_one(query: types.CallbackQuery, state: FSMContext):
     numq = int(data.get("numquest"))
     page = data.get("page")
     await query.message.edit_text(
-        f"Please, {html.underline('choose')} the right answer for question {html.bold(f'#1/{numq}')}:"
+        f"{html.blockquote('ps. 🟢 - done, 🟡 - current, 🔴 - not done (yes, traffic lights, you dumb*ss)')}"
         f"\n\n{get_ans_text(donel, typesl)}"
-        f"\n\n{html.blockquote('ps. 🟢 - done, 🟡 - current, 🔴 - not done (yes, traffic lights, you dumb*ss)')}",
+        f"\n\nPlease, {html.underline('choose')} the right answer for question {html.bold(f'#1/{numq}')}:",
         reply_markup=obom(1, numq, donel, typesl, page)
     )
     await state.set_state(creates.ans)
@@ -164,15 +165,14 @@ async def set_mcq(query: types.CallbackQuery, state: FSMContext):
             break
     if new_cur == -1:
         await state.set_state(creates.setts)
-        await query.message.edit_text(f"{await get_text(state)}\nPlease, choose the right settings.", reply_markup=ans_set_fin(1, 1))
+        await query.message.edit_text(f"{await get_text(state)}\nPlease, change the settings as you wish. (Pressing toggles on/off)", reply_markup=ans_set_fin(1, 1))
         return
     new_page = (new_cur-1)//config.MAX_QUESTION_IN_A_PAGE + 1
     page = new_page
     await state.update_data(curq=new_cur, donel=donel, page=page)
-    await query.message.edit_text(
-        f"Please, {html.underline('choose')} the right answer for question {html.bold(f'#{new_cur}/{numq}')}:"
+    await query.message.edit_text(f"{html.blockquote('ps. 🟢 - done, 🟡 - current, 🔴 - not done (yes, traffic lights, you dumb*ss)')}"
         f"\n\n{get_ans_text(donel, typesl)}"
-        f"\n\n{html.blockquote('ps. 🟢 - done, 🟡 - current, 🔴 - not done (yes, traffic lights, you dumb*ss)')}",
+        f"\n\nPlease, {html.underline('choose')} the right answer for question {html.bold(f'#{new_cur}/{numq}')}:",
         reply_markup=obom(new_cur, numq, donel, typesl, page)
     )
     await state.set_state(creates.ans)
@@ -238,6 +238,7 @@ async def switch_to_open(query: types.CallbackQuery, state: FSMContext):
     donel = data.get("donel")
     numq = data.get("numquest")
     page = data.get("page")
+    await state.update_data(msg=query.message.message_id)
     await query.message.edit_text(
         f"Please, {html.underline('send')} the right answer for question {html.bold(f'#{curq}/{numq}')}:"
         f"\n\n{get_ans_text(donel, typesl)}"
@@ -295,11 +296,48 @@ async def jump_to(query: types.CallbackQuery, state: FSMContext):
 @test.message(creates.ans)
 async def get_open_ans(message: types.Message, state: FSMContext):
     data = await state.get_data()
-    curq = data.get("curq")
-    typesl = data.get("typesl")
-    donel = data.get("donel")
     numq = data.get("numquest")
+    typesl = data.get("typesl")
+    if data.get("entering") == "all":
+        ans = ""
+        lines = message.text.split("\n")
+        cnt = 0
+        for line in lines:
+            if not line:
+                continue
+            if "," in line:
+                line = list(line.split(","))
+            ans.append(line)
+            cnt += 1
+        if cnt == numq:
+            donel = ans
+            # await state.update_data(donel=donel)
+            for i in range(len(donel)):
+                type = typesl[i]
+                if type(donel[i]) == list:
+                    for j in donel[i]:
+                        if len(j) > 1 or j not in ["A", "B", "C", "D", "E", "F"]:
+                            typesl[i] = 0
+                        else:
+                            typesl[i] = max(typesl[i], ord(j) - ord("A") + 1)
+                else:
+                    if len(donel[i]) > 1 or donel[i] not in ["A", "B", "C", "D", "E", "F"]:
+                        typesl[i] = 0
+                    else:
+                        typesl[i] = max(typesl[i], ord(donel[i]) - ord("A") + 1)
+            await state.update_data(typesl=typesl, donel=donel)
+            await message.answer(f"{await get_text(state)}\n{get_ans_text(donel, typesl)}\n\nPlease, change the settings as you wish. (Pressing toggles on/off)", reply_markup=ans_set_fin(1, 1)
+            )
+            await state.set_state(creates.ans)
+
+        else:
+            await message.answer(f"Please, send all the answers.\nLooks like you have only {cnt}/{numq} answers.")
+            return
+
+    curq = data.get("curq")
+    donel = data.get("donel")
     page = data.get("page")
+    msg = data.get("msg")
     if typesl[curq-1] == 0:
         donel[curq-1] = message.text
         await message.answer(f"🟢 #{curq} is {message.text}")
@@ -320,13 +358,16 @@ async def get_open_ans(message: types.Message, state: FSMContext):
         # if typesl[new_cur-1] == 0:
         #     typesl[new_cur-1] = config.MULTIPLE_CHOICE_DEF
         #     await state.update_data(typesl=typesl)
-        await message.answer(
+        await message.bot.edit_message_text(
             f"Please, {html.underline('choose')} the right answer for question {html.bold(f'#{new_cur}/{numq}')}:"
             f"\n\n{get_ans_text(donel, typesl)}"
             f"\n\n{html.blockquote('ps. 🟢 - done, 🟡 - current, 🔴 - not done (yes, traffic lights, you dumb*ss)')}",
+            chat_id=message.chat.id,
+            message_id=msg,
             reply_markup=obom(new_cur, numq, donel, typesl, page)
         )
         await state.set_state(creates.ans)
+        await message.delete()
     else:
         msg = await message.answer("Not in open ended mode.")
         await message.delete()

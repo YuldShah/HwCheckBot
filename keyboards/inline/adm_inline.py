@@ -151,11 +151,13 @@ def ans_set_fin(visibility, resub, folder=None):
     btns = []
     if folder:
         btns.append([InlineKeyboardButton(text=dict.folder+folder, callback_data="folder")])
+    else:
+        btns.append([InlineKeyboardButton(text=dict.folder_not, callback_data="folder")])
     btns.append([
-            InlineKeyboardButton(text=dict.hide_not, callback_data=f"vis_on") if visibility else InlineKeyboardButton(text=dict.hide_ok, callback_data="vis_off")
+            InlineKeyboardButton(text=dict.hide_not, callback_data=f"vis_on") if not visibility else InlineKeyboardButton(text=dict.hide_ok, callback_data="vis_off")
         ])
     btns.append([
-            InlineKeyboardButton(text=dict.resub_not, callback_data="resub_on") if resub else InlineKeyboardButton(text=dict.resub_ok, callback_data="resub_off")
+            InlineKeyboardButton(text=dict.resub_not, callback_data="resub_on") if not resub else InlineKeyboardButton(text=dict.resub_ok, callback_data="resub_off")
         ])
     btns.append([InlineKeyboardButton(text=dict.contin, callback_data="continue")])
     return InlineKeyboardMarkup(inline_keyboard=btns)
