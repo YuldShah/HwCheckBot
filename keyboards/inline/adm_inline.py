@@ -115,7 +115,7 @@ def goto_bot(username):
 
     btns = [
         [
-            InlineKeyboardButton(text="Go to bot", url=f"https://t.me/{username}")
+            InlineKeyboardButton(text="Botni ishga tushirish", url=f"https://t.me/{username}")
         ]
     ]
     return InlineKeyboardMarkup(inline_keyboard=btns)
