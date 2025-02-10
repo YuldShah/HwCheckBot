@@ -186,15 +186,14 @@ async def test_plus(query: types.CallbackQuery, state: FSMContext):
     if sign == "plus":
         if typesl[curq-1] == 6:
             await query.answer("Can't have more than 6 choices.")
-            return
-        else:
-            typesl[curq-1] += 1
+            return    
+        typesl[curq-1] += 1
     elif sign == "minus":
         if typesl[curq-1] == 2:
             await query.answer("Can't have less than 2 choices.")
-            return
-        else:
-            typesl[curq-1] -= 1
+            return    
+        typesl[curq-1] -= 1
+    await query.answer(f"Now {typesl[curq-1]} choices.")
     await state.update_data(typesl=typesl)
     await query.message.edit_text(f"Please, {html.underline("choose")} the right answer for question {html.bold(f'#{curq}/{numq}')}:\n\n{html.blockquote("ps. 🟢 - done, 🟡 - current, 🔴 - not done (yes, traffic lights, you dumb*ss)")}", reply_markup=obom(curq, numq, donel, typesl, page))
 
