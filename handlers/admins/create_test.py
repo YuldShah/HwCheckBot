@@ -159,6 +159,7 @@ async def set_mcq(query: types.CallbackQuery, state: FSMContext):
 @test.callback_query(creates.ans, CbDataStartsWith("test_"))
 async def test_plus(query: types.CallbackQuery, state: FSMContext):
     data = await state.get_data()
+    print(data)
     curq = data.get("curq")
     type = data.get("type")
     typesl = data.get("typesl")
@@ -187,6 +188,7 @@ async def test_plus(query: types.CallbackQuery, state: FSMContext):
 @test.callback_query(creates.ans, CbDataStartsWith("page_"))
 async def browse_page(query: types.CallbackQuery, state: FSMContext):
     data = await state.get_data()
+    print(data)
     curq = data.get("curq")
     type = data.get("type")
     typesl = data.get("typesl")
@@ -210,6 +212,7 @@ async def browse_page(query: types.CallbackQuery, state: FSMContext):
 @test.callback_query(creates.ans, CbData("switch_open"))
 async def switch_to_open(query: types.CallbackQuery, state: FSMContext):
     data = await state.get_data()
+    print(data)
     curq = data.get("curq")
     # type = data.get("type")
     typesl = data.get("typesl")
@@ -223,6 +226,7 @@ async def switch_to_open(query: types.CallbackQuery, state: FSMContext):
 @test.callback_query(creates.ans, CbData("switch_mcq"))
 async def switch_to_mcq(query: types.CallbackQuery, state: FSMContext):
     data = await state.get_data()
+    print(data)
     curq = data.get("curq")
     # type = data.get("type")
     typesl = data.get("typesl")
@@ -236,6 +240,7 @@ async def switch_to_mcq(query: types.CallbackQuery, state: FSMContext):
 @test.callback_query(creates.ans, CbDataStartsWith("jump_"))
 async def jump_to(query: types.CallbackQuery, state: FSMContext):
     data = await state.get_data()
+    print(data)
     curq = int(query.data.split("_")[1])
     type = data.get("type")
     typesl = data.get("typesl")
@@ -249,6 +254,7 @@ async def jump_to(query: types.CallbackQuery, state: FSMContext):
 @test.message(creates.ans)
 async def get_open_ans(message: types.Message, state: FSMContext): # get open ended question's answer if not open ended ignore
     data = await state.get_data()
+    print(data)
     curq = data.get("curq")
     type = data.get("type")
     typesl = data.get("typesl")
