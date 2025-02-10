@@ -130,10 +130,11 @@ async def set_way_one(query: types.CallbackQuery, state: FSMContext):
     await state.update_data(curq=1)
     await state.update_data(type=1)
     typesl = await state.get_data()
+    donel = typesl.get("donel")
     typesl = typesl.get("typesl")
     numq = await state.get_data()
     numq = int(numq.get("numquest"))
-    await query.message.edit_text(f"Please, {html.underline("choose")} the right answer for question {html.bold("#1")}:\n\n{html.blockquote("ps. 🟢 - done, 🟡 - current, 🔴 - not done (yes, traffic lights, you dumb*ss)")}", reply_markup=obom(1, numq, [], 1, types))
+    await query.message.edit_text(f"Please, {html.underline("choose")} the right answer for question {html.bold("#1")}:\n\n{html.blockquote("ps. 🟢 - done, 🟡 - current, 🔴 - not done (yes, traffic lights, you dumb*ss)")}", reply_markup=obom(1, numq, donel, 1, types))
     await state.set_state(creates.ans)
 
 @test.callback_query(CbDataStartsWith("mcq_"), creates.ans)
