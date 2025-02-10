@@ -126,7 +126,7 @@ async def set_way_all(query: types.CallbackQuery, state: FSMContext):
 
 @test.callback_query(CbData("one"), creates.way)
 async def set_way_one(query: types.CallbackQuery, state: FSMContext):
-    await state.update_data(ans=None)
+    await state.update_data(page=1)
     await state.update_data(curq=1)
     await state.update_data(type=1)
     await state.update_data(mcqnum=4)
@@ -249,7 +249,7 @@ async def jump_to(query: types.CallbackQuery, state: FSMContext):
     donel = data.get("donel")
     mcqnum = data.get("mcqnum")
     await state.update_data(curq=curq)
-    await query.message.edit_text(f"Please, {html.underline('choose')} the right answer for question {html.bold(f'#{curq+1}')}:", reply_markup=obom(curq, numq, donel, type, typesl, mcqnum, page))
+    await query.message.edit_text(f"Please, {html.underline('choose')} the right answer for question {html.bold(f'#{curq+1}/{numq}')}:", reply_markup=obom(curq, numq, donel, type, typesl, mcqnum, page))
 
 @test.message(creates.ans)
 async def get_open_ans(message: types.Message, state: FSMContext): # get open ended question's answer if not open ended ignore
@@ -274,7 +274,7 @@ async def get_open_ans(message: types.Message, state: FSMContext): # get open en
         await state.update_data(donel=donel)
         await state.update_data(typesl=typesl)
         await state.update_data(type=1)
-        await message.answer(f"Please, {html.underline('choose')} the right answer for question {html.bold(f'#{curq+1}')}:")
+        await message.answer(f"Please, {html.underline('choose')} the right answer for question {html.bold(f'#{curq+1}/{numq}')}:")
     else:
         msg = await message.answer("Not in open ended mode.")
         
