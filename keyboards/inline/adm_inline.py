@@ -99,7 +99,7 @@ def obom(cur, numq, donel, type, typesl, mcqnum=config.MULTIPLE_CHOICE_DEF, page
     row = [
         InlineKeyboardButton(text="⇐", callback_data="page_prev"),
         # InlineKeyboardButton(text="←", callback_data="test_back"),
-        InlineKeyboardButton(text=f"Pg: {page} out of {(numq+config.MAX_QUESTION_IN_A_PAGE-1)/config.MAX_QUESTION_IN_A_PAGE}", callback_data="_test_page"),
+        InlineKeyboardButton(text=f"Pg: {page}/{int((numq+config.MAX_QUESTION_IN_A_PAGE-1)/config.MAX_QUESTION_IN_A_PAGE)}", callback_data="_test_page"),
         # InlineKeyboardButton(text="→", callback_data="test_next"),
         InlineKeyboardButton(text="⇒", callback_data="page_next")
     ]

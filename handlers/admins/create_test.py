@@ -129,6 +129,7 @@ async def set_way_one(query: types.CallbackQuery, state: FSMContext):
     await state.update_data(ans=None)
     await state.update_data(curq=1)
     await state.update_data(type=1)
+    await state.update_data(mcqnum=4)
     typesl = await state.get_data()
     donel = typesl.get("donel")
     typesl = typesl.get("typesl")
@@ -189,7 +190,7 @@ async def browse_page(query: types.CallbackQuery, state: FSMContext):
     type = data.get("type")
     typesl = data.get("typesl")
     numq = data.get("numquest")
-    page = int(query.data.split("_")[1])
+    page = int(data.get("page"))
     donel = data.get("donel")
     mcqnum = data.get("mcqnum")
     sign = query.data.split("_")[1]
