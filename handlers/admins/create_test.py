@@ -1,7 +1,7 @@
 from aiogram import Router, types, F, html
 from filters import IsAdmin, IsAdminCallback, CbData, CbDataStartsWith
 from loader import db
-from keyboards.inline import today, ans_enter_meth, obom, ans_set_fin
+from keyboards.inline import today, ans_enter_meth, obom, ans_set_fin, inl_folders
 from keyboards.regular import main_key, back_key, skip_desc
 from data import dict, config
 from datetime import datetime, timedelta, timezone
@@ -104,13 +104,13 @@ async def back_to_number(message: types.Message, state: FSMContext):
 async def get_sdate(message: types.Message, state: FSMContext):
 
     await state.update_data(sdate=message.text)
-    await message.answer(f"{await get_text(state)}\nPlease, choose the way you want to enter the answers (multiple answers only possible with all in one option):", reply_markup=ans_enter_meth)
+    await message.answer(f"{await get_text(state)}\nPlease, choose the way you want to enter the answers (multiple answers only possible with all at once option):", reply_markup=ans_enter_meth)
     await state.set_state(creates.way)
 
 @test.callback_query(CbData("today"), creates.sdate)
 async def set_date_today(query: types.CallbackQuery, state: FSMContext):
     await state.update_data(sdate=datetime.now(timezone(timedelta(hours=5))).strftime("%d %m %Y"))
-    await query.message.edit_text(f"{await get_text(state)}\nPlease, choose the way you want to enter the answers (multiple answers only possible with all in one option):", reply_markup=ans_enter_meth)
+    await query.message.edit_text(f"{await get_text(state)}\nPlease, choose the way you want to enter the answers (multiple answers only possible with all at once option):", reply_markup=ans_enter_meth)
     await state.set_state(creates.way)
 
 @test.message(creates.way, F.text == dict.back)
@@ -165,6 +165,7 @@ async def set_mcq(query: types.CallbackQuery, state: FSMContext):
             break
     if new_cur == -1:
         await state.set_state(creates.setts)
+        await state.update_data(vis=0, resub=0, folder=None)
         await query.message.edit_text(f"{await get_text(state)}\n{get_ans_text(donel, typesl)}\nPlease, change the settings as you wish. (Pressing toggles on/off)", reply_markup=ans_set_fin(1, 1))
         return
     new_page = (new_cur-1)//config.MAX_QUESTION_IN_A_PAGE + 1
@@ -294,6 +295,18 @@ async def jump_to(query: types.CallbackQuery, state: FSMContext):
             reply_markup=obom(new_cur, numq, donel, typesl, page)
         )
 
+@test.message(creates.ans, F.text == dict.back)
+async def back_to_way(message: types.Message, state: FSMContext):
+    data = await state.get_data()
+    # curq = data.get("curq")
+    # typesl = data.get("typesl")
+    # numq = data.get("numquest")
+    # page = data.get("page")
+    # donel = data.get("donel")
+    await state.update_data(entering=None)
+    await message.answer(f"{await get_text(state)}\nPlease, choose the way you want to enter the answers (multiple answers only possible with all at once option):", reply_markup=ans_enter_meth)
+    await state.set_state(creates.way)
+
 @test.message(creates.ans)
 async def get_open_ans(message: types.Message, state: FSMContext):
     data = await state.get_data()
@@ -327,6 +340,7 @@ async def get_open_ans(message: types.Message, state: FSMContext):
                     else:
                         typesl[i] = max(typesl[i], ord(donel[i]) - ord("A") + 1)
             await state.update_data(typesl=typesl, donel=donel)
+            await state.update_data(curq=new_cur, donel=donel, page=page)
             await message.answer(f"{await get_text(state)}\n{get_ans_text(donel, typesl)}\nPlease, change the settings as you wish. (Pressing toggles on/off)", reply_markup=ans_set_fin(1, 1)
             )
             await state.set_state(creates.setts)
@@ -349,6 +363,7 @@ async def get_open_ans(message: types.Message, state: FSMContext):
                 break
         if new_cur == -1:
             await state.set_state(creates.setts)
+            await state.update_data(curq=new_cur, donel=donel, page=page)
             await message.answer(f"{await get_text(state)}\n{get_ans_text(donel, typesl)}\nPlease, change the settings as you wish.", reply_markup=ans_set_fin(1, 1))
             return
         new_page = (new_cur-1)//config.MAX_QUESTION_IN_A_PAGE + 1
@@ -386,3 +401,41 @@ async def back_to_ans(message: types.Message, state: FSMContext):
     donel = data.get("donel")
     await message.answer(f"{await get_text(state)}\n{get_ans_text(donel, typesl)}\nPlease, change the settings as you wish. (Pressing toggles on/off)", reply_markup=ans_set_fin(curq, numq))
     await state.set_state(creates.setts)
+
+
+@test.callback_query(creates.setts, CbData("folder"))
+async def set_folder(query: types.CallbackQuery, state: FSMContext):
+    folders = db.fetchall("SELECT * FROM folders")
+    if not folders:
+        await query.answer("No folders found, create one first")
+        return
+    await query.message.edit_text("Please, choose the folder:", reply_markup=inl_folders(folders))
+
+@test.callback_query(creates.setts, CbData("back"))
+async def back_to_ans(query: types.CallbackQuery, state: FSMContext):
+    data = await state.get_data()
+    curq = data.get("curq")
+    typesl = data.get("typesl")
+    numq = data.get("numquest")
+    page = data.get("page")
+    donel = data.get("donel")
+    await query.message.edit_text(f"{await get_text(state)}\n{get_ans_text(donel, typesl)}\nPlease, change the settings as you wish. (Pressing toggles on/off)", reply_markup=ans_set_fin(curq, numq))
+
+
+
+@test.callback_query(creates.setts, CbDataStartsWith("vis_"))
+async def toggle_visibility(query: types.CallbackQuery, state: FSMContext):
+    data = await state.get_data()
+    numq = data.get("numquest")
+    typesl = data.get("typesl")
+    donel = data.get("donel")
+    curq = data.get("curq")
+    resub = data.get("resub")
+    vis = query.data.split("_")[1]
+    if vis == "on":
+        await query.answer("Visibility now on.")
+    else:
+        await query.answer("Visibility now off.")
+    await state.update_data(vis=vis=="on")
+
+    await query.message.edit_text(f"{await get_text(state)}\n{get_ans_text(donel, typesl)}\nPlease, change the settings as you wish. (Pressing toggles on/off)", reply_markup=ans_set_fin(vis=="on", ))

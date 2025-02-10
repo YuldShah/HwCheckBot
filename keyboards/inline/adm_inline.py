@@ -161,3 +161,10 @@ def ans_set_fin(visibility, resub, folder=None):
         ])
     btns.append([InlineKeyboardButton(text=dict.contin, callback_data="continue")])
     return InlineKeyboardMarkup(inline_keyboard=btns)
+
+def inl_folders(folders):
+    btns = []
+    for idx, title in folders:
+        btns.append([InlineKeyboardButton(text=title, callback_data=f"folder_{idx}")])
+    btns.append([InlineKeyboardButton(text=dict.back, callback_data="back")])
+    return InlineKeyboardMarkup(inline_keyboard=btns)
