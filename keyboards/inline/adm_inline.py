@@ -73,7 +73,7 @@ def obom(cur, numq, donel, typesl, page=1):
         arow = [InlineKeyboardButton(text="-", callback_data="test_minus")]
         for i in range(typesl[cur-1]):
             if chr(65+i) == donel[cur-1]:
-                arow.append(InlineKeyboardButton(text="✓", callback_data=f"mcq_{chr(65+i)}"))
+                arow.append(InlineKeyboardButton(text="🟢", callback_data=f"mcq_{chr(65+i)}"))
             else:
                 arow.append(InlineKeyboardButton(text=f"{chr(65+i)}", callback_data=f"mcq_{chr(65+i)}"))
         arow.append(InlineKeyboardButton(text="+", callback_data="test_plus"))
@@ -153,7 +153,9 @@ def ans_set_fin(visibility, resub, folder=None):
         btns.append([InlineKeyboardButton(text=dict.folder+folder, callback_data="folder")])
     btns.append(
         [
-            InlineKeyboardButton(text=dict.hide_not, callback_data=f"vis_on") if visibility else InlineKeyboardButton(text=dict.hide_ok, callback_data="vis_off"),
+            InlineKeyboardButton(text=dict.hide_not, callback_data=f"vis_on") if visibility else InlineKeyboardButton(text=dict.hide_ok, callback_data="vis_off")
+        ],
+        [
             InlineKeyboardButton(text=dict.resub_not, callback_data="resub_on") if resub else InlineKeyboardButton(text=dict.resub_ok, callback_data="resub_off")
         ]
     )

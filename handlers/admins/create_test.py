@@ -7,7 +7,7 @@ from data import dict, config
 from datetime import datetime, timedelta, timezone
 from states import creates
 from aiogram.fsm.context import FSMContext
-from utils.yau import get_text
+from utils.yau import get_text, get_ans_text
 from time import sleep
 
 test = Router()
@@ -104,13 +104,13 @@ async def back_to_number(message: types.Message, state: FSMContext):
 async def get_sdate(message: types.Message, state: FSMContext):
 
     await state.update_data(sdate=message.text)
-    await message.answer(f"{await get_text(state)}\nPlease, choose the way you want to enter the answers:", reply_markup=ans_enter_meth)
+    await message.answer(f"{await get_text(state)}\nPlease, choose the way you want to enter the answers (multiple answers only possible with all in one option):", reply_markup=ans_enter_meth)
     await state.set_state(creates.way)
 
 @test.callback_query(CbData("today"), creates.sdate)
 async def set_date_today(query: types.CallbackQuery, state: FSMContext):
     await state.update_data(sdate=datetime.now(timezone(timedelta(hours=5))).strftime("%d %m %Y"))
-    await query.message.edit_text(f"{await get_text(state)}\nPlease, choose the way you want to enter the answers:", reply_markup=ans_enter_meth)
+    await query.message.edit_text(f"{await get_text(state)}\nPlease, choose the way you want to enter the answers (multiple answers only possible with all in one option):", reply_markup=ans_enter_meth)
     await state.set_state(creates.way)
 
 @test.message(creates.way, F.text == dict.back)
@@ -136,6 +136,7 @@ async def set_way_one(query: types.CallbackQuery, state: FSMContext):
     page = data.get("page")
     await query.message.edit_text(
         f"Please, {html.underline('choose')} the right answer for question {html.bold(f'#1/{numq}')}:"
+        f"\n\n{get_ans_text(donel, typesl)}"
         f"\n\n{html.blockquote('ps. 🟢 - done, 🟡 - current, 🔴 - not done (yes, traffic lights, you dumb*ss)')}",
         reply_markup=obom(1, numq, donel, typesl, page)
     )
@@ -170,6 +171,7 @@ async def set_mcq(query: types.CallbackQuery, state: FSMContext):
     await state.update_data(curq=new_cur, donel=donel, page=page)
     await query.message.edit_text(
         f"Please, {html.underline('choose')} the right answer for question {html.bold(f'#{new_cur}/{numq}')}:"
+        f"\n\n{get_ans_text(donel, typesl)}"
         f"\n\n{html.blockquote('ps. 🟢 - done, 🟡 - current, 🔴 - not done (yes, traffic lights, you dumb*ss)')}",
         reply_markup=obom(new_cur, numq, donel, typesl, page)
     )
@@ -197,7 +199,7 @@ async def test_plus(query: types.CallbackQuery, state: FSMContext):
         typesl[curq-1] -= 1
     await query.answer(f"Now {typesl[curq-1]} choices.")
     await state.update_data(typesl=typesl)
-    await query.message.edit_text(f"Please, {html.underline("choose")} the right answer for question {html.bold(f'#{curq}/{numq}')}:\n\n{html.blockquote("ps. 🟢 - done, 🟡 - current, 🔴 - not done (yes, traffic lights, you dumb*ss)")}", reply_markup=obom(curq, numq, donel, typesl, page))
+    await query.message.edit_text(f"Please, {html.underline("choose")} the right answer for question {html.bold(f'#{curq}/{numq}')}:\n\n{get_ans_text(donel, typesl)}\n\n{html.blockquote("ps. 🟢 - done, 🟡 - current, 🔴 - not done (yes, traffic lights, you dumb*ss)")}", reply_markup=obom(curq, numq, donel, typesl, page))
 
 @test.callback_query(creates.ans, CbDataStartsWith("page_"))
 async def browse_page(query: types.CallbackQuery, state: FSMContext):
@@ -223,7 +225,7 @@ async def browse_page(query: types.CallbackQuery, state: FSMContext):
         await query.answer("There just for decoration ;)")
         return
     await state.update_data(page=page)
-    await query.message.edit_text(f"Please, {html.underline("choose")} the right answer for question {html.bold(f'#{curq}/{numq}')}:\n\n{html.blockquote("ps. 🟢 - done, 🟡 - current, 🔴 - not done (yes, traffic lights, you dumb*ss)")}", reply_markup=obom(curq, numq, donel, typesl, page))
+    await query.message.edit_text(f"Please, {html.underline("choose")} the right answer for question {html.bold(f'#{curq}/{numq}')}:\n\n{get_ans_text(donel, typesl)}\n\n{html.blockquote("ps. 🟢 - done, 🟡 - current, 🔴 - not done (yes, traffic lights, you dumb*ss)")}", reply_markup=obom(curq, numq, donel, typesl, page))
 
 @test.callback_query(creates.ans, CbData("switch_open"))
 async def switch_to_open(query: types.CallbackQuery, state: FSMContext):
@@ -238,6 +240,7 @@ async def switch_to_open(query: types.CallbackQuery, state: FSMContext):
     page = data.get("page")
     await query.message.edit_text(
         f"Please, {html.underline('send')} the right answer for question {html.bold(f'#{curq}/{numq}')}:"
+        f"\n\n{get_ans_text(donel, typesl)}"
         f"\n\n{html.blockquote('ps. 🟢 - done, 🟡 - current, 🔴 - not done (yes, traffic lights, you dumb*ss)')}",
         reply_markup=obom(curq, numq, donel, typesl, page)
     )
@@ -256,6 +259,7 @@ async def switch_to_mcq(query: types.CallbackQuery, state: FSMContext):
     page = data.get("page")
     await query.message.edit_text(
         f"Please, {html.underline('choose')} the right answer for question {html.bold(f'#{curq}/{numq}')}:"
+        f"\n\n{get_ans_text(donel, typesl)}"
         f"\n\n{html.blockquote('ps. 🟢 - done, 🟡 - current, 🔴 - not done (yes, traffic lights, you dumb*ss)')}",
         reply_markup=obom(curq, numq, donel, typesl, page)
     )
@@ -276,12 +280,14 @@ async def jump_to(query: types.CallbackQuery, state: FSMContext):
     if typesl[new_cur-1] == 0:
         await query.message.edit_text(
             f"Please, {html.underline('send')} the right answer for question {html.bold(f'#{new_cur}/{numq}')}:"
+            f"\n\n{get_ans_text(donel, typesl)}"
             f"\n\n{html.blockquote('ps. 🟢 - done, 🟡 - current, 🔴 - not done (yes, traffic lights, you dumb*ss)')}",
             reply_markup=obom(new_cur, numq, donel, typesl, page)
         )
     else:
         await query.message.edit_text(
             f"Please, {html.underline('choose')} the right answer for question {html.bold(f'#{new_cur}/{numq}')}:"
+            f"\n\n{get_ans_text(donel, typesl)}"
             f"\n\n{html.blockquote('ps. 🟢 - done, 🟡 - current, 🔴 - not done (yes, traffic lights, you dumb*ss)')}",
             reply_markup=obom(new_cur, numq, donel, typesl, page)
         )
@@ -316,6 +322,7 @@ async def get_open_ans(message: types.Message, state: FSMContext):
         #     await state.update_data(typesl=typesl)
         await message.answer(
             f"Please, {html.underline('choose')} the right answer for question {html.bold(f'#{new_cur}/{numq}')}:"
+            f"\n\n{get_ans_text(donel, typesl)}"
             f"\n\n{html.blockquote('ps. 🟢 - done, 🟡 - current, 🔴 - not done (yes, traffic lights, you dumb*ss)')}",
             reply_markup=obom(new_cur, numq, donel, typesl, page)
         )

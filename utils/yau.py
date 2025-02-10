@@ -30,3 +30,15 @@ async def get_text(state: FSMContext):
     res += f"{html.italic("Start date:")} {html.bold(sdate)}\n" if sdate else ""
     # res += f"Duration: {html.bold(duration)} minutes\n" if duration else ""
     return res
+
+def get_ans_text(donel, typesl):
+    numq = len(donel)
+    res = ""
+    for i in range(numq):
+        res += f"{html.bold(f"{i+1}.")} {html.code(f"{donel[i]}")} "
+        if typesl[i] == 0:
+            res += "| OE"
+        else:
+            res += f"| MCQ[{typesl[i]}]"
+        res += "\n"
+    return html.expandable_blockquote(res)
