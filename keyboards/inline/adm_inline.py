@@ -47,9 +47,6 @@ btns2 = [
     [
         InlineKeyboardButton(text=dict.all_at_one, callback_data="all"),
         InlineKeyboardButton(text=dict.one_by_one, callback_data="one")
-    ],
-    [
-        InlineKeyboardButton(text=dict.back, callback_data="back")
     ]
 ]
 ans_enter_meth = InlineKeyboardMarkup(inline_keyboard=btns2)

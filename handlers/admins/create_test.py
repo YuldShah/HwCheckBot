@@ -101,9 +101,9 @@ async def set_date_today(query: types.CallbackQuery, state: FSMContext):
     await query.message.edit_text(f"{await get_text(state)}\nPlease, choose the way you want to enter the answers:", reply_markup=ans_enter_meth)
     await state.set_state(creates.way)
 
-@test.callback_query(CbData("back"), creates.way)
-async def back_to_date(query: types.CallbackQuery, state: FSMContext):
-    await query.message.edit_text(f"{await get_text(state)}\nPlease, send the date in the following format or press the following to set it for today:\n{html.code(f'DD MM YYYY')}", reply_markup=today)
+@test.message(creates.way, F.text == dict.back)
+async def back_to_date(message: types.Message, state: FSMContext):
+    await message.answer(f"{await get_text(state)}\nPlease, send the date in the following format or press the following to set it for today:\n{html.code(f'DD MM YYYY')}", reply_markup=today)
     await state.set_state(creates.sdate)
 
 @test.callback_query(CbData("all"), creates.way)
@@ -118,6 +118,6 @@ async def set_way_one(query: types.CallbackQuery, state: FSMContext):
     await state.update_data(ans=None)
     await state.update_data(curq=1)
     await state.update_data(type=1)
-    numq = int(await state.get_data()).get("numquest")
+    numq = int(await state.get_data().get("numquest"))
     await query.message.edit_text(f"{await get_text(state)}\nPlease, choose the right answer for question {html.bold("#1")}:", reply_markup=obom(1, numq, [], 1))
     await state.set_state(creates.ans)
