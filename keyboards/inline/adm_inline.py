@@ -74,7 +74,7 @@ def obom(cur, numq, donel, type, typesl, mcqnum=config.MULTIPLE_CHOICE_DEF, page
         arow = [InlineKeyboardButton(text="-", callback_data="test_minus")]
         for i in range(mcqnum):
             if chr(65+i) == donel[cur]:
-                arow.append(InlineKeyboardButton(text=f"{chr(65+i)}✓", callback_data=f"mcq_{chr(65+i)}"))
+                arow.append(InlineKeyboardButton(text=f"✓", callback_data=f"mcq_{chr(65+i)}"))
             else:
                 arow.append(InlineKeyboardButton(text=f"{chr(65+i)}", callback_data=f"mcq_{chr(65+i)}"))
             # arow.append(InlineKeyboardButton(text=f"{chr(65+i)}", callback_data=f"mcq_{i-65}")) # add ✓ for multiple answers and maybe done button

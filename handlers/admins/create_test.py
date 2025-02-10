@@ -247,7 +247,11 @@ async def switch_to_mcq(query: types.CallbackQuery, state: FSMContext):
 async def jump_to(query: types.CallbackQuery, state: FSMContext):
     data = await state.get_data()
     print(data)
-    curq = int(query.data.split("_")[1])
+    cur = int(query.data.split("_")[1])
+    curq = data.get("curq")
+    if cur == curq:
+        await query.answer(f"Already at #{cur}")
+        return
     type = data.get("type")
     typesl = data.get("typesl")
     numq = data.get("numquest")
@@ -280,7 +284,7 @@ async def get_open_ans(message: types.Message, state: FSMContext): # get open en
         await state.update_data(donel=donel)
         await state.update_data(typesl=typesl)
         await state.update_data(type=1)
-        await message.answer(f"Please, {html.underline('choose')} the right answer for question {html.bold(f'#{curq+1}/{numq}')}:\n\n{html.blockquote("ps. 🟢 - done, 🟡 - current, 🔴 - not done (yes, traffic lights, you dumb*ss)")}")
+        await message.answer(f"Please, {html.underline('choose')} the right answer for question {html.bold(f'#{curq}/{numq}')}:\n\n{html.blockquote("ps. 🟢 - done, 🟡 - current, 🔴 - not done (yes, traffic lights, you dumb*ss)")}")
     else:
         msg = await message.answer("Not in open ended mode.")
         
