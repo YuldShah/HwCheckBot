@@ -1,7 +1,7 @@
 from aiogram import Router, types, F, html
 from filters import IsAdmin, IsAdminCallback, CbData, CbDataStartsWith
 from loader import db
-from keyboards.inline import today, ans_enter_meth, obom
+from keyboards.inline import today, ans_enter_meth, obom, ans_set_fin
 from keyboards.regular import main_key, back_key, skip_desc
 from data import dict, config
 from datetime import datetime, timedelta, timezone
@@ -259,7 +259,7 @@ async def get_open_ans(message: types.Message, state: FSMContext): # get open en
         curq += 1
         if curq == numq:
             await state.set_state(creates.setts)
-            await message.answer(f"{await get_text(state)}\nPlease, choose the right settings.", reply_markup=main_key)
+            await message.answer(f"{await get_text(state)}\nPlease, choose the right settings.", reply_markup=ans_set_fin(1, 1))
             return
         await state.update_data(curq=curq)
         await state.update_data(donel=donel)

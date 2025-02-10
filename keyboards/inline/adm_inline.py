@@ -73,7 +73,7 @@ def obom(cur, numq, donel, type, typesl, mcqnum=config.MULTIPLE_CHOICE_DEF, page
     if type == 1:
         arow = [InlineKeyboardButton(text="-", callback_data="test_minus")]
         for i in range(mcqnum):
-            if chr(65+i) in donel[cur]:
+            if chr(65+i) == donel[cur]:
                 arow.append(InlineKeyboardButton(text=f"{chr(65+i)} ✓", callback_data=f"mcq_{i-65}"))
             else:
                 arow.append(InlineKeyboardButton(text=f"{chr(65+i)}", callback_data=f"mcq_{i-65}"))
@@ -152,8 +152,15 @@ btns7 = [
 ]
 today = InlineKeyboardMarkup(inline_keyboard=btns7)
 
-btns8 = [
-    [
-        
-    ]
-]
+def ans_set_fin(visibility, resub, folder=None):
+    btns = []
+    if folder:
+        btns.append([InlineKeyboardButton(text=dict.folder+folder, callback_data="folder")])
+    btns.append(
+        [
+            InlineKeyboardButton(text=dict.hide_not, callback_data=f"vis_on") if visibility else InlineKeyboardButton(text=dict.hide_ok, callback_data="vis_off"),
+            InlineKeyboardButton(text=dict.resub_not, callback_data="resub_on") if resub else InlineKeyboardButton(text=dict.resub_ok, callback_data="resub_off")
+        ]
+    )
+    btns.append([InlineKeyboardButton(text=dict.contin, callback_data="continue")])
+    return InlineKeyboardMarkup(inline_keyboard=btns)
