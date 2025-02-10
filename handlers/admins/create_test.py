@@ -248,10 +248,10 @@ async def switch_to_mcq(query: types.CallbackQuery, state: FSMContext):
 async def jump_to(query: types.CallbackQuery, state: FSMContext):
     data = await state.get_data()
     print(data)
-    cur = int(query.data.split("_")[1])
+    new_cur = int(query.data.split("_")[1])
     curq = data.get("curq")
-    if cur == curq:
-        await query.answer(f"Already at #{cur}")
+    if new_cur == curq:
+        await query.answer(f"Already at #{new_cur}")
         return
     type = data.get("type")
     typesl = data.get("typesl")
@@ -259,8 +259,11 @@ async def jump_to(query: types.CallbackQuery, state: FSMContext):
     page = data.get("page")
     donel = data.get("donel")
     mcqnum = data.get("mcqnum")
-    await state.update_data(curq=curq)
-    await query.message.edit_text(f"Please, {html.underline('choose')} the right answer for question {html.bold(f'#{curq}/{numq}')}:\n\n{html.blockquote("ps. 🟢 - done, 🟡 - current, 🔴 - not done (yes, traffic lights, you dumb*ss)")}", reply_markup=obom(curq, numq, donel, type, typesl, mcqnum, page))
+    await state.update_data(curq=new_cur)
+    if typesl[new_cur] == 0:
+        await query.message.edit_text(f"Please, {html.underline("send")} the right answer for question {html.bold(f'#{new_cur}/{numq}')}:\n\n{html.blockquote("ps. 🟢 - done, 🟡 - current, 🔴 - not done (yes, traffic lights, you dumb*ss)")}", reply_markup=obom(new_cur, numq, donel, 0, typesl, mcqnum, page))
+    else:
+        await query.message.edit_text(f"Please, {html.underline('choose')} the right answer for question {html.bold(f'#{new_cur}/{numq}')}:\n\n{html.blockquote("ps. 🟢 - done, 🟡 - current, 🔴 - not done (yes, traffic lights, you dumb*ss)")}", reply_markup=obom(new_cur, numq, donel, type, typesl, mcqnum, page))
 
 @test.message(creates.ans)
 async def get_open_ans(message: types.Message, state: FSMContext): # get open ended question's answer if not open ended ignore
