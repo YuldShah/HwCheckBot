@@ -119,6 +119,6 @@ async def set_way_one(query: types.CallbackQuery, state: FSMContext):
     await state.update_data(curq=1)
     await state.update_data(type=1)
     numq = await state.get_data()
-    numq = numq.get("numquest")
+    numq = int(numq.get("numquest"))
     await query.message.edit_text(f"{await get_text(state)}\nPlease, choose the right answer for question {html.bold("#1")}:", reply_markup=obom(1, numq, [], 1))
     await state.set_state(creates.ans)
