@@ -149,8 +149,8 @@ async def set_mcq(query: types.CallbackQuery, state: FSMContext):
     typesl = data.get("typesl")
     # Switch to MCQ by setting the current question's typesl to default (nonzero)
     from data import config
-    typesl[curq-1] = config.MULTIPLE_CHOICE_DEF
-    await state.update_data(typesl=typesl)
+    # typesl[curq-1] = config.MULTIPLE_CHOICE_DEF
+    # await state.update_data(typesl=typesl)
     donel = data.get("donel")
     numq = data.get("numquest")
     page = data.get("page")
