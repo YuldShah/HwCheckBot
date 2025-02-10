@@ -47,6 +47,9 @@ btns2 = [
     [
         InlineKeyboardButton(text=dict.all_at_one, callback_data="all"),
         InlineKeyboardButton(text=dict.one_by_one, callback_data="one")
+    ],
+    [
+        InlineKeyboardButton(text=dict.back, callback_data="back")
     ]
 ]
 ans_enter_meth = InlineKeyboardMarkup(inline_keyboard=btns2)
@@ -59,22 +62,27 @@ btns3 = [
 ]
 ping_set = InlineKeyboardMarkup(inline_keyboard=btns3)
 
-def obom(cur, numq, donel, mcqnum=config.MULTIPLE_CHOICE_DEF, page=1):
+def obom(cur, numq, donel, type, mcqnum=config.MULTIPLE_CHOICE_DEF, page=1):
     """
     cur: current question number
     numq: total number of questions
     mcqnum: number of choices in mcq
     donel: list of done questions
+    type: mcq or open-ended (1 or 0)
     page: current page, self explanatory
     """
     
     btns = []
-    arow = [InlineKeyboardButton(text="-", callback_data="test_minus")]
-    for i in range(mcqnum):
-        arow.append(InlineKeyboardButton(text=f"{chr(65+i)}", callback_data=f"mcq_{i-65}")) # add ✓ for multiple answers and maybe done button
-    # arow.append(*[InlineKeyboardButton(text=f"{chr(65+i)}", callback_data=f"mcq_{i-65}") for i in range(config.MULTIPLE_CHOICE_DEF)])
-    arow.append(InlineKeyboardButton(text="+", callback_data="test_plus"))
-    btns.append(arow)
+    if type == 1:
+        arow = [InlineKeyboardButton(text="-", callback_data="test_minus")]
+        for i in range(mcqnum):
+            arow.append(InlineKeyboardButton(text=f"{chr(65+i)}", callback_data=f"mcq_{i-65}")) # add ✓ for multiple answers and maybe done button
+        # arow.append(*[InlineKeyboardButton(text=f"{chr(65+i)}", callback_data=f"mcq_{i-65}") for i in range(config.MULTIPLE_CHOICE_DEF)])
+        arow.append(InlineKeyboardButton(text="+", callback_data="test_plus"))
+        btns.append(arow)
+        btns.append([InlineKeyboardButton(text=dict.switch_to_open, callback_data="switch_to_open")])
+    else:
+        btns.append([InlineKeyboardButton(text=dict.switch_to_mcq, callback_data="switch_to_mcq")])
     qforthis = min(config.MAX_QUESTION_IN_A_PAGE, numq-(page-1)*config.MAX_QUESTION_IN_A_PAGE)
     for i in range((qforthis+4)//5):
         row = []
@@ -85,13 +93,13 @@ def obom(cur, numq, donel, mcqnum=config.MULTIPLE_CHOICE_DEF, page=1):
             elif now in donel:
                 row.append(InlineKeyboardButton(text=f"🟢 {now}", callback_data=f"jump_{now}"))
             else:
-                row.append(InlineKeyboardButton(text=f"{now}", callback_data=f"jump_{now}"))
+                row.append(InlineKeyboardButton(text=f"🔴 {now}", callback_data=f"jump_{now}"))
         btns.append(row)
     row = [
         InlineKeyboardButton(text="⇐", callback_data="test_prev"),
-        InlineKeyboardButton(text="←", callback_data="test_back"),
-        InlineKeyboardButton(text=f"{page}", callback_data="test_page"),
-        InlineKeyboardButton(text="→", callback_data="test_next"),
+        # InlineKeyboardButton(text="←", callback_data="test_back"),
+        InlineKeyboardButton(text=f"Pg: {page}", callback_data="_test_page"),
+        # InlineKeyboardButton(text="→", callback_data="test_next"),
         InlineKeyboardButton(text="⇒", callback_data="test_next")
     ]
     btns.append(row)
@@ -129,6 +137,16 @@ btns6 = [
     [
         InlineKeyboardButton(text=dict.add_access, callback_data="add_access"),
         InlineKeyboardButton(text=dict.del_access, callback_data="remove_access")
+    ],
+    [
+        InlineKeyboardButton(text=dict.back, callback_data="back")
     ]
 ]
 man_access = InlineKeyboardMarkup(inline_keyboard=btns6)
+
+btns7 = [
+    [
+        InlineKeyboardButton(text=dict.today, callback_data="today"),
+    ]
+]
+today = InlineKeyboardMarkup(inline_keyboard=btns7)
