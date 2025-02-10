@@ -207,8 +207,9 @@ async def browse_page(query: types.CallbackQuery, state: FSMContext):
     mcqnum = data.get("mcqnum")
     sign = query.data.split("_")[1]
     if sign == "next":
-        if page == (numq+config.MAX_QUESTION_IN_A_PAGE-1)/config.MAX_QUESTION_IN_A_PAGE:
+        if page == (numq+config.MAX_QUESTION_IN_A_PAGE-1)//config.MAX_QUESTION_IN_A_PAGE:
             await query.answer("You are already on the last page.")
+            return
         page += 1
     elif sign == "prev":
         if page == 1:
