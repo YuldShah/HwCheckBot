@@ -165,7 +165,9 @@ async def set_mcq(query: types.CallbackQuery, state: FSMContext):
         await state.set_state(creates.setts)
         await query.message.edit_text(f"{await get_text(state)}\nPlease, choose the right settings.", reply_markup=ans_set_fin(1, 1))
         return
-    await state.update_data(curq=new_cur, donel=donel)
+    new_page = (new_cur-1)//config.MAX_QUESTION_IN_A_PAGE + 1
+    page = new_page
+    await state.update_data(curq=new_cur, donel=donel, page=page)
     await query.message.edit_text(
         f"Please, {html.underline('choose')} the right answer for question {html.bold(f'#{new_cur}/{numq}')}:"
         f"\n\n{html.blockquote('ps. 🟢 - done, 🟡 - current, 🔴 - not done (yes, traffic lights, you dumb*ss)')}",
@@ -304,7 +306,9 @@ async def get_open_ans(message: types.Message, state: FSMContext):
             await state.set_state(creates.setts)
             await message.answer(f"{await get_text(state)}\nPlease, choose the right settings.", reply_markup=ans_set_fin(1, 1))
             return
-        await state.update_data(curq=new_cur, donel=donel)
+        new_page = (new_cur-1)//config.MAX_QUESTION_IN_A_PAGE + 1
+        page = new_page
+        await state.update_data(curq=new_cur, donel=donel, page=page)
         # Optionally, if you want to switch back to MCQ after an open answer, uncomment below:
         # from data import config
         # if typesl[new_cur-1] == 0:
