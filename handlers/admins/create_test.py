@@ -3,7 +3,7 @@ from filters import IsAdmin, IsAdminCallback, CbData, CbDataStartsWith
 from loader import db
 from keyboards.inline import today, ans_enter_meth, obom
 from keyboards.regular import main_key, back_key, skip_desc
-from data import dict
+from data import dict, config
 from datetime import datetime, timedelta, timezone
 from states import creates
 from aiogram.fsm.context import FSMContext
@@ -79,7 +79,17 @@ async def back_to_instructions(message: types.Message, state: FSMContext):
 
 @test.message(creates.number)
 async def get_number(message: types.Message, state: FSMContext):
-    await state.update_data(numquest=message.text)
+    numq = int(message.text)
+    try: 
+        await state.update_data(numquest=numq)
+    except:
+        await message.answer(f"{await get_text(state)}\nPlease, send the number of questions using digits.")
+        return
+    if numq < 1 or numq > 100:
+        await message.answer(f"{await get_text(state)}\nPlease, send the number of questions from 1 to 100.")
+        return
+    await state.update_data(donel=[None for i in range(numq)])
+    await state.update_data(typesl=[config.MULTIPLE_CHOICE_DEF for i in range(numq)])
     await message.answer(f"{await get_text(state)}\nPlease, send the date in the following format:\n{html.code(f"DD MM YYYY")}", reply_markup=today)
     await state.set_state(creates.sdate)
 
@@ -109,7 +119,7 @@ async def back_to_date(message: types.Message, state: FSMContext):
 @test.callback_query(CbData("all"), creates.way)
 async def set_way_all(query: types.CallbackQuery, state: FSMContext):
     # await state.update_data(duration=None)
-    await state.update_data(ans=None)
+    # await state.update_data(ans=None)
     await query.message.edit_text(f"{await get_text(state)}\nPlease, send the answers in the following format:\n{html.code('Answer1\nAnswer2\nAnswer3,AgainAnswer3')}")
     await state.set_state(creates.ans)
 
@@ -118,7 +128,25 @@ async def set_way_one(query: types.CallbackQuery, state: FSMContext):
     await state.update_data(ans=None)
     await state.update_data(curq=1)
     await state.update_data(type=1)
+    
     numq = await state.get_data()
     numq = int(numq.get("numquest"))
-    await query.message.edit_text(f"{await get_text(state)}\nPlease, choose the right answer for question {html.bold("#1")}:", reply_markup=obom(1, numq, [], 1))
+    await query.message.edit_text(f"Please, choose the right answer for question {html.bold("#1")}:\n\n{html.blockquote("ps. 🟢 - done, 🟡 - current, 🔴 - not done (yes, traffic lights, you dumb*ss)")}", reply_markup=obom(1, numq, [], 1))
+    await state.set_state(creates.ans)
+
+@test.callback_query(CbDataStartsWith("mcq_"), creates.ans)
+async def set_mcq(query: types.CallbackQuery, state: FSMContext):
+    data = await state.get_data()
+    curq = data.get("curq")
+    type = data.get("type")
+    typesl = data.get("typesl")
+    numq = data.get("numquest")
+    page = data.get("page")
+    donel = data.get("donel")
+    mcqnum = data.get("mcqnum")
+    # await state.update_data(ans=query.data.split("_")[1])
+    cur_ans = query.data.split("_")[1]
+    donel[curq] = cur_ans
+    await query.answer(f"🟢 #{curq} is {cur_ans}")
+    await query.message.edit_text(f"Please, choose the right answer for question {html.bold(f"#{curq+1}")}:\n\n{html.blockquote("ps. 🟢 - done, 🟡 - current, 🔴 - not done (yes, traffic lights, you dumb*ss)")}", reply_markup=obom(curq+1, numq, donel, type, typesl, mcqnum, page))
     await state.set_state(creates.ans)

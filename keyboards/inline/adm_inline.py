@@ -59,7 +59,7 @@ btns3 = [
 ]
 ping_set = InlineKeyboardMarkup(inline_keyboard=btns3)
 
-def obom(cur, numq, donel, type, mcqnum=config.MULTIPLE_CHOICE_DEF, page=1):
+def obom(cur, numq, donel, type, typesl, mcqnum=config.MULTIPLE_CHOICE_DEF, page=1):
     """
     cur: current question number
     numq: total number of questions
@@ -86,16 +86,16 @@ def obom(cur, numq, donel, type, mcqnum=config.MULTIPLE_CHOICE_DEF, page=1):
         for j in range(min(5, qforthis-i*5)):
             now = (page-1)*config.MAX_QUESTION_IN_A_PAGE+i*5+j+1
             if now == cur:
-                row.append(InlineKeyboardButton(text=f"🟡 {now}", callback_data=f"jump_{now}"))
+                row.append(InlineKeyboardButton(text=f"🟡{now}", callback_data=f"jump_{now}"))
             elif now in donel:
-                row.append(InlineKeyboardButton(text=f"🟢 {now}", callback_data=f"jump_{now}"))
+                row.append(InlineKeyboardButton(text=f"🟢{now}", callback_data=f"jump_{now}"))
             else:
-                row.append(InlineKeyboardButton(text=f"🔴 {now}", callback_data=f"jump_{now}"))
+                row.append(InlineKeyboardButton(text=f"🔴{now}", callback_data=f"jump_{now}"))
         btns.append(row)
     row = [
         InlineKeyboardButton(text="⇐", callback_data="test_prev"),
         # InlineKeyboardButton(text="←", callback_data="test_back"),
-        InlineKeyboardButton(text=f"Pg: {page}", callback_data="_test_page"),
+        InlineKeyboardButton(text=f"Pg: {page} out of {(numq+config.MAX_QUESTION_IN_A_PAGE-1)/config.MAX_QUESTION_IN_A_PAGE}", callback_data="_test_page"),
         # InlineKeyboardButton(text="→", callback_data="test_next"),
         InlineKeyboardButton(text="⇒", callback_data="test_next")
     ]
