@@ -73,13 +73,17 @@ def obom(cur, numq, donel, type, typesl, mcqnum=config.MULTIPLE_CHOICE_DEF, page
     if type == 1:
         arow = [InlineKeyboardButton(text="-", callback_data="test_minus")]
         for i in range(mcqnum):
-            arow.append(InlineKeyboardButton(text=f"{chr(65+i)}", callback_data=f"mcq_{i-65}")) # add ✓ for multiple answers and maybe done button
+            if chr(65+i) in donel[cur]:
+                arow.append(InlineKeyboardButton(text=f"{chr(65+i)} ✓", callback_data=f"mcq_{i-65}"))
+            else:
+                arow.append(InlineKeyboardButton(text=f"{chr(65+i)}", callback_data=f"mcq_{i-65}"))
+            # arow.append(InlineKeyboardButton(text=f"{chr(65+i)}", callback_data=f"mcq_{i-65}")) # add ✓ for multiple answers and maybe done button
         # arow.append(*[InlineKeyboardButton(text=f"{chr(65+i)}", callback_data=f"mcq_{i-65}") for i in range(config.MULTIPLE_CHOICE_DEF)])
         arow.append(InlineKeyboardButton(text="+", callback_data="test_plus"))
         btns.append(arow)
-        btns.append([InlineKeyboardButton(text=dict.switch_to_open, callback_data="switch_to_open")])
+        btns.append([InlineKeyboardButton(text=dict.switch_to_open, callback_data="switch_open")])
     else:
-        btns.append([InlineKeyboardButton(text=dict.switch_to_mcq, callback_data="switch_to_mcq")])
+        btns.append([InlineKeyboardButton(text=dict.switch_to_mcq, callback_data="switch_mcq")])
     qforthis = min(config.MAX_QUESTION_IN_A_PAGE, numq-(page-1)*config.MAX_QUESTION_IN_A_PAGE)
     for i in range((qforthis+4)//5):
         row = []
@@ -93,11 +97,11 @@ def obom(cur, numq, donel, type, typesl, mcqnum=config.MULTIPLE_CHOICE_DEF, page
                 row.append(InlineKeyboardButton(text=f"🔴{now}", callback_data=f"jump_{now}"))
         btns.append(row)
     row = [
-        InlineKeyboardButton(text="⇐", callback_data="test_prev"),
+        InlineKeyboardButton(text="⇐", callback_data="page_prev"),
         # InlineKeyboardButton(text="←", callback_data="test_back"),
         InlineKeyboardButton(text=f"Pg: {page} out of {(numq+config.MAX_QUESTION_IN_A_PAGE-1)/config.MAX_QUESTION_IN_A_PAGE}", callback_data="_test_page"),
         # InlineKeyboardButton(text="→", callback_data="test_next"),
-        InlineKeyboardButton(text="⇒", callback_data="test_next")
+        InlineKeyboardButton(text="⇒", callback_data="page_next")
     ]
     btns.append(row)
     return InlineKeyboardMarkup(inline_keyboard=btns)
@@ -147,3 +151,9 @@ btns7 = [
     ]
 ]
 today = InlineKeyboardMarkup(inline_keyboard=btns7)
+
+btns8 = [
+    [
+        
+    ]
+]
