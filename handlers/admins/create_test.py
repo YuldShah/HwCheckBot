@@ -327,7 +327,7 @@ async def get_open_ans(message: types.Message, state: FSMContext):
                     else:
                         typesl[i] = max(typesl[i], ord(donel[i]) - ord("A") + 1)
             await state.update_data(typesl=typesl, donel=donel)
-            await message.answer(f"{await get_text(state)}\n{get_ans_text(donel, typesl)}\n\nPlease, change the settings as you wish. (Pressing toggles on/off)", reply_markup=ans_set_fin(1, 1)
+            await message.answer(f"{await get_text(state)}\n{get_ans_text(donel, typesl)}\nPlease, change the settings as you wish. (Pressing toggles on/off)", reply_markup=ans_set_fin(1, 1)
             )
             await state.set_state(creates.ans)
 
@@ -341,7 +341,7 @@ async def get_open_ans(message: types.Message, state: FSMContext):
     msg = data.get("msg")
     if typesl[curq-1] == 0:
         donel[curq-1] = message.text
-        await message.answer(f"🟢 #{curq} is {message.text}")
+        msg = await message.answer(f"🟢 #{curq} is {message.text}")
         new_cur = -1
         for i in range(len(donel)):
             if not donel[i]:
@@ -349,7 +349,7 @@ async def get_open_ans(message: types.Message, state: FSMContext):
                 break
         if new_cur == -1:
             await state.set_state(creates.setts)
-            await message.answer(f"{await get_text(state)}\n{get_ans_text(donel, typesl)}Please, choose the right settings.", reply_markup=ans_set_fin(1, 1))
+            await message.answer(f"{await get_text(state)}\n{get_ans_text(donel, typesl)}\nPlease, change the settings as you wish.", reply_markup=ans_set_fin(1, 1))
             return
         new_page = (new_cur-1)//config.MAX_QUESTION_IN_A_PAGE + 1
         page = new_page
@@ -369,6 +369,7 @@ async def get_open_ans(message: types.Message, state: FSMContext):
         )
         await state.set_state(creates.ans)
         await message.delete()
+        await msg.delete()
     else:
         msg = await message.answer("Not in open ended mode.")
         await message.delete()
