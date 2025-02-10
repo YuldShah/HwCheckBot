@@ -165,7 +165,7 @@ async def set_mcq(query: types.CallbackQuery, state: FSMContext):
             break
     if new_cur == -1:
         await state.set_state(creates.setts)
-        await query.message.edit_text(f"{await get_text(state)}\n{get_ans_text(donel, typesl)}Please, change the settings as you wish. (Pressing toggles on/off)", reply_markup=ans_set_fin(1, 1))
+        await query.message.edit_text(f"{await get_text(state)}\n{get_ans_text(donel, typesl)}\nPlease, change the settings as you wish. (Pressing toggles on/off)", reply_markup=ans_set_fin(1, 1))
         return
     new_page = (new_cur-1)//config.MAX_QUESTION_IN_A_PAGE + 1
     page = new_page
@@ -300,7 +300,7 @@ async def get_open_ans(message: types.Message, state: FSMContext):
     numq = data.get("numquest")
     typesl = data.get("typesl")
     if data.get("entering") == "all":
-        ans = ""
+        ans = []
         lines = message.text.split("\n")
         cnt = 0
         for line in lines:
@@ -329,7 +329,7 @@ async def get_open_ans(message: types.Message, state: FSMContext):
             await state.update_data(typesl=typesl, donel=donel)
             await message.answer(f"{await get_text(state)}\n{get_ans_text(donel, typesl)}\nPlease, change the settings as you wish. (Pressing toggles on/off)", reply_markup=ans_set_fin(1, 1)
             )
-            await state.set_state(creates.ans)
+            await state.set_state(creates.setts)
 
         else:
             await message.answer(f"Please, send all the answers.\nLooks like you have only {cnt}/{numq} answers.")
@@ -367,7 +367,7 @@ async def get_open_ans(message: types.Message, state: FSMContext):
             message_id=msg,
             reply_markup=obom(new_cur, numq, donel, typesl, page)
         )
-        await state.set_state(creates.ans)
+        await state.set_state(creates.setts)
         await message.delete()
         await msg.delete()
     else:
@@ -375,3 +375,14 @@ async def get_open_ans(message: types.Message, state: FSMContext):
         await message.delete()
         sleep(2)
         await msg.delete()
+
+@test.message(creates.setts, F.text == dict.back)
+async def back_to_ans(message: types.Message, state: FSMContext):
+    data = await state.get_data()
+    curq = data.get("curq")
+    typesl = data.get("typesl")
+    numq = data.get("numquest")
+    page = data.get("page")
+    donel = data.get("donel")
+    await message.answer(f"{await get_text(state)}\n{get_ans_text(donel, typesl)}\nPlease, change the settings as you wish. (Pressing toggles on/off)", reply_markup=ans_set_fin(curq, numq))
+    await state.set_state(creates.setts)
