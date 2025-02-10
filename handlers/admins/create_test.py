@@ -4,7 +4,7 @@ from loader import db
 from keyboards.inline import today, ans_enter_meth, obom
 from keyboards.regular import main_key, back_key, skip_desc
 from data import dict
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from states import creates
 from aiogram.fsm.context import FSMContext
 from utils.yau import get_text
@@ -97,7 +97,7 @@ async def get_sdate(message: types.Message, state: FSMContext):
 
 @test.callback_query(CbData("today"), creates.sdate)
 async def set_date_today(query: types.CallbackQuery, state: FSMContext):
-    await state.update_data(sdate=(datetime.now(datetime.timezone.utc) + timedelta(hours=5)).strftime("%d %m %Y"))
+    await state.update_data(sdate=datetime.now(timezone(timedelta(hours=5))).strftime("%d %m %Y"))
     await query.message.edit_text(f"{await get_text(state)}\nPlease, choose the way you want to enter the answers:", reply_markup=ans_enter_meth)
     await state.set_state(creates.way)
 
