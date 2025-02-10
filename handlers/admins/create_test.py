@@ -130,7 +130,7 @@ async def set_way_one(query: types.CallbackQuery, state: FSMContext):
     await state.update_data(page=1)
     await state.update_data(curq=1)
     await state.update_data(type=1)
-    await state.update_data(mcqnum=4)
+    # await state.update_data(mcqnum=4)
     typesl = await state.get_data()
     donel = typesl.get("donel")
     typesl = typesl.get("typesl")
@@ -149,7 +149,7 @@ async def set_mcq(query: types.CallbackQuery, state: FSMContext):
     numq = data.get("numquest")
     page = data.get("page")
     donel = data.get("donel")
-    mcqnum = data.get("mcqnum")
+    # mcqnum = data.get("mcqnum")
     # await state.update_data(ans=query.data.split("_")[1])
     cur_ans = query.data.split("_")[1]
     donel[curq-1] = cur_ans
@@ -162,7 +162,7 @@ async def set_mcq(query: types.CallbackQuery, state: FSMContext):
     curq = new_cur
     await state.update_data(curq=curq)
     await state.update_data(donel=donel)
-    await query.message.edit_text(f"Please, {html.underline("choose")} the right answer for question {html.bold(f"#{curq}/{numq}")}:\n\n{html.blockquote("ps. 🟢 - done, 🟡 - current, 🔴 - not done (yes, traffic lights, you dumb*ss)")}", reply_markup=obom(curq, numq, donel, type, typesl, mcqnum, page))
+    await query.message.edit_text(f"Please, {html.underline("choose")} the right answer for question {html.bold(f"#{curq}/{numq}")}:\n\n{html.blockquote("ps. 🟢 - done, 🟡 - current, 🔴 - not done (yes, traffic lights, you dumb*ss)")}", reply_markup=obom(curq, numq, donel, type, typesl, page))
     await state.set_state(creates.ans)
 
 @test.callback_query(creates.ans, CbDataStartsWith("test_"))
@@ -175,24 +175,24 @@ async def test_plus(query: types.CallbackQuery, state: FSMContext):
     numq = data.get("numquest")
     page = data.get("page")
     donel = data.get("donel")
-    mcqnum = data.get("mcqnum")
+    # mcqnum = data.get("mcqnum")
     sign = query.data.split("_")[1]
     if sign == "plus":
-        if mcqnum == 6:
+        if typesl[curq-1] == 6:
             await query.answer("Can't have more than 6 choices.")
             return
         else:
-            mcqnum += 1
+            typesl[curq-1] += 1
     elif sign == "minus":
-        if mcqnum == 2:
+        if typesl[curq-1] == 2:
             await query.answer("Can't have less than 2 choices.")
             return
         else:
-            mcqnum -= 1
-    await state.update_data(mcqnum=mcqnum)
-    typesl[curq] = mcqnum
+            typesl[curq-1] -= 1
     await state.update_data(typesl=typesl)
-    await query.message.edit_text(f"Please, {html.underline("choose")} the right answer for question {html.bold(f'#{curq}/{numq}')}:\n\n{html.blockquote("ps. 🟢 - done, 🟡 - current, 🔴 - not done (yes, traffic lights, you dumb*ss)")}", reply_markup=obom(curq, numq, donel, type, typesl, mcqnum, page))
+    # typesl[curq] = mcqnum
+    await state.update_data(typesl=typesl)
+    await query.message.edit_text(f"Please, {html.underline("choose")} the right answer for question {html.bold(f'#{curq}/{numq}')}:\n\n{html.blockquote("ps. 🟢 - done, 🟡 - current, 🔴 - not done (yes, traffic lights, you dumb*ss)")}", reply_markup=obom(curq, numq, donel, type, typesl, page))
 
 @test.callback_query(creates.ans, CbDataStartsWith("page_"))
 async def browse_page(query: types.CallbackQuery, state: FSMContext):
@@ -204,7 +204,7 @@ async def browse_page(query: types.CallbackQuery, state: FSMContext):
     numq = data.get("numquest")
     page = int(data.get("page"))
     donel = data.get("donel")
-    mcqnum = data.get("mcqnum")
+    # mcqnum = data.get("mcqnum
     sign = query.data.split("_")[1]
     if sign == "next":
         if page == (numq+config.MAX_QUESTION_IN_A_PAGE-1)//config.MAX_QUESTION_IN_A_PAGE:
@@ -220,7 +220,7 @@ async def browse_page(query: types.CallbackQuery, state: FSMContext):
         await query.answer("There just for decoration ;)")
         return
     await state.update_data(page=page)
-    await query.message.edit_text(f"Please, {html.underline("choose")} the right answer for question {html.bold(f'#{curq}/{numq}')}:\n\n{html.blockquote("ps. 🟢 - done, 🟡 - current, 🔴 - not done (yes, traffic lights, you dumb*ss)")}", reply_markup=obom(curq, numq, donel, type, typesl, mcqnum, page))
+    await query.message.edit_text(f"Please, {html.underline("choose")} the right answer for question {html.bold(f'#{curq}/{numq}')}:\n\n{html.blockquote("ps. 🟢 - done, 🟡 - current, 🔴 - not done (yes, traffic lights, you dumb*ss)")}", reply_markup=obom(curq, numq, donel, type, typesl, page))
 
 @test.callback_query(creates.ans, CbData("switch_open"))
 async def switch_to_open(query: types.CallbackQuery, state: FSMContext):
@@ -232,9 +232,9 @@ async def switch_to_open(query: types.CallbackQuery, state: FSMContext):
     numq = data.get("numquest")
     page = data.get("page")
     donel = data.get("donel")
-    mcqnum = data.get("mcqnum")
+    # mcqnum = data.get("mcqnum")
     await state.update_data(type=0)
-    await query.message.edit_text(f"Please, {html.underline("send")} the right answer for question {html.bold(f'#{curq}/{numq}')}:\n\n{html.blockquote("ps. 🟢 - done, 🟡 - current, 🔴 - not done (yes, traffic lights, you dumb*ss)")}", reply_markup=obom(curq, numq, donel, 0, typesl, mcqnum, page))
+    await query.message.edit_text(f"Please, {html.underline("send")} the right answer for question {html.bold(f'#{curq}/{numq}')}:\n\n{html.blockquote("ps. 🟢 - done, 🟡 - current, 🔴 - not done (yes, traffic lights, you dumb*ss)")}", reply_markup=obom(curq, numq, donel, 0, typesl, page))
 
 @test.callback_query(creates.ans, CbData("switch_mcq"))
 async def switch_to_mcq(query: types.CallbackQuery, state: FSMContext):
@@ -246,9 +246,9 @@ async def switch_to_mcq(query: types.CallbackQuery, state: FSMContext):
     numq = data.get("numquest")
     page = data.get("page")
     donel = data.get("donel")
-    mcqnum = data.get("mcqnum")
+    # mcqnum = data.get("mcqnum")
     await state.update_data(type=1)
-    await query.message.edit_text(f"Please, {html.underline("choose")} the right answer for question {html.bold(f'#{curq}/{numq}')}:\n\n{html.blockquote("ps. 🟢 - done, 🟡 - current, 🔴 - not done (yes, traffic lights, you dumb*ss)")}", reply_markup=obom(curq, numq, donel, 1, typesl, mcqnum, page))
+    await query.message.edit_text(f"Please, {html.underline("choose")} the right answer for question {html.bold(f'#{curq}/{numq}')}:\n\n{html.blockquote("ps. 🟢 - done, 🟡 - current, 🔴 - not done (yes, traffic lights, you dumb*ss)")}", reply_markup=obom(curq, numq, donel, 1, typesl, page))
 
 @test.callback_query(creates.ans, CbDataStartsWith("jump_"))
 async def jump_to(query: types.CallbackQuery, state: FSMContext):
@@ -264,12 +264,12 @@ async def jump_to(query: types.CallbackQuery, state: FSMContext):
     numq = data.get("numquest")
     page = data.get("page")
     donel = data.get("donel")
-    mcqnum = data.get("mcqnum")
+    # mcqnum = data.get("mcqnum")
     await state.update_data(curq=new_cur)
     if typesl[new_cur] == 0:
-        await query.message.edit_text(f"Please, {html.underline("send")} the right answer for question {html.bold(f'#{new_cur}/{numq}')}:\n\n{html.blockquote("ps. 🟢 - done, 🟡 - current, 🔴 - not done (yes, traffic lights, you dumb*ss)")}", reply_markup=obom(new_cur, numq, donel, 0, typesl, mcqnum, page))
+        await query.message.edit_text(f"Please, {html.underline("send")} the right answer for question {html.bold(f'#{new_cur}/{numq}')}:\n\n{html.blockquote("ps. 🟢 - done, 🟡 - current, 🔴 - not done (yes, traffic lights, you dumb*ss)")}", reply_markup=obom(new_cur, numq, donel, 0, typesl, page))
     else:
-        await query.message.edit_text(f"Please, {html.underline('choose')} the right answer for question {html.bold(f'#{new_cur}/{numq}')}:\n\n{html.blockquote("ps. 🟢 - done, 🟡 - current, 🔴 - not done (yes, traffic lights, you dumb*ss)")}", reply_markup=obom(new_cur, numq, donel, type, typesl, mcqnum, page))
+        await query.message.edit_text(f"Please, {html.underline('choose')} the right answer for question {html.bold(f'#{new_cur}/{numq}')}:\n\n{html.blockquote("ps. 🟢 - done, 🟡 - current, 🔴 - not done (yes, traffic lights, you dumb*ss)")}", reply_markup=obom(new_cur, numq, donel, type, typesl, page))
 
 @test.message(creates.ans)
 async def get_open_ans(message: types.Message, state: FSMContext): # get open ended question's answer if not open ended ignore
@@ -281,10 +281,10 @@ async def get_open_ans(message: types.Message, state: FSMContext): # get open en
     numq = data.get("numquest")
     page = data.get("page")
     donel = data.get("donel")
-    mcqnum = data.get("mcqnum")
+    # mcqnum = data.get("mcqnum")
     if type == 0:
         donel[curq-1] = message.text
-        typesl[curq] = 0
+        typesl[curq-1] = 0
         curq += 1
         if curq == numq:
             await state.set_state(creates.setts)

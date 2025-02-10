@@ -59,20 +59,20 @@ btns3 = [
 ]
 ping_set = InlineKeyboardMarkup(inline_keyboard=btns3)
 
-def obom(cur, numq, donel, type, typesl, mcqnum=config.MULTIPLE_CHOICE_DEF, page=1):
+def obom(cur, numq, donel, type, typesl, page=1):
     """
     cur: current question number
     numq: total number of questions
-    mcqnum: number of choices in mcq
     donel: list of done questions
     type: mcq or open-ended (1 or 0)
+    typesl: list of number of options for each question, 0 for open ended
     page: current page, self explanatory
     """
     
     btns = []
     if type == 1:
         arow = [InlineKeyboardButton(text="-", callback_data="test_minus")]
-        for i in range(mcqnum):
+        for i in range(typesl[cur-1]):
             if chr(65+i) == donel[cur-1]:
                 arow.append(InlineKeyboardButton(text=f"✓", callback_data=f"mcq_{chr(65+i)}"))
             else:
