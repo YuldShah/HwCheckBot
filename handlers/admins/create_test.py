@@ -80,8 +80,9 @@ async def back_to_instructions(message: types.Message, state: FSMContext):
 
 @test.message(creates.number)
 async def get_number(message: types.Message, state: FSMContext):
-    numq = int(message.text)
+    numq = None
     try: 
+        numq = int(message.text)
         await state.update_data(numquest=numq)
     except:
         await message.answer(f"{await get_text(state)}\nPlease, send the number of questions using digits.")
