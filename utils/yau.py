@@ -35,10 +35,12 @@ def get_ans_text(donel, typesl):
     numq = len(donel)
     res = ""
     for i in range(numq):
-        res += f"{html.bold(f"{i+1}.")} {html.code(f"{donel[i]}")} "
-        if typesl[i] == 0:
-            res += "| OE"
-        else:
-            res += f"| MCQ[{typesl[i]}]"
+        res += f"{html.bold(f"{i+1}.")}"
+        if donel[i]:
+            res += f" {html.code(f"{donel[i]}")} "
+            if typesl[i] == 0:
+                res += "| OE"
+            else:
+                res += f"| MCQ[{typesl[i]}]"
         res += "\n"
     return html.expandable_blockquote(res)
