@@ -95,25 +95,25 @@ async def get_sdate(message: types.Message, state: FSMContext):
     await message.answer(f"{await get_text(state)}\nPlease, choose the way you want to enter the answers:", reply_markup=ans_enter_meth)
     await state.set_state(creates.way)
 
-@test.callback_query(CbData("today"), state=creates.sdate)
+@test.callback_query(CbData("today"), creates.sdate)
 async def set_date_today(query: types.CallbackQuery, state: FSMContext):
     await state.update_data(sdate=(datetime.now(datetime.timezone.utc) + timedelta(hours=5)).strftime("%d %m %Y"))
     await query.message.edit_text(f"{await get_text(state)}\nPlease, choose the way you want to enter the answers:", reply_markup=ans_enter_meth)
     await state.set_state(creates.way)
 
-@test.callback_query(CbData("back"), state=creates.way)
+@test.callback_query(CbData("back"), creates.way)
 async def back_to_date(query: types.CallbackQuery, state: FSMContext):
     await query.message.edit_text(f"{await get_text(state)}\nPlease, send the date in the following format or press the following to set it for today:\n{html.code(f'DD MM YYYY')}", reply_markup=today)
     await state.set_state(creates.sdate)
 
-@test.callback_query(CbData("all"), state=creates.way)
+@test.callback_query(CbData("all"), creates.way)
 async def set_way_all(query: types.CallbackQuery, state: FSMContext):
     # await state.update_data(duration=None)
     await state.update_data(ans=None)
     await query.message.edit_text(f"{await get_text(state)}\nPlease, send the answers in the following format:\n{html.code('Answer1\nAnswer2\nAnswer3,AgainAnswer3')}")
     await state.set_state(creates.ans)
 
-@test.callback_query(CbData("one"), state=creates.way)
+@test.callback_query(CbData("one"), creates.way)
 async def set_way_one(query: types.CallbackQuery, state: FSMContext):
     await state.update_data(ans=None)
     await state.update_data(curq=1)
