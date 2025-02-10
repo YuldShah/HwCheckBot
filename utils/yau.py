@@ -34,6 +34,7 @@ async def get_text(state: FSMContext):
 def get_ans_text(donel, typesl):
     numq = len(donel)
     res = ""
+    cnt = 0
     for i in range(numq):
         res += f"{html.bold(f"{i+1}.")}"
         if donel[i]:
@@ -42,5 +43,7 @@ def get_ans_text(donel, typesl):
                 res += "| OE"
             else:
                 res += f"| MCQ[{typesl[i]}]"
+            cnt += 1
         res += "\n"
+    res = f"✅ Done: {cnt}/{numq}\n\n#No. Ans | Type\n" + res
     return html.expandable_blockquote(res)
