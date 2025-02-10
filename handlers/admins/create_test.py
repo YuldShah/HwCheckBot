@@ -155,6 +155,7 @@ async def set_mcq(query: types.CallbackQuery, state: FSMContext):
     await query.answer(f"🟢 #{curq} is {cur_ans}")
     curq += 1
     await state.update_data(curq=curq)
+    await state.update_data(donel=donel)
     await query.message.edit_text(f"Please, {html.underline("choose")} the right answer for question {html.bold(f"#{curq}/{numq}")}:\n\n{html.blockquote("ps. 🟢 - done, 🟡 - current, 🔴 - not done (yes, traffic lights, you dumb*ss)")}", reply_markup=obom(curq+1, numq, donel, type, typesl, mcqnum, page))
     await state.set_state(creates.ans)
 
