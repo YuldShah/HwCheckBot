@@ -40,7 +40,9 @@ class creates(StatesGroup):
     setts = State()
     confirm = State()
 
-class edits(StatesGroup):
+class arch_states(StatesGroup):
+    folders = State()
+    tests = State()
     emenu = State()
     edit = State()
     title = State()

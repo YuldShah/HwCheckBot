@@ -168,3 +168,16 @@ def inl_folders(folders):
         btns.append([InlineKeyboardButton(text=title, callback_data=f"folder_{idx}")])
     btns.append([InlineKeyboardButton(text=dict.back, callback_data="back")])
     return InlineKeyboardMarkup(inline_keyboard=btns)
+
+def get_create_folders(folders=[]):
+    btns = []
+    for i, j in folders:
+        btns.append([InlineKeyboardButton(text=dict.j, callback_data=f"fmng_{i}")])
+    btns.append([InlineKeyboardButton(text=dict.add_folder, callback_data="add_folder")])
+
+def get_folder_tests(tests):
+    btns = []
+    for i, j in tests:
+        btns.append([InlineKeyboardButton(text=dict.j, callback_data=f"exman_{i}")])
+    btns.append([InlineKeyboardButton(text=dict.back, callback_data="back")])
+    # btns.append([InlineKeyboardButton(text=dict.add_folder, callback_data="")])
