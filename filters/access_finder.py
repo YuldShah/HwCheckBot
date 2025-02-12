@@ -3,6 +3,7 @@ from aiogram.types import Message, CallbackQuery, InlineQuery
 from data import config
 from loader import db, bot
 from utils.chat_info import checksub
+from utils.yau import checksub
 
 class IsRegistered(BaseFilter):
     async def __call__(self, message: Message) -> bool:
@@ -15,23 +16,47 @@ class IsNotRegistered(BaseFilter):
 
 class IsSubscriber(BaseFilter):
     async def __call__(self, message: Message) -> bool:
-        allowed = int(db.fetchone("SELECT allowed FROM users WHERE userid=%s::text", (message.from_user.id,))[0])
-        return bool(allowed)
+        allowed = db.fetchone("SELECT allowed FROM users WHERE userid=%s::text", (message.from_user.id,))
+        if allowed:
+            return bool(int(allowed[0]))
+        chid = db.fetchone("SELECT chid FROM channel")
+        if chid:
+            chid = int(chid[0])
+            return await checksub(message.from_user.id, chid)
+        return False
 
 class IsNotSubscriber(BaseFilter):
     async def __call__(self, message: Message) -> bool:
-        allowed = int(db.fetchone("SELECT allowed FROM users WHERE userid=%s::text", (message.from_user.id,))[0])
-        return not bool(allowed)
+        allowed = db.fetchone("SELECT allowed FROM users WHERE userid=%s::text", (message.from_user.id,))
+        if allowed:
+            return not bool(int(allowed[0]))
+        chid = db.fetchone("SELECT chid FROM channel")
+        if chid:
+            chid = int(chid[0])
+            return not await checksub(message.from_user.id, chid)
+        return True
 
 class IsSubscriberCallback(BaseFilter):
     async def __call__(self, callback: CallbackQuery) -> bool:
-        allowed = int(db.fetchone("SELECT allowed FROM users WHERE userid=%s::text", (callback.from_user.id,))[0])
-        return bool(allowed)
+        allowed = db.fetchone("SELECT allowed FROM users WHERE userid=%s::text", (callback.from_user.id,))
+        if allowed:
+            return bool(int(allowed[0]))
+        chid = db.fetchone("SELECT chid FROM channel")
+        if chid:
+            chid = int(chid[0])
+            return await checksub(callback.from_user.id, chid)
+        return False
 
 class IsNotSubscriberCallback(BaseFilter):
     async def __call__(self, callback: CallbackQuery) -> bool:
-        allowed = int(db.fetchone("SELECT allowed FROM users WHERE userid=%s::text", (callback.from_user.id,))[0])
-        return not bool(allowed)
+        allowed = db.fetchone("SELECT allowed FROM users WHERE userid=%s::text", (callback.from_user.id,))
+        if allowed:
+            return not bool(int(allowed[0]))
+        chid = db.fetchone("SELECT chid FROM channel")
+        if chid:
+            chid = int(chid[0])
+            return not await checksub(callback.from_user.id, chid)
+        return True
 
 class IsAdmin(BaseFilter):
     # def __init__(self, args):

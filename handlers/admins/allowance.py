@@ -3,6 +3,7 @@ from data import config
 from keyboards.inline import perm_inl
 # import hashlib
 from time import sleep
+from loader import db
 from filters import InlineData, InlineDataStartsWith, IsAdmin, IsAdminCallback, IsAdminInline, CbData, CbDataStartsWith
 
 allow = Router()
@@ -19,7 +20,7 @@ async def allow_inline(inline: types.InlineQuery):
     # unique_id = hashlib.md5(str(inline.from_user.id).encode()).hexdigest()
     res = types.InlineQueryResultArticle(
         id="wtf",
-        title="Granting permission",
+        title="Permit",
         description="Grant permission to user",
         input_message_content=types.InputTextMessageContent(
             message_text="Botga ruxsat olish uchun quyidagi tugmani bosing."
@@ -27,6 +28,32 @@ async def allow_inline(inline: types.InlineQuery):
         reply_markup=perm_inl
     )
     await inline.answer([res], cache_time=1, is_personal=True)
+
+@allow.inline_query(InlineData("link"))
+async def link_inline(inline: types.InlineQuery):
+    chid = db.fetchone("SELECT chid FROM channel")
+    if chid:
+        chid = int(chid[0])
+        lk = await inline.bot.create_chat_invite_link(chat_id=chid, member_limit=1)
+        res = types.InlineQueryResultArticle(
+            id="wtf",
+            title="Link",
+            description="Create one time link for the channel",
+            input_message_content=types.InputTextMessageContent(
+                message_text=f"Quyida kanalga ulanishingiz uchun bir martalik link:"
+            ),
+            reply_markup=types.InlineKeyboardMarkup(
+                inline_keyboard=[
+                    [
+                        types.InlineKeyboardButton(
+                            text="📲 Kanalga ulanish",
+                            url=lk.invite_link
+                        )
+                    ]
+                ]
+            )
+        )
+        await inline.answer([res], cache_time=1, is_personal=True)
 
 @allow.inline_query()
 async def default_inline(inline: types.InlineQuery):
@@ -40,9 +67,9 @@ async def default_inline(inline: types.InlineQuery):
         ),
         types.InlineQueryResultArticle(
             id = "2",
-            title = "remove",
-            description = "Used to remove access from user",
-            input_message_content = types.InputTextMessageContent(message_text=f"Wrong query! You should have entered {html.code(f"@{config.bot_info.username} remove")} and press the resultant button.")
+            title = "link",
+            description = "Used to create one time link for the anyone",
+            input_message_content = types.InputTextMessageContent(message_text=f"Wrong query! You should have entered {html.code(f"@{config.bot_info.username} link")} and press the resultant button.")
         )
     ]
     await inline.answer(res, cache_time=1, is_personal=True)

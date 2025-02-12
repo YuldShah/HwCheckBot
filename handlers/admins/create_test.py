@@ -1,14 +1,15 @@
 from aiogram import Router, types, F, html
 from filters import IsAdmin, IsAdminCallback, CbData, CbDataStartsWith
 from loader import db
-from keyboards.inline import today, ans_enter_meth, obom, ans_set_fin, inl_folders
-from keyboards.regular import main_key, back_key, skip_desc
+from keyboards.inline import today, ans_enter_meth, obom, ans_set_fin, inl_folders, remove_att
+from keyboards.regular import main_key, back_key, skip_desc, adm_default, attach_done
 from data import dict, config
 from datetime import datetime, timedelta, timezone
 from states import creates
 from aiogram.fsm.context import FSMContext
 from utils.yau import get_text, get_ans_text
 from time import sleep
+import json
 
 test = Router()
 
@@ -58,9 +59,9 @@ async def get_about(message: types.Message, state: FSMContext):
 
 @test.message(creates.instructions, F.text == dict.skip)
 async def get_instructions(message: types.Message, state: FSMContext):
-    await state.update_data(instructions=None)
-    await message.answer(f"{await get_text(state)}\nPlease, send the number of questions.", reply_markup=back_key)
-    await state.set_state(creates.number)
+    await state.update_data(instructions=None, attaches=[])
+    await state.set_state(creates.attachments)
+    await message.answer(f"{await get_text(state)}\nPlease, send the attachments if any and press done if you're.", reply_markup=attach_done)
 
 @test.message(creates.instructions, F.text == dict.back)
 async def back_to_about(message: types.Message, state: FSMContext):
@@ -69,14 +70,68 @@ async def back_to_about(message: types.Message, state: FSMContext):
 
 @test.message(creates.instructions)
 async def get_instructions(message: types.Message, state: FSMContext):
-    await state.update_data(instructions=message.text)
+    await state.update_data(instructions=message.text, attaches=[])
+    await state.set_state(creates.attachments)
+    await message.answer(f"{await get_text(state)}\nPlease, send the attachments if any and press done if you're.", reply_markup=attach_done)
+
+@test.message(creates.attachments, F.text == dict.done)
+async def done_attachments(message: types.Message, state: FSMContext):
     await message.answer(f"{await get_text(state)}\nPlease, send the number of questions.", reply_markup=back_key)
     await state.set_state(creates.number)
 
-@test.message(creates.number, F.text == dict.back)
+@test.message(creates.attachments, F.text == dict.back)
 async def back_to_instructions(message: types.Message, state: FSMContext):
     await message.answer(f"{await get_text(state)}\nPlease, send the new instructions.", reply_markup=skip_desc)
     await state.set_state(creates.instructions)
+
+@test.message(creates.attachments)
+async def get_attachments(message: types.Message, state: FSMContext):
+    data = await state.get_data()
+    attaches = data.get("attaches")
+    num = 1
+    if not attaches:
+        attaches = []
+    else:
+        num = attaches[-1][0] + 1
+    if message.photo:
+        attaches.append((num, message.photo[-1].file_id, message.caption, "photo"))
+    elif message.document:
+        attaches.append((num, message.document.file_id, message.caption, "document"))
+    else:
+        await message.answer(f"{await get_text(state)}\n❗️ Please, send only photos or documents.")
+        return
+    await state.update_data(attaches=attaches)
+    await message.reply(f"🗃 Attachment {html.bold(f"#{len(attaches)}")} added.\n\nSend more attachments if needed or press done.", reply_markup=attach_done)
+    
+
+@test.message(creates.number, F.text == dict.back)
+async def back_to_instructions(message: types.Message, state: FSMContext):
+    data = await state.get_data()
+    await state.set_state(creates.attachments)
+    attaches = data.get("attaches")
+    if attaches:
+        for idx, fileid, caption, ty in attaches:
+            # attach_from_db = db.fetchone("SELECT idx, tgfileid, caption FROM attachments WHERE id = %s", (i,))
+            if ty == "document":
+                await message.answer_document(document=fileid, caption=caption, reply_markup=remove_att(idx)) 
+            elif ty == "photo":
+                await message.answer_photo(photo=fileid, caption=caption, reply_markup=remove_att(idx))
+            else:
+                await message.answer(f"Attachment {html.bold(f"#{idx}")} type not recognized.")
+    await message.answer(f"Delete the unwanted attachments by clicking on them.\n\nAnd send new attachments for the test with captions if needed.", reply_markup=attach_done)
+
+@test.callback_query(CbDataStartsWith("rma_"), creates.attachments)
+async def remove_attach(query: types.CallbackQuery, state: FSMContext):
+    idx = int(query.data.split("_")[1])
+    data = await state.get_data()
+    attaches = data.get("attaches")
+    for i in range(len(attaches)):
+        if attaches[i][0] == idx:
+            attaches.pop(i)
+            break
+    await state.update_data(attaches=attaches)
+    await query.answer("Attachment removed.")
+    await query.message.delete()
 
 @test.message(creates.number)
 async def get_number(message: types.Message, state: FSMContext):
@@ -89,7 +144,7 @@ async def get_number(message: types.Message, state: FSMContext):
     if numq < 1 or numq > 100:
         await message.answer(f"{await get_text(state)}\n❗️ Please, send the number of questions from 1 to 100.")
         return
-    await state.update_data(numquest=numq)
+    await state.update_data(numquest=numq, vis=1, resub=1, folder=None)
     await state.update_data(donel=[None for i in range(numq)])
     await state.update_data(typesl=[config.MULTIPLE_CHOICE_DEF for i in range(numq)])
     await message.answer(f"{await get_text(state)}\nPlease, send the date in the following format:\n{html.code(f"DD MM YYYY")}", reply_markup=today)
@@ -103,7 +158,7 @@ async def back_to_number(message: types.Message, state: FSMContext):
 @test.message(creates.sdate)
 async def get_sdate(message: types.Message, state: FSMContext):
     try:
-        sdate = datetime.strptime(message.text, "%d %m %Y")
+        sdate = datetime.strptime(message.text, "%d %m %Y").replace(tzinfo=timezone(timedelta(hours=5)))
         if sdate < datetime.now(timezone(timedelta(hours=5))) - timedelta(days=1):
             await message.answer(f"{await get_text(state)}\n❗️ Please, send a date that is today or later.")
             return
@@ -165,6 +220,7 @@ async def set_mcq(query: types.CallbackQuery, state: FSMContext):
     page = data.get("page")
     cur_ans = query.data.split("_")[1]
     donel[curq-1] = cur_ans
+    ans_confirm = bool(data.get("ans_confirm"))
     await query.answer(f"🟢 #{curq} is {cur_ans}")
     new_cur = -1
     for i in range(len(donel)):
@@ -172,9 +228,20 @@ async def set_mcq(query: types.CallbackQuery, state: FSMContext):
             new_cur = i+1
             break
     if new_cur == -1:
-        await state.set_state(creates.setts)
-        await state.update_data(vis=0, resub=0, folder=None)
-        await query.message.edit_text(f"{await get_text(state)}\n{get_ans_text(donel, typesl)}\nPlease, change the settings as you wish. (Pressing toggles on/off)", reply_markup=ans_set_fin(1, 1))
+        # await state.set_state(creates.setts)
+        vis = data.get("vis")
+        resub = data.get("resub")
+        folder = data.get("folder")
+        # await state.update_data(vis=0, resub=0, folder=None)
+        await query.message.edit_text(f"{html.blockquote('ps. 🟢 - done, 🟡 - current, 🔴 - not done (yes, traffic lights, you dumb*ss)')}"
+            f"\n\n{get_ans_text(donel, typesl)}"
+            f"\n\nPlease, {html.underline('choose' if typesl[curq-1] > 0 else 'send')} the right answer for question {html.bold(f'#{curq}/{numq}')}:"
+            f"\n\n{html.bold("Note: you have entered all the answers. You can change the answers for each question by clicking on the question number, navigating through pages.")}",
+            reply_markup=obom(curq, numq, donel, typesl, page, confirm=True)
+        )
+        await state.update_data(ans_confirm=True)
+        # await state.set_state(creates.ans_confirm)
+        # await query.message.edit_text(f"{await get_text(state)}\n{get_ans_text(donel, typesl)}\nPlease, change the settings as you wish. (Pressing toggles on/off)", reply_markup=ans_set_fin(1, 1))
         return
     new_page = (new_cur-1)//config.MAX_QUESTION_IN_A_PAGE + 1
     page = new_page
@@ -182,9 +249,9 @@ async def set_mcq(query: types.CallbackQuery, state: FSMContext):
     await query.message.edit_text(f"{html.blockquote('ps. 🟢 - done, 🟡 - current, 🔴 - not done (yes, traffic lights, you dumb*ss)')}"
         f"\n\n{get_ans_text(donel, typesl)}"
         f"\n\nPlease, {html.underline('choose')} the right answer for question {html.bold(f'#{new_cur}/{numq}')}:",
-        reply_markup=obom(new_cur, numq, donel, typesl, page)
+        reply_markup=obom(new_cur, numq, donel, typesl, page, ans_confirm)
     )
-    await state.set_state(creates.ans)
+    # await state.set_state(creates.ans)
 
 @test.callback_query(creates.ans, CbDataStartsWith("test_"))
 async def test_plus(query: types.CallbackQuery, state: FSMContext):
@@ -195,6 +262,7 @@ async def test_plus(query: types.CallbackQuery, state: FSMContext):
     numq = data.get("numquest")
     page = data.get("page")
     donel = data.get("donel")
+    ans_confirm = bool(data.get("ans_confirm"))
     sign = query.data.split("_")[1]
     if sign == "plus":
         if typesl[curq-1] == 6:
@@ -204,11 +272,15 @@ async def test_plus(query: types.CallbackQuery, state: FSMContext):
     elif sign == "minus":
         if typesl[curq-1] == 2:
             await query.answer("Can't have less than 2 choices.")
-            return    
+            return
+        diff = ord(donel[curq-1])-ord("A")
+        if diff+1 == typesl[curq-1]:
+            await query.answer("Can't have less choices than the answer.")
+            return
         typesl[curq-1] -= 1
     await query.answer(f"Now {typesl[curq-1]} choices.")
     await state.update_data(typesl=typesl)
-    await query.message.edit_text(f"Please, {html.underline("choose")} the right answer for question {html.bold(f'#{curq}/{numq}')}:\n\n{get_ans_text(donel, typesl)}\n\n{html.blockquote("ps. 🟢 - done, 🟡 - current, 🔴 - not done (yes, traffic lights, you dumb*ss)")}", reply_markup=obom(curq, numq, donel, typesl, page))
+    await query.message.edit_text(f"{html.blockquote("ps. 🟢 - done, 🟡 - current, 🔴 - not done (yes, traffic lights, you dumb*ss)")}\n\n{get_ans_text(donel, typesl)}\n\nPlease, {html.underline("choose")} the right answer for question {html.bold(f'#{curq}/{numq}')}:", reply_markup=obom(curq, numq, donel, typesl, page, ans_confirm))
 
 @test.callback_query(creates.ans, CbDataStartsWith("page_"))
 async def browse_page(query: types.CallbackQuery, state: FSMContext):
@@ -219,6 +291,7 @@ async def browse_page(query: types.CallbackQuery, state: FSMContext):
     numq = data.get("numquest")
     page = int(data.get("page"))
     donel = data.get("donel")
+    ans_confirm = bool(data.get("ans_confirm"))
     sign = query.data.split("_")[1]
     if sign == "next":
         if page == (numq+config.MAX_QUESTION_IN_A_PAGE-1)//config.MAX_QUESTION_IN_A_PAGE:
@@ -234,13 +307,14 @@ async def browse_page(query: types.CallbackQuery, state: FSMContext):
         await query.answer("There just for decoration ;)")
         return
     await state.update_data(page=page)
-    await query.message.edit_text(f"Please, {html.underline("choose")} the right answer for question {html.bold(f'#{curq}/{numq}')}:\n\n{get_ans_text(donel, typesl)}\n\n{html.blockquote("ps. 🟢 - done, 🟡 - current, 🔴 - not done (yes, traffic lights, you dumb*ss)")}", reply_markup=obom(curq, numq, donel, typesl, page))
+    await query.message.edit_text(f"Please, {html.underline("choose")} the right answer for question {html.bold(f'#{curq}/{numq}')}:\n\n{get_ans_text(donel, typesl)}\n\n{html.blockquote("ps. 🟢 - done, 🟡 - current, 🔴 - not done (yes, traffic lights, you dumb*ss)")}", reply_markup=obom(curq, numq, donel, typesl, page, ans_confirm))
 
 @test.callback_query(creates.ans, CbData("switch_open"))
 async def switch_to_open(query: types.CallbackQuery, state: FSMContext):
     data = await state.get_data()
     curq = data.get("curq")
     typesl = data.get("typesl")
+    ans_confirm = bool(data.get("ans_confirm"))
     # Switch to open ended mode by setting current typesl to 0
     typesl[curq-1] = 0
     await state.update_data(typesl=typesl)
@@ -252,7 +326,7 @@ async def switch_to_open(query: types.CallbackQuery, state: FSMContext):
         f"{html.blockquote('ps. 🟢 - done, 🟡 - current, 🔴 - not done (yes, traffic lights, you dumb*ss)')}"
         f"\n\n{get_ans_text(donel, typesl)}"
         f"\n\nPlease, {html.underline('send')} the right answer for question {html.bold(f'#{curq}/{numq}')}:",
-        reply_markup=obom(curq, numq, donel, typesl, page)
+        reply_markup=obom(curq, numq, donel, typesl, page, ans_confirm)
     )
 
 @test.callback_query(creates.ans, CbData("switch_mcq"))
@@ -267,11 +341,12 @@ async def switch_to_mcq(query: types.CallbackQuery, state: FSMContext):
     donel = data.get("donel")
     numq = data.get("numquest")
     page = data.get("page")
+    ans_confirm = bool(data.get("ans_confirm"))
     await query.message.edit_text(
         f"{html.blockquote('ps. 🟢 - done, 🟡 - current, 🔴 - not done (yes, traffic lights, you dumb*ss)')}"
         f"\n\n{get_ans_text(donel, typesl)}"
         f"\n\nPlease, {html.underline('choose')} the right answer for question {html.bold(f'#{curq}/{numq}')}:",
-        reply_markup=obom(curq, numq, donel, typesl, page)
+        reply_markup=obom(curq, numq, donel, typesl, page, ans_confirm)
     )
 
 @test.callback_query(creates.ans, CbDataStartsWith("jump_"))
@@ -286,13 +361,14 @@ async def jump_to(query: types.CallbackQuery, state: FSMContext):
     typesl = data.get("typesl")
     numq = data.get("numquest")
     page = data.get("page")
+    ans_confirm = bool(data.get("ans_confirm"))
     await state.update_data(curq=new_cur)
     if typesl[new_cur-1] == 0:
         await query.message.edit_text(
             f"{html.blockquote('ps. 🟢 - done, 🟡 - current, 🔴 - not done (yes, traffic lights, you dumb*ss)')}"
             f"\n\n{get_ans_text(donel, typesl)}"
             f"\n\nPlease, {html.underline('send')} the right answer for question {html.bold(f'#{new_cur}/{numq}')}:",
-            reply_markup=obom(new_cur, numq, donel, typesl, page)
+            reply_markup=obom(new_cur, numq, donel, typesl, page, ans_confirm)
         )
     else:
         await query.message.edit_text(
@@ -300,18 +376,21 @@ async def jump_to(query: types.CallbackQuery, state: FSMContext):
             f"{html.blockquote('ps. 🟢 - done, 🟡 - current, 🔴 - not done (yes, traffic lights, you dumb*ss)')}"
             f"\n\n{get_ans_text(donel, typesl)}"
             f"\n\nPlease, {html.underline('choose')} the right answer for question {html.bold(f'#{new_cur}/{numq}')}:",
-            reply_markup=obom(new_cur, numq, donel, typesl, page)
+            reply_markup=obom(new_cur, numq, donel, typesl, page, ans_confirm)
         )
 
 @test.message(creates.ans, F.text == dict.back)
 async def back_to_way(message: types.Message, state: FSMContext):
-    data = await state.get_data()
+    # data = await sta/te.get_data()
     # curq = data.get("curq")
     # typesl = data.get("typesl")
     # numq = data.get("numquest")
     # page = data.get("page")
     # donel = data.get("donel")
-    await state.update_data(entering=None)
+    # entering = data.get("entering")
+    # if entering != "all":
+
+    # await state.update_data(entering=None)
     await message.answer(f"{await get_text(state)}\nPlease, choose the way you want to enter the answers (multiple answers only possible with all at once option):", reply_markup=ans_enter_meth)
     await state.set_state(creates.way)
 
@@ -335,7 +414,7 @@ async def get_open_ans(message: types.Message, state: FSMContext):
             donel = ans
             # await state.update_data(donel=donel)
             for i in range(len(donel)):
-                type = typesl[i]
+                qtype = typesl[i]
                 if type(donel[i]) == list:
                     for j in donel[i]:
                         if len(j) > 1 or j not in ["A", "B", "C", "D", "E", "F"]:
@@ -348,11 +427,14 @@ async def get_open_ans(message: types.Message, state: FSMContext):
                     else:
                         typesl[i] = max(typesl[i], ord(donel[i]) - ord("A") + 1)
             await state.update_data(typesl=typesl, donel=donel)
-            await state.update_data(curq=new_cur, donel=donel, page=page)
-            await message.answer(f"{await get_text(state)}\n{get_ans_text(donel, typesl)}\nPlease, change the settings as you wish. (Pressing toggles on/off)", reply_markup=ans_set_fin(1, 1)
+            await state.update_data(donel=donel)
+            vis = data.get("vis")
+            resub = data.get("resub")
+            folder = data.get("folder")
+            await message.answer(f"{await get_text(state)}\n{get_ans_text(donel, typesl)}\nPlease, change the settings as you wish. (Pressing toggles on/off)", reply_markup=ans_set_fin(vis, resub, folder)
             )
             await state.set_state(creates.setts)
-
+            return
         else:
             await message.answer(f"Please, send all the answers.\nLooks like you have only {cnt}/{numq} answers.")
             return
@@ -361,6 +443,7 @@ async def get_open_ans(message: types.Message, state: FSMContext):
     donel = data.get("donel")
     page = data.get("page")
     msg = data.get("msg")
+    ans_confirm = bool(data.get("ans_confirm"))
     if typesl[curq-1] == 0:
         donel[curq-1] = message.text
         msg = await message.answer(f"🟢 #{curq} is {message.text}")
@@ -372,7 +455,10 @@ async def get_open_ans(message: types.Message, state: FSMContext):
         if new_cur == -1:
             await state.set_state(creates.setts)
             await state.update_data(curq=new_cur, donel=donel, page=page)
-            await message.answer(f"{await get_text(state)}\n{get_ans_text(donel, typesl)}\nPlease, change the settings as you wish.", reply_markup=ans_set_fin(1, 1))
+            vis = data.get("vis")
+            resub = data.get("resub")
+            folder = data.get("folder")
+            await message.answer(f"{await get_text(state)}\n{get_ans_text(donel, typesl)}\nPlease, change the settings as you wish.", reply_markup=ans_set_fin(vis, resub, folder))
             return
         new_page = (new_cur-1)//config.MAX_QUESTION_IN_A_PAGE + 1
         page = new_page
@@ -387,10 +473,10 @@ async def get_open_ans(message: types.Message, state: FSMContext):
             f"\n\n{get_ans_text(donel, typesl)}"
             f"\n\nPlease, {html.underline('choose')} the right answer for question {html.bold(f'#{new_cur}/{numq}')}:",
             chat_id=message.chat.id,
-            message_id=msg,
-            reply_markup=obom(new_cur, numq, donel, typesl, page)
+            message_id=msg.message_id,
+            reply_markup=obom(new_cur, numq, donel, typesl, page, ans_confirm)
         )
-        await state.set_state(creates.setts)
+        # await state.set_state(creates.setts)
         await message.delete()
         await msg.delete()
     else:
@@ -407,9 +493,35 @@ async def back_to_ans(message: types.Message, state: FSMContext):
     numq = data.get("numquest")
     page = data.get("page")
     donel = data.get("donel")
-    await message.answer(f"{await get_text(state)}\n{get_ans_text(donel, typesl)}\nPlease, change the settings as you wish. (Pressing toggles on/off)", reply_markup=ans_set_fin(curq, numq))
-    await state.set_state(creates.setts)
+    entering = data.get("entering")
+    await state.set_state(creates.ans)
+    if entering == "all":
+        await message.answer(f"{await get_text(state)}\nPlease, send the answers in the following format:\n{html.code('Answer1\nAnswer2\nAnswer3,AgainAnswer3')}")
+        return
+    else:
+        await message.answer(
+            f"{html.blockquote('ps. 🟢 - done, 🟡 - current, 🔴 - not done (yes, traffic lights, you dumb*ss)')}"
+            f"\n\n{get_ans_text(donel, typesl)}"
+            f"\n\nPlease, {html.underline('choose' if typesl[curq-1] > 0 else 'send')} the right answer for question {html.bold(f'#{curq}/{numq}')}:"
+            f"\n\n{html.bold("Note: you have entered all the answers. You can change the answers for each question by clicking on the question number, navigating through pages.")}",
+            
+            reply_markup=obom(curq, numq, donel, typesl, page, confirm=True))
+        await state.update_data(ans_confirm=True)
 
+@test.callback_query(CbData("continue"), creates.ans)
+async def confirm_ans(query: types.CallbackQuery, state: FSMContext):
+    data = await state.get_data()
+    curq = data.get("curq")
+    typesl = data.get("typesl")
+    numq = data.get("numquest")
+    page = data.get("page")
+    donel = data.get("donel")
+    vis = data.get("vis")
+    resub = data.get("resub")
+    folder = data.get("folder")
+    await state.set_state(creates.setts)
+    # await state.update_data()
+    await query.message.edit_text(f"{await get_text(state)}\n{get_ans_text(donel, typesl)}\nPlease, change the settings as you wish. (Pressing toggles on/off)", reply_markup=ans_set_fin(vis, resub, folder))
 
 @test.callback_query(creates.setts, CbData("folder"))
 async def set_folder(query: types.CallbackQuery, state: FSMContext):
@@ -420,15 +532,28 @@ async def set_folder(query: types.CallbackQuery, state: FSMContext):
     await query.message.edit_text("Please, choose the folder:", reply_markup=inl_folders(folders))
 
 @test.callback_query(creates.setts, CbData("back"))
-async def back_to_ans(query: types.CallbackQuery, state: FSMContext):
+async def back_to_ans(callback: types.CallbackQuery, state: FSMContext):
     data = await state.get_data()
     curq = data.get("curq")
     typesl = data.get("typesl")
     numq = data.get("numquest")
     page = data.get("page")
     donel = data.get("donel")
-    await query.message.edit_text(f"{await get_text(state)}\n{get_ans_text(donel, typesl)}\nPlease, change the settings as you wish. (Pressing toggles on/off)", reply_markup=ans_set_fin(curq, numq))
-
+    entering = data.get("entering")
+    await state.set_state(creates.ans)
+    if entering == "all":
+        await callback.message.edit_text(f"{await get_text(state)}\nPlease, send the answers in the following format:\n{html.code('Answer1\nAnswer2\nAnswer3,AgainAnswer3')}")
+        return
+    else:
+        await callback.message.edit_text(
+            f"{html.blockquote('ps. 🟢 - done, 🟡 - current, 🔴 - not done (yes, traffic lights, you dumb*ss)')}"
+            f"\n\n{get_ans_text(donel, typesl)}"
+            f"\n\nPlease, {html.underline('choose' if typesl[curq-1] > 0 else 'send')} the right answer for question {html.bold(f'#{curq}/{numq}')}:"
+            f"\n\n{html.bold("Note: you have entered all the answers. You can change the answers for each question by clicking on the question number, navigating through pages.")}",
+            
+            reply_markup=obom(curq, numq, donel, typesl, page, confirm=True))
+        await state.update_data(ans_confirm=True)
+        # await state.set_state(creates.ans)
 
 
 @test.callback_query(creates.setts, CbDataStartsWith("vis_"))
@@ -439,11 +564,70 @@ async def toggle_visibility(query: types.CallbackQuery, state: FSMContext):
     donel = data.get("donel")
     curq = data.get("curq")
     resub = data.get("resub")
+    folder = data.get("folder")
     vis = query.data.split("_")[1]
-    if vis == "on":
-        await query.answer("Visibility now on.")
-    else:
-        await query.answer("Visibility now off.")
+    await query.answer(f"👁 Visibility now - {vis.capitalize()}.")
+    # if vis == "on":
+    #     await query.answer("Visibility now on.")
+    # else:
+    #     await query.answer("Visibility now off.")
+        # vis = "off"
     await state.update_data(vis=vis=="on")
 
-    await query.message.edit_text(f"{await get_text(state)}\n{get_ans_text(donel, typesl)}\nPlease, change the settings as you wish. (Pressing toggles on/off)", reply_markup=ans_set_fin(vis=="on", ))
+    await query.message.edit_text(f"{await get_text(state)}\n{get_ans_text(donel, typesl)}\nPlease, change the settings as you wish. (Pressing toggles on/off)", reply_markup=ans_set_fin(vis=="on", resub, folder))
+
+@test.callback_query(creates.setts, CbDataStartsWith("resub_"))
+async def toggle_resubmission(query: types.CallbackQuery, state: FSMContext):
+    data = await state.get_data()
+    numq = data.get("numquest")
+    typesl = data.get("typesl")
+    donel = data.get("donel")
+    curq = data.get("curq")
+    resub = data.get("resub")
+    folder = data.get("folder")
+    vis = data.get("vis")
+    resub = query.data.split("_")[1]
+    await query.answer(f"Resubmission now - {resub.capitalize()}.")
+    # if vis == "on":
+    #     await query.answer("Visibility now on.")
+    # else:
+    #     await query.answer("Visibility now off.")
+        # vis = "off"
+    await state.update_data(resub=resub=="on")
+
+    await query.message.edit_text(f"{await get_text(state)}\n{get_ans_text(donel, typesl)}\nPlease, change the settings as you wish. (Pressing toggles on/off)", reply_markup=ans_set_fin(vis, resub=="on", folder))
+
+@test.callback_query(creates.setts, CbData("folder"))
+async def set_folder(query: types.CallbackQuery, state: FSMContext):
+    folders = db.fetchall("SELECT * FROM folders")
+    if not folders:
+        await query.answer("No folders found, create one first")
+        return
+    await query.message.edit_text("Please, choose the folder:", reply_markup=inl_folders(folders))
+
+@test.callback_query(creates.setts, CbData("continue"))
+async def finalize_test(query: types.CallbackQuery, state: FSMContext):
+    data = await state.get_data()
+    title = data.get("title")
+    about = data.get("about")
+    instructions = data.get("instructions")
+    numquest = data.get("numquest")
+    sdate = data.get("sdate")
+    # Assume that the correct answers and types are stored in state under keys 'donel' and 'typesl'
+    donel = data.get("donel")
+    typesl = data.get("typesl")
+    # Pack correct answers and types in JSON for later homework processing
+    test_info = {"answers": donel, "types": typesl}
+    # Insert new exam/test record. Field order: idx, title, about, instructions, num_questions, correct, sdate, resub, folder, hide
+    query_str = """INSERT INTO exams (title, about, instructions, num_questions, correct, sdate, random) 
+                   VALUES (%s, %s, %s, %s, %s, %s, %s)"""
+    random_text = datetime.now().strftime("%Y%m%d%H%M%S")
+    db.query(query_str, (title, about, instructions, numquest, json.dumps(test_info), sdate, random_text))
+    attaches = data.get("attaches")
+    exid = db.fetchone("SELECT idx FROM exams WHERE random = %s", (random_text,))[0]
+    if attaches:
+        for idx, fileid, caption in attaches:
+            db.query("INSERT INTO attachments (tgfileid, caption, exid) VALUES (%s, %s, %s)", (fileid, caption, exid))
+    await query.message.edit_text(f"📕 Test {html.bold(f"{title}")} created and stored successfully with its attachments.")
+    await query.message.answer(f"Back to {html.bold(f"{dict.main_menu}")}", reply_markup=adm_default)
+    await state.clear()

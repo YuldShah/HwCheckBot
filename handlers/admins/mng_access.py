@@ -24,7 +24,7 @@ async def manage_access(message: types.Message, state: FSMContext):
 @access.callback_query(CbData("post"), accstates.acmenu)
 async def post_c(callback: types.CallbackQuery, state: FSMContext):
     await state.set_state(accstates.post)
-    response = "Here you can change or reset the permission giving chat."
+    response = "Here you can change or reset the permission giving chat.\n\nThe bot will automatically give permissions to members of the following chat."
     channel = db.fetchone("SELECT title, link FROM channel")
     print(channel)
     if not channel:
@@ -49,7 +49,7 @@ async def setnew(callback: types.CallbackQuery, state: FSMContext):
 async def back_to_c(message: types.Message, state: FSMContext):
     await state.set_state(accstates.post)
     await message.answer("Back to posting channel menu", reply_markup=main_key)
-    response = "Here you can change or reset the permission giving chat."
+    response = "Here you can change or reset the permission giving chat.\n\nThe bot will automatically give permissions to members of the following chat."
     channel = db.fetchone("SELECT title, link FROM channel")
     print(channel)
     if not channel:
@@ -100,9 +100,10 @@ async def get_link(message: types.Message, state: FSMContext):
         print(lk)
         await message.answer("Please, make sure to add the bot to the chat as an admin, chat exists and try again")
         return
+    title = channel_info.title
     print(title, lk)
     print(channel_info)
-    title = channel_info.title
+
 
     
     await state.set_state(accstates.confirm)
@@ -164,12 +165,93 @@ async def confirm(callback: types.CallbackQuery, state: FSMContext) -> None:
 @access.callback_query(CbData("manually"))
 async def manually(callback: types.CallbackQuery, state: FSMContext) -> None:
     await state.set_state(accstates.manl)
-    await callback.message.answer("You can give or remove access to users manually here", reply_markup=man_access)
-    await callback.message.delete()
+    await callback.message.edit_text("You can give or remove access to users manually here", reply_markup=man_access)
+    # await callback.message.delete()
 
+@access.callback_query(CbData("back"), accstates.manl)
+async def back_to_m(callback: types.CallbackQuery, state: FSMContext) -> None:
+    await state.set_state(accstates.acmenu)
+    await callback.message.edit_text(f"Here you can manage the access of users to the bot", reply_markup=access_menu)
+    # await callback.message.delete()
 
 @access.callback_query(CbData("add_access"))
 async def add_access(callback: types.CallbackQuery, state: FSMContext) -> None:
-    await state.set_state(accstates.add)
-    await callback.message.edit_text("Forward the message of the user you want to give access to the bot, or give the id, username of the user.", reply_markup=back_key)
-    # await callback.message.delete()
+    await state.set_state(accstates.adda)
+    await callback.message.answer("Forward the message of the user you want to give access to the bot, or give the id of the user.", reply_markup=back_key)
+    await callback.message.delete()
+
+@access.message(F.text == dict.back, accstates.adda)
+async def back_to_a(message: types.Message, state: FSMContext) -> None:
+    await message.answer("Back to the access menu.", reply_markup=main_key)
+    await state.set_state(accstates.manl)
+    await message.answer("You can give or remove access to users manually here", reply_markup=man_access)
+
+@access.message(accstates.adda)
+async def add_access(message: types.Message, state: FSMContext) -> None:
+    if message.forward_from:
+        userid = message.forward_from.id
+        username = message.forward_from.username
+        mention = message.forward_from.mention_html()
+    elif message.text.isnumeric():
+        userid = int(message.text)
+        mention = f"<a href='tg://user?id={userid}'>{userid}</a>"
+    else:
+        await message.answer("This message neither forwarded from private chat nor includes a valid user id. Forward a message from the private chat to here (Make sure the message was sent by a user)\n\nOr send the user id")
+        return
+    exist = db.fetchone("SELECT idx, allowed FROM users WHERE userid=%s::text", (userid,))
+    if exist:
+        if exist[1]:
+            await message.answer(f"{mention} already has access to the bot.\n\nBack to the access menu.")
+            await state.set_state(accstates.manl)
+            await message.answer("You can give or remove access to users manually here", reply_markup=man_access)
+            return
+        else:
+            db.query("UPDATE users SET allowed = TRUE WHERE idx = %s", (exist[0],))
+            await message.answer(f"{mention} has been given access to the bot.\n\nBack to the access menu.")
+            await state.set_state(accstates.manl)
+            await message.answer("You can give or remove access to users manually here", reply_markup=man_access)
+            return
+    db.query("INSERT INTO users (userid, allowed) VALUES (%s, TRUE)", (userid,))
+
+    await message.answer(f"{mention} has been given access to the bot.\n\nBack to the access menu.")
+    await state.set_state(accstates.manl)
+    await message.answer("You can give or remove access to users manually here", reply_markup=man_access)
+
+@access.callback_query(CbData("remove_access"))
+async def remove_access(callback: types.CallbackQuery, state: FSMContext) -> None:
+    await state.set_state(accstates.rema)
+    await callback.message.answer("Forward the message of the user you want to remove access to the bot, or give the id of the user.", reply_markup=back_key)
+    await callback.message.delete()
+
+@access.message(F.text == dict.back, accstates.rema)
+async def back_to_r(message: types.Message, state: FSMContext) -> None:
+    await message.answer("Back to the access menu.", reply_markup=main_key)
+    await state.set_state(accstates.manl)
+    await message.answer("You can give or remove access to users manually here", reply_markup=man_access)
+
+@access.message(accstates.rema)
+async def remove_access(message: types.Message, state: FSMContext) -> None:
+    if message.forward_from:
+        userid = message.forward_from.id
+        username = message.forward_from.username
+        mention = message.forward_from.mention_html()
+    elif message.text.isnumeric():
+        userid = int(message.text)
+        mention = f"<a href='tg://user?id={userid}'>{userid}</a>"
+    else:
+        await message.answer("This message neither forwarded from private chat nor includes a valid user id. Forward a message from the private chat to here (Make sure the message was sent by a user)\n\nOr send the user id")
+        return
+    exist = db.fetchone("SELECT idx, allowed FROM users WHERE userid=%s::text", (userid,))
+    if exist:
+        if not exist[1]:
+            await message.answer(f"{mention} already doesn't have access to the bot.\n\nBack to the access menu.")
+            await state.set_state(accstates.manl)
+            await message.answer("You can give or remove access to users manually here", reply_markup=man_access)
+            return
+        else:
+            db.query("UPDATE users SET allowed = 0 WHERE idx = %s", (exist[0],))
+            await message.answer(f"{mention} has been removed access to the bot.\n\nBack to the access menu.")
+            await state.set_state(accstates.manl)
+            await message.answer("You can give or remove access to users manually here", reply_markup=man_access)
+            return
+    await message.answer(f"{mention} already doesn't have access to the bot.\n\nBack to the access menu.")

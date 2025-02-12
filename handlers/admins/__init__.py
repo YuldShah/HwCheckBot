@@ -4,3 +4,4 @@ from .allowance import allow
 from .mng_access import access
 from .create_test import test
 from .mng_archive import arch
+from .stats import stater

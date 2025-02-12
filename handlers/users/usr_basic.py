@@ -3,6 +3,7 @@ from data import config, dict
 from aiogram.filters import CommandStart, Command
 from aiogram.fsm.context import FSMContext
 from keyboards.regular import user_markup
+from keyboards.inline import goto_bot
 from filters import IsUser, IsUserCallback, CbData, CbDataStartsWith, IsSubscriber
 
 user = Router()
@@ -28,3 +29,10 @@ async def results(message: types.Message):
 @user.message(F.text == dict.help_txt)
 async def help(message: types.Message):
     await message.answer("Bu yerda botni qanday qilib ishlatishingiz uchun yo'llanmalar bo'ladi. Hozircha hech narsa qo'shilmagan.")
+
+
+@user.callback_query(CbData("get_perm"))
+async def get_perm(callback: types.CallbackQuery):
+    # exist = db.fetchone("SELECT idx, allowed FROM users WHERE userid=%s::text", (callback.from_user.id,))
+    await callback.bot.edit_message_text(text="🎉 Sizga allaqachon ruxsat berilgan! Botdan bemalol foydalanishingiz mumkin!", inline_message_id=callback.inline_message_id, reply_markup=goto_bot(config.bot_info.username))
+    await callback.answer("🎉 Sizga ruxsat berilgan.")

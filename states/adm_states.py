@@ -11,6 +11,7 @@ class dels(StatesGroup):
 
 class sets(StatesGroup):
     smenu = State()
+    defs = State()
     ping = State()
 
 class accstates(StatesGroup):
@@ -23,20 +24,20 @@ class accstates(StatesGroup):
     
     manl = State()
     adda = State()
-    dela = State()
+    rema = State()
     confirm_add = State()
     confirm_del = State()
 
 class creates(StatesGroup):
     title = State()
     about = State()
-    instructions = State()  # New state added
+    instructions = State() 
+    attachments = State()
     number = State()
     sdate = State()
     # duration = State()
     way = State()
     ans = State()
-    back_way_conf = State()
     setts = State()
     confirm = State()
 
@@ -50,3 +51,6 @@ class arch_states(StatesGroup):
     edans = State()
     share = State()
     post = State()
+
+class stats(StatesGroup):
+    stmenu = State()

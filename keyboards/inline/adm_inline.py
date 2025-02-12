@@ -1,4 +1,4 @@
-from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup
+from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup, SwitchInlineQueryChosenChat
 from data import dict, config
 
 
@@ -59,7 +59,7 @@ btns3 = [
 ]
 ping_set = InlineKeyboardMarkup(inline_keyboard=btns3)
 
-def obom(cur, numq, donel, typesl, page=1):
+def obom(cur, numq, donel, typesl, page=1, confirm=False):
     """
     cur: current question number
     numq: total number of questions
@@ -69,6 +69,8 @@ def obom(cur, numq, donel, typesl, page=1):
     """
     mode = 1 if typesl[cur-1] > 0 else 0
     btns = []
+    if confirm:
+        btns.append([InlineKeyboardButton(text=dict.contin, callback_data="continue")])
     if mode == 1:
         arow = [InlineKeyboardButton(text="-", callback_data="test_minus")]
         for i in range(typesl[cur-1]):
@@ -115,7 +117,7 @@ def goto_bot(username):
 
     btns = [
         [
-            InlineKeyboardButton(text="Botni ishga tushirish", url=f"https://t.me/{username}")
+            InlineKeyboardButton(text="🤖 Botni ishga tushirish", url=f"https://t.me/{username}?start")
         ]
     ]
     return InlineKeyboardMarkup(inline_keyboard=btns)
@@ -125,6 +127,9 @@ btns5 = [
     [
         InlineKeyboardButton(text=dict.post, callback_data="post"),
         InlineKeyboardButton(text=dict.manually, callback_data="manually")
+    ],
+    [
+        InlineKeyboardButton(text="🔎 On inline mode", switch_inline_query_chosen_chat=SwitchInlineQueryChosenChat(query="allow", allow_user_chats=True))
     ]
 ]
 access_menu = InlineKeyboardMarkup(inline_keyboard=btns5)
@@ -148,18 +153,18 @@ btns7 = [
 today = InlineKeyboardMarkup(inline_keyboard=btns7)
 
 def ans_set_fin(visibility, resub, folder=None):
-    btns = []
+    btns = [[InlineKeyboardButton(text=dict.back, callback_data="back"), InlineKeyboardButton(text=dict.contin, callback_data="continue")]]
     if folder:
         btns.append([InlineKeyboardButton(text=dict.folder+folder, callback_data="folder")])
     else:
         btns.append([InlineKeyboardButton(text=dict.folder_not, callback_data="folder")])
     btns.append([
-            InlineKeyboardButton(text=dict.hide_not, callback_data=f"vis_on") if not visibility else InlineKeyboardButton(text=dict.hide_ok, callback_data="vis_off")
+            InlineKeyboardButton(text=dict.vis_cur_off, callback_data=f"vis_on") if not visibility else InlineKeyboardButton(text=dict.vis_cur_on, callback_data="vis_off")
         ])
     btns.append([
             InlineKeyboardButton(text=dict.resub_not, callback_data="resub_on") if not resub else InlineKeyboardButton(text=dict.resub_ok, callback_data="resub_off")
         ])
-    btns.append([InlineKeyboardButton(text=dict.contin, callback_data="continue")])
+    # btns.append()
     return InlineKeyboardMarkup(inline_keyboard=btns)
 
 def inl_folders(folders):
@@ -174,10 +179,20 @@ def get_create_folders(folders=[]):
     for i, j in folders:
         btns.append([InlineKeyboardButton(text=dict.j, callback_data=f"fmng_{i}")])
     btns.append([InlineKeyboardButton(text=dict.add_folder, callback_data="add_folder")])
+    return InlineKeyboardMarkup(inline_keyboard=btns)
 
 def get_folder_tests(tests):
     btns = []
     for i, j in tests:
         btns.append([InlineKeyboardButton(text=dict.j, callback_data=f"exman_{i}")])
     btns.append([InlineKeyboardButton(text=dict.back, callback_data="back")])
+    return InlineKeyboardMarkup(inline_keyboard=btns)
     # btns.append([InlineKeyboardButton(text=dict.add_folder, callback_data="")])
+
+def remove_att(attach_id):
+    btns = [
+        [
+            InlineKeyboardButton(text=dict.unattach, callback_data=f"rma_{attach_id}")
+        ]
+    ]
+    return InlineKeyboardMarkup(inline_keyboard=btns)

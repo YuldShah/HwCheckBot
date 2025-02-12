@@ -26,8 +26,9 @@ async def get_text(state: FSMContext):
     res += f"{html.italic("Title:")} {title}\n" if title else ""
     res += f"{html.italic("Description:")} {html.expandable_blockquote(about)}\n" if about else ""
     res += f"{html.italic("Instructions:")} {html.expandable_blockquote(instructions)}\n" if instructions else ""
+    res += f"{html.italic("Attachments:")} {html.bold(f'{len(data.get("attaches"))}')}\n" if data.get("attaches") else ""
     res += f"{html.italic("Number of questions:")} {html.bold(numquest)}\n" if numquest else ""
-    res += f"{html.italic("Start date:")} {html.bold(sdate)}\n" if sdate else ""
+    res += f"{html.italic("Running date:")} {html.bold(sdate)}\n" if sdate else ""
     # res += f"Duration: {html.bold(duration)} minutes\n" if duration else ""
     return res
 

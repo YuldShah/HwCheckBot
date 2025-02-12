@@ -14,3 +14,11 @@ btns1 = [
     ]
 ]
 back_inl_key = InlineKeyboardMarkup(inline_keyboard=btns1)
+
+btns2 = [
+    [
+        InlineKeyboardButton(text=dict.cancel, callback_data="cancel"),
+        InlineKeyboardButton(text=dict.confirm, callback_data="confirm")
+    ]
+]
+confirm_inl_key = InlineKeyboardMarkup(inline_keyboard=btns2)

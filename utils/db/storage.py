@@ -14,10 +14,11 @@ class DatabaseManager:
         try:
             self.query('''CREATE TABLE IF NOT EXISTS users (idx SERIAL PRIMARY KEY, userid TEXT, fullname TEXT, username TEXT, regdate TIMESTAMP DEFAULT CURRENT_TIMESTAMP, allowed INTEGER DEFAULT 0)''')
             self.query("CREATE TABLE IF NOT EXISTS folders (idx SERIAL PRIMARY KEY, title TEXT)")
-            self.query("CREATE TABLE IF NOT EXISTS exams (idx SERIAL PRIMARY KEY, title TEXT, about TEXT DEFAULT NULL, instructions TEXT, num_questions INTEGER, correct TEXT, sdate TEXT DEFAULT NULL, resub INTEGER DEFAULT 1, folder INTEGER DEFAULT NULL, hide INTEGER DEFAULT 0)")
+            self.query("CREATE TABLE IF NOT EXISTS exams (idx SERIAL PRIMARY KEY, title TEXT, about TEXT DEFAULT NULL, instructions TEXT, num_questions INTEGER, correct TEXT, sdate TEXT DEFAULT NULL, resub INTEGER DEFAULT 1, folder INTEGER DEFAULT NULL, hide INTEGER DEFAULT 0, random TEXT)")
             self.query("CREATE TABLE IF NOT EXISTS submissions(idx SERIAL PRIMARY KEY, userid TEXT, exid INTEGER, date TIMESTAMP DEFAULT CURRENT_TIMESTAMP, answers TEXT)")
             self.query("CREATE TABLE IF NOT EXISTS channel (idx SERIAL PRIMARY KEY, chid TEXT, title TEXT, link TEXT)")
             self.query("CREATE TABLE IF NOT EXISTS jobs (idx SERIAL PRIMARY KEY, type TEXT, data TEXT DEFAULT NULL, run TIMESTAMP NOT NULL, created TIMESTAMP DEFAULT CURRENT_TIMESTAMP, completed INTEGER DEFAULT 0)")
+            self.query("CREATE TABLE IF NOT EXISTS attachments (idx SERIAL PRIMARY KEY, tgfileid TEXT DEFAULT NULL, caption TEXT DEFAULT NULL, exid INTEGER DEFAULT NULL)")
         except DatabaseError as e:
             print(f"Error creating tables: {e}")
 

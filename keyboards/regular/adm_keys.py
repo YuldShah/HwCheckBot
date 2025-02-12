@@ -24,3 +24,11 @@ btns2 = [
     ]
 ]
 skip_desc = ReplyKeyboardMarkup(keyboard=btns2, resize_keyboard=True)
+
+btns3 = [
+    [
+        KeyboardButton(text=dict.back),
+        KeyboardButton(text=dict.done)
+    ]
+]
+attach_done = ReplyKeyboardMarkup(keyboard=btns3, resize_keyboard=True)

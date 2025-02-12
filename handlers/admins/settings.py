@@ -49,3 +49,14 @@ async def back_to_s(callback: types.CallbackQuery, state: FSMContext) -> None:
     await state.set_state(sets.smenu)
     await callback.message.edit_text("Here you can change some configuration settings, check the ping with the Telegram servers", reply_markup=set_menu)
     await callback.answer("Back to settings menu")
+
+@set.callback_query(CbData("defaults"), sets.smenu)
+async def defaults(callback: types.CallbackQuery, state: FSMContext) -> None:
+    await callback.message.edit_text("Here you will be able to change the defaule number of options for multiple choice questions, and the default number of questions that will be shown in a page and etc.", reply_markup=back_inl_key)
+    await state.set_state(sets.defs)
+
+@set.callback_query(CbData("back"), sets.defs)
+async def back_to_s(callback: types.CallbackQuery, state: FSMContext) -> None:
+    await state.set_state(sets.smenu)
+    await callback.message.edit_text("Here you can change some configuration settings, check the ping with the Telegram servers", reply_markup=set_menu)
+    await callback.answer("Back to settings menu")
