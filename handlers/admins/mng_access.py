@@ -160,3 +160,10 @@ async def manually(callback: types.CallbackQuery, state: FSMContext) -> None:
     await state.set_state(accstates.manl)
     await callback.message.answer("You can give or remove access to users manually here", reply_markup=man_access)
     await callback.message.delete()
+
+
+@access.callback_query(CbData("add_access"))
+async def add_access(callback: types.CallbackQuery, state: FSMContext) -> None:
+    await state.set_state(accstates.add)
+    await callback.message.edit_text("Forward the message of the user you want to give access to the bot, or give the id, username of the user.", reply_markup=back_key)
+    # await callback.message.delete()
