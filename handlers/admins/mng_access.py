@@ -54,7 +54,7 @@ async def back_to_c(message: types.Message, state: FSMContext):
     print(channel)
     if not channel:
         response = "The chat that users will be checked to give permission to the bot was not set, you can set a new one\n\nOnce you set a chat, the bot will automatically give permissions to members of that chat"
-    await message.answer(response, reply_markup=accstates(channel))
+    await message.answer(response, reply_markup=post_chan(channel))
 
 @access.message(accstates.link)
 async def get_link(message: types.Message, state: FSMContext):
