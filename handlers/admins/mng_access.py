@@ -144,7 +144,10 @@ async def confirm(callback: types.CallbackQuery, state: FSMContext) -> None:
         await msg.delete()
         # await callback.message.delete()
         return
-    db.query("DELETE FROM channel")
+    chck = db.fetchone("SELECT title FROM channel")
+    if chck:
+        db.query("DELETE FROM channel")
+    # db.query("DELETE FROM channel")
     db.query("INSERT INTO channel (chid, title, link) VALUES (%s, %s, %s)", (chid, title, link))
     await callback.answer(f"Successfully set")
     await callback.message.answer("Back to posting channel menu", reply_markup=main_key)
