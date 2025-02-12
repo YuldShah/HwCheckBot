@@ -17,10 +17,6 @@ async def start(message: types.Message, state: FSMContext):
     await message.answer_sticker("CAACAgIAAxkBAAIBt2emDv__wEe3FxrexsQkuXhfqM63AAJAAQACVp29CmzpW0AsSdYlNgQ")
     await message.answer(f"👋 Salom, {html.bold(message.from_user.mention_html())}! Botga xush kelibsiz!", reply_markup=user_markup)
 
-@user.message(F.text == dict.do_todays_hw)
-async def do_hw(message: types.Message):
-    await message.answer("Bugungi vazifa hali yuklangani yo'q yoki bugunga vazifa yo'q. Agar bu xato deb o'ylasangiz admin bilan bog'laning.")
-
 @user.message(F.text == dict.archive)
 async def archive(message: types.Message):
     await message.answer("Bu yerda arxivdagi vazifalar bo'ladi. Hozircha arxivda hech narsa yo'q.")

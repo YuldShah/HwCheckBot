@@ -80,9 +80,8 @@ async def get_link(message: types.Message, state: FSMContext):
     else:
         # chatid = None
         print(message.text)
-        if message.text.isnumeric():
+        if message.text[1:].isnumeric() and message.text.startswith("-100"):
             chanid = message.text
-
         else:
             await message.answer("This message neither forwarded from private chat nor includes a valid chat id. Forward a message from the private chat to here (Make sure the message was sent by the group as anonymous)\n\nOr send the chat id")
             return
