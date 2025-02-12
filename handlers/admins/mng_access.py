@@ -89,14 +89,21 @@ async def get_link(message: types.Message, state: FSMContext):
     try:
         channel_info = await bot.get_chat(chanid)
         mb_cnt = await bot.get_chat_member_count(chanid)
+        lk = (await bot.create_chat_invite_link(chat_id=chanid, name=f"Join link by {config.bot_info.username}")).invite_link
+            # except Exception as e:
+            #     print(e)
+            #     await message.answer("Please, make sure to add the bot to the chat as an admin and try again")
+            #     return
         # mebot = await bot.get_chat_member(chat_id=chanid, user_id=config.bot_info.id)
     except Exception as e:
         print(e)
         print(lk)
         await message.answer("Please, make sure to add the bot to the chat as an admin, chat exists and try again")
         return
-    # print(title, lk)
+    print(title, lk)
+    print(channel_info)
     title = channel_info.title
+
     
     await state.set_state(accstates.confirm)
     await state.update_data(title=title)
