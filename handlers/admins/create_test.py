@@ -102,6 +102,14 @@ async def back_to_number(message: types.Message, state: FSMContext):
 
 @test.message(creates.sdate)
 async def get_sdate(message: types.Message, state: FSMContext):
+    try:
+        sdate = datetime.strptime(message.text, "%d %m %Y")
+        if sdate < datetime.now(timezone(timedelta(hours=5))) - timedelta(days=1):
+            await message.answer(f"{await get_text(state)}\n❗️ Please, send a date that is today or later.")
+            return
+    except ValueError:
+        await message.answer(f"{await get_text(state)}\n❗️ Please, send the date in the correct format: {html.code('DD MM YYYY')}")
+        return
 
     await state.update_data(sdate=message.text)
     await message.answer(f"{await get_text(state)}\nPlease, choose the way you want to enter the answers (multiple answers only possible with all at once option):", reply_markup=ans_enter_meth)
