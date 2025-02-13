@@ -39,7 +39,7 @@ async def do_today_hw(message: types.Message, state: FSMContext):
     except Exception:
         await message.answer("Test tafsilotlarini yuklashda xatolik yuz berdi.", reply_markup=usr_main_key)
         return
-    await state.update_data(exam_id=exam_id,
+    await state.update_data(exam_id=exam_id, ans_confirm=False,
                             total=test[4], current=1, title=test[1], about=test[2], instructions=test[3],
                             correct=test_info.get("answers", []),
                             typesl=test_info.get("types", []),
@@ -218,6 +218,7 @@ async def handle_open_ended(message: types.Message, state: FSMContext):
         return
 
     donel = data.get("donel")
+    ans_confirm = data.get("ans_confirm")
     donel[curq-1] = message.text
     new_cur = -1
     for i, ans in enumerate(donel):
