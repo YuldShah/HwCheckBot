@@ -18,7 +18,7 @@ class DatabaseManager:
             self.query("CREATE TABLE IF NOT EXISTS submissions(idx SERIAL PRIMARY KEY, userid TEXT, exid INTEGER, date TIMESTAMP DEFAULT CURRENT_TIMESTAMP, answers TEXT)")
             self.query("CREATE TABLE IF NOT EXISTS channel (idx SERIAL PRIMARY KEY, chid TEXT, title TEXT, link TEXT)")
             self.query("CREATE TABLE IF NOT EXISTS jobs (idx SERIAL PRIMARY KEY, type TEXT, data TEXT DEFAULT NULL, run TIMESTAMP NOT NULL, created TIMESTAMP DEFAULT CURRENT_TIMESTAMP, completed INTEGER DEFAULT 0)")
-            self.query("CREATE TABLE IF NOT EXISTS attachments (idx SERIAL PRIMARY KEY, tgfileid TEXT DEFAULT NULL, caption TEXT DEFAULT NULL, exid INTEGER DEFAULT NULL)")
+            self.query("CREATE TABLE IF NOT EXISTS attachments (idx SERIAL PRIMARY KEY, ty TEXT DEFAULT NULL, tgfileid TEXT DEFAULT NULL, caption TEXT DEFAULT NULL, exid INTEGER DEFAULT NULL)")
         except DatabaseError as e:
             print(f"Error creating tables: {e}")
 

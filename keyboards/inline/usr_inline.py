@@ -1,6 +1,6 @@
 from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup, SwitchInlineQueryChosenChat
 from data.dict import check_subs
-from data import config
+from data import config, dict
 
 def mand_chans(channels) -> InlineKeyboardMarkup:
     btns = []
@@ -9,29 +9,32 @@ def mand_chans(channels) -> InlineKeyboardMarkup:
     btns.append([InlineKeyboardButton(text=check_subs, callback_data="check_subs")])
     return InlineKeyboardMarkup(inline_keyboard=btns)
 
-def create_mcq_keyboard(cur: int, total: int, answers: list, types: list, page: int = 1) -> InlineKeyboardMarkup:
-    """
-    Build an inline keyboard for user MCQ answering.
-    cur: current question number
-    total: total number of questions
-    answers: list of user's answers (or None)
-    types: list of number of options for each question (non-zero for MCQ, 0 for open-ended)
-    """
-    num_options = types[cur-1]
-    option_buttons = []
-    for i in range(num_options):
-        letter = chr(65+i)
-        btn_text = f"{letter}" if answers[cur-1] != letter else f"✔{letter}"
-        option_buttons.append(InlineKeyboardButton(text=btn_text, callback_data=f"user_mcq_{letter}"))
-    keyboard = InlineKeyboardMarkup(inline_keyboard=[option_buttons])
-    # nav_row = []
-    # if cur > 1:
-    #     nav_row.append(InlineKeyboardButton(text="Prev", callback_data="user_prev"))
-    # if cur < total:
-    #     nav_row.append(InlineKeyboardButton(text="Next", callback_data="user_next"))
-    # if nav_row:
-    #     keyboard.append(*nav_row)
-    return keyboard
+def get_answering_keys(current, total, answers, typesl, page=1, confirm=False) -> InlineKeyboardMarkup:
+    btns = [[InlineKeyboardButton(text=dict.continue_uz, callback_data="continue")]]
+    if not confirm:
+        btns = []
+    if typesl[current-1] > 0: # MCQ
+        for i in range(typesl[current-1]):
+            btns.append([InlineKeyboardButton(text=chr(65+i), callback_data=f"mcq_{chr(65+i)}")])
+    qforthis = min(config.MAX_QUESTION_IN_A_PAGE, total - (page-1)*config.MAX_QUESTION_IN_A_PAGE)
+    for i in range((qforthis+4)//5):
+        row = []
+        for j in range(min(5, qforthis - i*5)):
+            now = (page-1)*config.MAX_QUESTION_IN_A_PAGE + i*5 + j + 1
+            if now == current:
+                row.append(InlineKeyboardButton(text=f"🟡{now}", callback_data=f"jump_{now}"))
+            elif answers[now-1]:
+                row.append(InlineKeyboardButton(text=f"🟢{now}", callback_data=f"jump_{now}"))
+            else:
+                row.append(InlineKeyboardButton(text=f"🔴{now}", callback_data=f"jump_{now}"))
+        btns.append(row)
+    row = [
+        InlineKeyboardButton(text="⇐", callback_data="page_prev"),
+        InlineKeyboardButton(text=f"Bet: {page}/{(total+config.MAX_QUESTION_IN_A_PAGE-1)//config.MAX_QUESTION_IN_A_PAGE}", callback_data="page_now"),
+        InlineKeyboardButton(text="⇒", callback_data="page_next")
+    ]
+    btns.append(row)
+
 
 btns1 = [
     [

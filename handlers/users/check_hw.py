@@ -8,7 +8,8 @@ from states import check_hw_states
 import json
 from datetime import datetime, timezone, timedelta
 from loader import db
-from keyboards.inline import usr_inline, adm_inline, obom
+from utils.yau import get_ans_text
+from keyboards.inline import usr_inline, adm_inline, get_answering_keys
 
 
 
@@ -51,86 +52,98 @@ async def do_today_hw(message: types.Message, state: FSMContext):
                             answers=[None]*test[4])
     # Send first question based on type:
     current = 1
+    attaches = db.fetchall("SELECT ty, tgfileid, caption FROM attachments WHERE exid = %s", (exam_id,))
+    if attaches:
+        for attach in attaches:
+            if attach[0] == "photo":
+                await message.answer_photo(attach[1], caption=attach[2])
+            elif attach[0] == "document":
+                await message.answer_document(attach[1], caption=attach[2])
+            else:
+                print("Unknown attachment type:", attach[0])
+    res = f"{html.blockquote('ps. 🟢 - javobi tanlangan, 🟡 - hozirgi tanlanyotgan, 🔴 - hali bajarilmagan (xuddiki, svetafor chiroqlari kabi)')}"
     q_type = test_info.get("types", [])[current-1]
     if q_type and q_type > 0:
+        res+=f"\n\n{get_ans_text([None]*test[4], test_info.get("types", []))}"
         # Use user's own MCQ keyboard instead of adm_inline.obom
-        markup = usr_inline.create_mcq_keyboard(current, test[4], [None]*test[4], test_info.get("types", []), page=1)
-        await message.answer(f"Question #{current} (MCQ): Please choose your answer:", reply_markup=markup)
+        # markup = usr_inline.create_mcq_keyboard(current, test[4], [None]*test[4], test_info.get("types", []), page=1)
+        await message.answer(f"Savol #{current} javobini quyidan {html.underline("belgilang")}:", reply_markup=get_answering_keys(current, test[4], [None]*test[4], test_info.get("types", [])))
+    
     else:
         # Open ended question: send a plain prompt
-        await message.answer(f"Question #{current} (Open ended): Please send your answer as message.")
+        await message.answer(f"Savol #{current} javobini {html.underline("jo'nating")}:")
     await state.set_state(check_hw_states.answer)
 
-@chhw.callback_query(check_hw_states.answer)
-async def process_mcq_answer(query: types.CallbackQuery, state: FSMContext):
-    data = await state.get_data()
-    current = data.get("current")
-    total = data.get("total")
-    typesl = data.get("types")
-    answers = data.get("answers")
-    # Expect callback: format "user_mcq_{ANSWER}", e.g., "user_mcq_A"
-    answer = query.data.split("_")[2]
-    answers[current-1] = answer
-    await state.update_data(answers=answers)
+# @chhw.callback_query(check_hw_states.answer)
+# async def process_mcq_answer(query: types.CallbackQuery, state: FSMContext):
+#     data = await state.get_data()
+#     current = data.get("current")
+#     total = data.get("total")
+#     typesl = data.get("types")
+#     answers = data.get("answers")
+#     # Expect callback: format "user_mcq_{ANSWER}", e.g., "user_mcq_A"
+#     answer = query.data.split("_")[2]
+#     answers[current-1] = answer
+#     await state.update_data(answers=answers)
     
-    # Move to next question if any
-    if current < total:
-        current += 1
-        await state.update_data(current=current)
-        q_type = typesl[current-1]
-        if q_type and q_type > 0:
-            markup = usr_inline.create_mcq_keyboard(current, total, answers, typesl, page=1)
-            await query.message.edit_text(f"Question #{current} (MCQ): Please choose your answer:", reply_markup=markup)
-        else:
-            await query.message.edit_text(f"Question #{current} (Open ended): Please send your answer as message.")
-    else:
-        # All questions answered: ask for confirmation via inline button
-        # confirm_markup = usr_inline.start_inline()  # reuse or build a confirm inline
-        await query.message.edit_text("All answers received. Press Confirm to submit your homework.", reply_markup=confirm_inl_key)
-        await state.set_state(check_hw_states.confirm)
+#     # Move to next question if any
+#     if current < total:
+#         current += 1
+#         await state.update_data(current=current)
+#         q_type = typesl[current-1]
+#         if q_type and q_type > 0:
+#             markup = usr_inline.create_mcq_keyboard(current, total, answers, typesl, page=1)
+#             await query.message.edit_text(f"Question #{current} (MCQ): Please choose your answer:", reply_markup=markup)
+#         else:
+#             await query.message.edit_text(f"Question #{current} (Open ended): Please send your answer as message.")
+#     else:
+#         # All questions answered: ask for confirmation via inline button
+#         # confirm_markup = usr_inline.start_inline()  # reuse or build a confirm inline
+#         await query.message.edit_text("All answers received. Press Confirm to submit your homework.", reply_markup=confirm_inl_key)
+#         await state.set_state(check_hw_states.confirm)
 
-@chhw.message(check_hw_states.answer)
-async def process_open_answer(message: types.Message, state: FSMContext):
-    data = await state.get_data()
-    current = data.get("current")
-    total = data.get("total")
-    typesl = data.get("types")
-    answers = data.get("answers")
-    # Process open ended answer for open mode question only
-    if typesl[current-1] == 0:
-        answers[current-1] = message.text
-        await state.update_data(answers=answers)
-        if current < total:
-            current += 1
-            await state.update_data(current=current)
-            q_type = typesl[current-1]
-            if q_type and q_type > 0:
-                markup = adm_inline.obom(current, total, answers, typesl, page=1)
-                await message.answer(f"Question #{current} (MCQ): Please choose your answer:", reply_markup=markup)
-            else:
-                await message.answer(f"Question #{current} (Open ended): Please send your answer as message.")
-        else:
-            confirm_markup = usr_inline.start_inline()  # reuse confirm inline
-            await message.answer("All answers received. Press Confirm to submit your homework.", reply_markup=confirm_markup)
-            await state.set_state(check_hw_states.confirm)
-    else:
-        # Ignore open text if question is MCQ
-        await message.answer("This question requires selecting an option via buttons.")
+# @chhw.message(check_hw_states.answer)
+# async def process_open_answer(message: types.Message, state: FSMContext):
+#     data = await state.get_data()
+#     current = data.get("current")
+#     total = data.get("total")
+#     typesl = data.get("types")
+#     answers = data.get("answers")
+#     # Process open ended answer for open mode question only
+#     if typesl[current-1] == 0:
+#         answers[current-1] = message.text
+#         await state.update_data(answers=answers)
+#         if current < total:
+#             current += 1
+#             await state.update_data(current=current)
+#             q_type = typesl[current-1]
+#             if q_type and q_type > 0:
+#                 markup = adm_inline.obom(current, total, answers, typesl, page=1)
+#                 await message.answer(f"Question #{current} (MCQ): Please choose your answer:", reply_markup=markup)
+#             else:
+#                 await message.answer(f"Question #{current} (Open ended): Please send your answer as message.")
+#         else:
+#             confirm_markup = usr_inline.start_inline()  # reuse confirm inline
+#             await message.answer("All answers received. Press Confirm to submit your homework.", reply_markup=confirm_markup)
+#             await state.set_state(check_hw_states.confirm)
+#     else:
+#         # Ignore open text if question is MCQ
+#         await message.answer("This question requires selecting an option via buttons.")
 
-@chhw.callback_query(check_hw_states.confirm)
-async def confirm_submission(query: types.CallbackQuery, state: FSMContext):
-    data = await state.get_data()
-    exam_id = data.get("exam_id")
-    user_answers = data.get("answers")
-    correct = data.get("correct")
-    score = 0
-    for ua, ca in zip(user_answers, correct):
-        if ua and ua.lower() == ca.lower():
-            score += 1
-    # Save submission
-    db.query("INSERT INTO submissions (userid, exid, answers) VALUES (%s, %s, %s)",
-             (str(query.from_user.id), exam_id, json.dumps(user_answers)))
-    await query.message.edit_text(f"Homework submitted successfully! Your score: {score}/{data.get('total')}")
-    await state.clear()
+# @chhw.callback_query(check_hw_states.confirm)
+# async def confirm_submission(query: types.CallbackQuery, state: FSMContext):
+#     data = await state.get_data()
+#     exam_id = data.get("exam_id")
+#     user_answers = data.get("answers")
+#     correct = data.get("correct")
+#     score = 0
+#     for ua, ca in zip(user_answers, correct):
+#         if ua and ua.lower() == ca.lower():
+#             score += 1
+#     # Save submission
+#     db.query("INSERT INTO submissions (userid, exid, answers) VALUES (%s, %s, %s)",
+#              (str(query.from_user.id), exam_id, json.dumps(user_answers)))
+#     await query.message.edit_text(f"Homework submitted successfully! Your score: {score}/{data.get('total')}")
+#     await state.clear()
 
-# ...existing code...
+# # ...existing code...

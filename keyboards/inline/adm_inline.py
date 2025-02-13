@@ -175,7 +175,7 @@ def inl_folders(folders):
     return InlineKeyboardMarkup(inline_keyboard=btns)
 
 def get_create_folders(folders=[]):
-    btns = []
+    btns = [[InlineKeyboardButton(text=dict.null_folder, callback_data="fmng_0")]]
     for i, j in folders:
         btns.append([InlineKeyboardButton(text=dict.j, callback_data=f"fmng_{i}")])
     btns.append([InlineKeyboardButton(text=dict.add_folder, callback_data="add_folder")])

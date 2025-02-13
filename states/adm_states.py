@@ -43,6 +43,7 @@ class creates(StatesGroup):
 
 class arch_states(StatesGroup):
     folders = State()
+    fol_title = State()
     tests = State()
     emenu = State()
     edit = State()
@@ -52,5 +53,5 @@ class arch_states(StatesGroup):
     share = State()
     post = State()
 
-class stats(StatesGroup):
+class statsstates(StatesGroup):
     stmenu = State()

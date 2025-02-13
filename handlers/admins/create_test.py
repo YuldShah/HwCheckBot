@@ -626,8 +626,8 @@ async def finalize_test(query: types.CallbackQuery, state: FSMContext):
     attaches = data.get("attaches")
     exid = db.fetchone("SELECT idx FROM exams WHERE random = %s", (random_text,))[0]
     if attaches:
-        for idx, fileid, caption in attaches:
-            db.query("INSERT INTO attachments (tgfileid, caption, exid) VALUES (%s, %s, %s)", (fileid, caption, exid))
+        for idx, fileid, caption, ty in attaches:
+            db.query("INSERT INTO attachments (ty, tgfileid, caption, exid) VALUES (%s, %s, %s, %s)", (ty, fileid, caption, exid))
     await query.message.edit_text(f"📕 Test {html.bold(f"{title}")} created and stored successfully with its attachments.")
     await query.message.answer(f"Back to {html.bold(f"{dict.main_menu}")}", reply_markup=adm_default)
     await state.clear()

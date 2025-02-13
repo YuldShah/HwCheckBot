@@ -26,7 +26,8 @@ async def adminstart(message: types.Message, state: FSMContext) -> None:
 @admin.callback_query(CbData("main_menu"))
 async def adminmenu(callback: types.CallbackQuery, state: FSMContext) -> None:
     await state.clear()
-    await callback.message.answer("Bosh menyuga qaytingiz", reply_markup=adm_default)
+    await callback.message.answer_sticker("CAACAgIAAxkBAANHZ6OBeJYZztktbr8YZHZ3muuKlr0AAqYCAAJWnb0K5jqXX4k9st02BA")
+    await callback.message.answer(f"Back to {html.bold(f"{dict.main_menu}")}", reply_markup=adm_default)
     await callback.message.delete()
 
 @admin.message(IsStickerMessage())
