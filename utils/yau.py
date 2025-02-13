@@ -85,8 +85,8 @@ def get_correct_text(correct, answers):
     print(correct, answers)
     cnt = 0
     for i in range((len(correct)+1)//2):
-        i1 = i*2
-        i2 = i1 + 1
+        i1 = i
+        i2 = (len(correct)+1)//2+i
         # print(i1, i2)
         tex1 = f"{html.bold(i1+1)}. {html.code(answers[i1])} "
         tex2 = ""
