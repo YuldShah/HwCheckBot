@@ -259,9 +259,10 @@ async def request_submit_hw(query: types.CallbackQuery, state: FSMContext):
 async def confirm_submit(query: types.CallbackQuery, state: FSMContext):
     await query.message.edit_text("Kutib turing...")
     today = datetime.now(timezone(timedelta(hours=5))).strftime("%d %m %Y")
-    test = db.fetchone("SELECT * FROM exams WHERE sdate = %s", (today,))
+    exam_id = data.get("exam_id")
+    test = db.fetchone("SELECT * FROM exams WHERE sdate = %s AND idx = %s", (today, exam_id))
     if not test:
-        await query.message.answer("Siz topshirmoqchi bo'lgan vazifa o'chirib tashlanganga o'xshaydi.")
+        await query.message.answer("Javobingizni saqlashni iloji yo'q!\n\nSiz topshirmoqchi bo'lgan vazifa vaqti o'tib ketganga yoki o'chirib tashlangan o'xshaydi.", reply_markup=usr_main_key)
         await state.clear()
         return
     exam_id = test[0]
@@ -273,9 +274,9 @@ async def confirm_submit(query: types.CallbackQuery, state: FSMContext):
     
     data = await state.get_data()
     correct = data.get("correct")
-    exam_id = data.get("exam_id")
     answers = data.get("donel")
     userid = query.from_user.id
+
     # Store the submission in DB (assumes store_submission is defined accordingly)
     db.store_submission(userid, exam_id, data.get("donel"))
     await query.answer("Muvaffaqiyatli jo'natildi.")
