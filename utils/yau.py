@@ -82,25 +82,26 @@ def get_user_ans_text(donel, typesl):
 
 def get_correct_text(correct, answers):
     res = ""
+    print(correct, answers)
     cnt = 0
     for i in range((len(correct)+1)//2):
         i1 = i*2
         i2 = i1 + 1
+        # print(i1, i2)
         tex1 = f"{html.bold(i1)}. {html.code(answers[i1])} "
-        tex2 = f"{html.bold(i2)}. {html.code(answers[i2])} "
+        tex2 = ""
         if correct[i1] == answers[i1]:
             cnt += 1
             tex1 += "✅\t"
         else:
             tex1 += "❌\t"
         if i2 != len(correct):
+            tex2 = f"{html.bold(i2)}. {html.code(answers[i2])} "
             if correct[i2] == answers[i2]:
                 cnt += 1
                 tex2 += "✅"
             else:
                 tex2 += "❌"
-        else:
-            tex2 = ""
         res += tex1 + tex2 + "\n"
     res = html.expandable_blockquote(f"✅ To'g'ri javoblar: {html.bold(f"{cnt}/{len(correct)}")} - {html.bold(f"{cnt/len(correct)*100:.1f}%")}\nSAT taxminiy ball: {html.bold(int(round((cnt/len(correct)*600+200)/10))*10)}\n#Raq. Natija\n" + res)
     return res
