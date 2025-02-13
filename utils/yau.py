@@ -79,3 +79,27 @@ def get_user_ans_text(donel, typesl):
         res += "\n"
     res = f"✅ Javob berildi: {cnt}/{numq}\n\n#Raq. Javob | Turi\n" + res
     return html.expandable_blockquote(res)
+
+def get_correct_text(correct, answers):
+    res = ""
+    cnt = 0
+    for i in range((len(correct)+1)//2):
+        i1 = i*2
+        i2 = i1 + 1
+        tex1 = f"{html.bold(i1)}. {html.code(answers[i1])} "
+        tex2 = f"{html.bold(i2)}. {html.code(answers[i2])} "
+        if correct[i1] == answers[i1]:
+            cnt += 1
+            tex1 += "✅\t"
+        else:
+            tex1 += "❌\t"
+        if i2 != len(correct):
+            if correct[i2] == answers[i2]:
+                cnt += 1
+                tex2 += "✅"
+            else:
+                tex2 += "❌"
+        else:
+            tex2 = ""
+        res += tex1 + tex2 + "\n"
+    res = f"✅ To'g'ri javoblar: {html.bold(f"{cnt}/{len(correct)}")} - {html.bold(f"{cnt/len(correct)*100:.1f}%")}\nSAT taxminiy ball\n#Raq. Javob | Turi\n" 

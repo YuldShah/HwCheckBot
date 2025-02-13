@@ -16,7 +16,7 @@ def get_answering_keys(current, total, answers, typesl, page=1, confirm=False) -
     if typesl[current-1] > 0: # MCQ
         arow = []
         for i in range(typesl[current-1]):
-            arow.append(InlineKeyboardButton(text=chr(65+i), callback_data=f"mcq_{chr(65+i)}"))
+            arow.append(InlineKeyboardButton(text="🟢" if chr(65+i)==answers[current-1] else chr(65+i), callback_data=f"mcq_{chr(65+i)}"))
         btns.append(arow)
     qforthis = min(config.MAX_QUESTION_IN_A_PAGE, total - (page-1)*config.MAX_QUESTION_IN_A_PAGE)
     for i in range((qforthis+4)//5):
@@ -52,3 +52,19 @@ btns2 = [
     ]
 ]
 lets_start = InlineKeyboardMarkup(inline_keyboard=btns2)
+
+btns3 = [
+    [
+        InlineKeyboardButton(text=dict.all_at_once_uz, callback_data="all"),
+        InlineKeyboardButton(text=dict.one_by_one_uz, callback_data="one")
+    ]
+]
+ans_enter_method_usr = InlineKeyboardMarkup(inline_keyboard=btns3)
+
+btns4 = [
+    [
+        InlineKeyboardButton(text=dict.back_uz, callback_data="back"),
+        InlineKeyboardButton(text=dict.send_uz, callback_data="submit")    
+    ]
+]
+submit_ans_user = InlineKeyboardMarkup(inline_keyboard=btns4)

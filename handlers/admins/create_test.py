@@ -144,7 +144,7 @@ async def get_number(message: types.Message, state: FSMContext):
     if numq < 1 or numq > 100:
         await message.answer(f"{await get_text(state)}\n❗️ Please, send the number of questions from 1 to 100.")
         return
-    await state.update_data(numquest=numq, vis=1, resub=1, folder=None)
+    await state.update_data(numquest=numq, vis=1, resub=0, folder=None)
     await state.update_data(donel=[None for i in range(numq)])
     await state.update_data(typesl=[config.MULTIPLE_CHOICE_DEF for i in range(numq)])
     await message.answer(f"{await get_text(state)}\nPlease, send the date in the following format:\n{html.code(f"DD MM YYYY")}", reply_markup=today)

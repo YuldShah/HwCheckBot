@@ -6,11 +6,11 @@ from filters import IsUser, IsUserCallback, IsRegistered, IsSubscriber, CbData
 from aiogram.fsm.context import FSMContext
 from states import check_hw_states
 import json
+from time import sleep
 from datetime import datetime, timezone, timedelta
 from loader import db
 from utils.yau import get_user_ans_text, get_user_text
-from keyboards.inline import usr_inline, adm_inline, lets_start, get_answering_keys
-from utils.db.storage import store_submission
+from keyboards.inline import usr_inline, adm_inline, lets_start, get_answering_keys, ans_enter_method_usr, submit_ans_user
 
 chhw = Router()
 chhw.message.filter(IsUser(), IsSubscriber())
@@ -19,17 +19,18 @@ chhw.callback_query.filter(IsUserCallback(), IsSubscriber())
 @chhw.message(F.text == dict.do_todays_hw)
 async def do_today_hw(message: types.Message, state: FSMContext):
     # Get today's date in UTC+5
+    await message.answer("Yuklanmoqda...", reply_markup=usr_main_key)
     today = datetime.now(timezone(timedelta(hours=5))).strftime("%d %m %Y")
     # Fetch homework test scheduled for today from storage
     test = db.fetchone("SELECT * FROM exams WHERE sdate = %s", (today,))
     if not test:
-        await message.answer("Bugungi vazifa hali yuklanmagan yoki mavjud emas. Agar bu xato bo'lsa, iltimos admin bilan bog'laning.")
+        await message.answer("Bugungi vazifa hali yuklanmagan yoki mavjud emas. Agar bu xato deb o'ylasangiz, iltimos admin bilan bog'laning.")
         return
     exam_id = test[0]
     # Check if user already submitted
     submission = db.fetchone("SELECT * FROM submissions WHERE userid = %s AND exid = %s", (str(message.from_user.id), exam_id))
-    if submission:
-        await message.answer("Siz allaqachon vazifaga javoblaringizni topshirib bo'lgansiz.")
+    if submission and not test[7]:
+        await message.answer("Siz allaqachon vazifaga javoblaringizni topshirib bo'lgansiz va qayta topshirish mumkin emas.")
         return
     # Parse test info stored in JSON
     try:
@@ -39,7 +40,7 @@ async def do_today_hw(message: types.Message, state: FSMContext):
         await message.answer("Test tafsilotlarini yuklashda xatolik yuz berdi.", reply_markup=usr_main_key)
         return
     await state.update_data(exam_id=exam_id,
-                            total=test[4], current=1,
+                            total=test[4], current=1, title=test[1], about=test[2], instructions=test[3],
                             correct=test_info.get("answers", []),
                             typesl=test_info.get("types", []),
                             donel=[None]*test[4])
@@ -58,9 +59,24 @@ async def do_today_hw(message: types.Message, state: FSMContext):
 
 @chhw.callback_query(CbData("start_test"), check_hw_states.details)
 async def start_test(query: types.CallbackQuery, state: FSMContext):
+    await query.message.edit_reply_markup()
+    await query.message.answer("Javoblarni qaysi yo'lda yuborishingizni tanlang.", reply_markup=ans_enter_method_usr)
+    await state.set_state(check_hw_states.way)
+
+@chhw.callback_query(F.data == "all", check_hw_states.way)
+async def all_at_once(query: types.CallbackQuery, state: FSMContext):
+    # await query.message.edit_reply_markup()
+    data = await state.get_data()
+    total = data.get("total")
+    await query.message.edit_text(f"Javoblaringizni quyidagi ko'rinishda jo'nating:\n{html.code("Javob1\nJavob2\nJavob3\n...")}")
+    await state.set_state(check_hw_states.answer)
+
+@chhw.callback_query(F.data == "one", check_hw_states.way)
+async def one_by_one(query: types.CallbackQuery, state: FSMContext):
     data = await state.get_data()
     await state.set_state(check_hw_states.answer)
-    await query.message.edit_reply_markup()
+    # await query.message.delete()
+    await state.update_data(msg=query.message.message_id)
     current = data.get("current")
     total = data.get("total")
     typesl = data.get("typesl")
@@ -69,13 +85,9 @@ async def start_test(query: types.CallbackQuery, state: FSMContext):
     q_type = typesl[current-1]
     # Send proper prompt based on question type:
     if q_type and q_type > 0:
-        await query.message.answer(f"Variantli #{current}. Iltimos javobingizni tanlang.", reply_markup=markup)
+        await query.message.edit_text(f"\n{get_user_ans_text(donel, typesl)}\nIltimos, #{current}/{total} savol uchun javobingizni tanlang:", reply_markup=markup)
     else:
-        await query.message.answer("Ochiq javoblidir. Iltimos javobingizni xabar shaklida yuboring.")
-
-@chhw.callback_query(F.data == "all", check_hw_states.way)
-async def all_at_once(query: types.CallbackQuery, state: FSMContext):
-    await query.message.answer("Javoblaringizni quyidagi ko'rinishda jo'nating")
+        await query.message.edit_text(f"\n{get_user_ans_text(donel, typesl)}\nIltimos, #{current}/{total} savol uchun javobingizni tanlang:", reply_markup=markup)
 
 @chhw.callback_query(F.data.startswith("mcq_"), check_hw_states.answer)
 async def handle_mcq(query: types.CallbackQuery, state: FSMContext):
@@ -100,11 +112,14 @@ async def handle_mcq(query: types.CallbackQuery, state: FSMContext):
     if new_cur == -1:
         ans_confirm = True
         new_cur=1
+        new_page=1
         await state.update_data(ans_confirm=ans_confirm)
+        await query.message.edit_text(f"{get_user_ans_text(donel, typesl)}\nBarcha savollarga javob berib bo'ldingiz, javobingizni topshirishni davom ettirsangiz bo'ladi.\n\nIltimos, #{new_cur}/{numq} savol uchun javobingizni tanlang:",
+        reply_markup=get_answering_keys(new_cur, numq, donel, typesl, new_page, ans_confirm))
+        return
     new_page = (new_cur-1)//config.MAX_QUESTION_IN_A_PAGE + 1
     await state.update_data(curq=new_cur, donel=donel, page=new_page)
-    await query.message.edit_text(
-        f"{get_user_ans_text(donel, typesl)}\nAnswer for question {curq}/{data.get('total')}:",
+    await query.message.edit_text(f"{get_user_ans_text(donel, typesl)}\nIltimos, #{new_cur}/{numq} savol uchun javobingizni tanlang:",
         reply_markup=get_answering_keys(new_cur, numq, donel, typesl, new_page, ans_confirm)
     )
 
@@ -124,12 +139,12 @@ async def handle_jump(query: types.CallbackQuery, state: FSMContext):
     await state.update_data(curq=new_cur)
     if typesl[new_cur-1] == 0:
         await query.message.edit_text(
-            f"{get_user_ans_text(donel, typesl)}\nIltimos, #{new_cur}/{numq} savol uchun javobingizni yuboring:",
+            f"{get_user_ans_text(donel, typesl)}\n{f"Barcha savollarga javob berib bo'ldingiz, javobingizni topshirishni davom ettirsangiz bo'ladi.\n\n" if not donel.count(None) else ""}Iltimos, #{new_cur}/{numq} savol uchun javobingizni yuboring:",
             reply_markup=get_answering_keys(new_cur, numq, donel, typesl, page, ans_confirm)
         )
     else:
         await query.message.edit_text(
-            f"{get_user_ans_text(donel, typesl)}\nIltimos, #{new_cur}/{numq} savol uchun to'g'ri javobingizni tanlang:",
+            f"{get_user_ans_text(donel, typesl)}\n{f"Barcha savollarga javob berib bo'ldingiz, javobingizni topshirishni davom ettirsangiz bo'ladi.\n\n" if not donel.count(None) else ""}Iltimos, #{new_cur}/{numq} savol uchun javobingizni tanlang:",
             reply_markup=get_answering_keys(new_cur, numq, donel, typesl, page, ans_confirm)
         )
 
@@ -165,31 +180,110 @@ async def handle_page(query: types.CallbackQuery, state: FSMContext):
 @chhw.message(check_hw_states.answer)
 async def handle_open_ended(message: types.Message, state: FSMContext):
     data = await state.get_data()
+    typesl = data.get("typesl")
     curq = data.get("curq") or data.get("current")
+    if typesl[curq-1] > 0:
+        await message.delete()
+        msg = await message.answer("Bu ochiq savol emas. Iltimos, berilgan variantlardan birini tanlang.")
+        sleep(2)
+        await msg.delete()
+        return
+    
+    entering = data.get("entering")
+
+    if entering=="all":
+        donel = data.get("donel")
+        donel[curq-1] = message.text
+        new_cur = -1
+        for i, ans in enumerate(donel):
+            if ans is None:
+                new_cur = i+1
+                break
+        await state.update_data(donel=donel)
+        msg = data.get("msg")
+        await message.bot.edit_message_text(message.chat.id, msg, f"Iltimos, #{curq}/{data.get('total')} savol uchun javobingizni jo'nating:")
+        if new_cur == -1:
+            ans_confirm = True
+            new_cur=1
+            new_page=1
+            await state.update_data(ans_confirm=ans_confirm)
+            await message.answer(f"{get_user_ans_text(donel, typesl)}\nBarcha savollarga javob berib bo'ldingiz, javobingizni topshirishni davom ettirsangiz bo'ladi.\n\nIltimos, #{new_cur}/{data.get("total")} savol uchun javobingizni tanlang:",
+            reply_markup=get_answering_keys(new_cur, data.get("total"), donel, typesl, new_page, ans_confirm))
+            return
+        new_page = (new_cur-1)//config.MAX_QUESTION_IN_A_PAGE + 1
+        await state.update_data(curq=new_cur, donel=donel, page=new_page)
+        await message.answer(f"{get_user_ans_text(donel, typesl)}\nIltimos, #{new_cur}/{data.get("total")} savol uchun javobingizni tanlang:",
+            reply_markup=get_answering_keys(new_cur, data.get("total"), donel, typesl, new_page, ans_confirm)
+        )
+        return
+
     donel = data.get("donel")
     donel[curq-1] = message.text
+    new_cur = -1
+    for i, ans in enumerate(donel):
+        if ans is None:
+            new_cur = i+1
+            break
     await state.update_data(donel=donel)
-    await message.answer(f"#{curq} savoliga javob qabul qilindi.")
+    msg = data.get("msg")
+    await message.bot.edit_message_text(message.chat.id, msg, f"Iltimos, #{curq}/{data.get('total')} savol uchun javobingizni jo'nating:")
+    if new_cur == -1:
+        ans_confirm = True
+        new_cur=1
+        new_page=1
+        await state.update_data(ans_confirm=ans_confirm)
+        await message.answer(f"{get_user_ans_text(donel, typesl)}\nBarcha savollarga javob berib bo'ldingiz, javobingizni topshirishni davom ettirsangiz bo'ladi.\n\nIltimos, #{new_cur}/{data.get("total")} savol uchun javobingizni tanlang:",
+        reply_markup=get_answering_keys(new_cur, data.get("total"), donel, typesl, new_page, ans_confirm))
+        return
+    new_page = (new_cur-1)//config.MAX_QUESTION_IN_A_PAGE + 1
+    await state.update_data(curq=new_cur, donel=donel, page=new_page)
+    await message.answer(f"{get_user_ans_text(donel, typesl)}\nIltimos, #{new_cur}/{data.get("total")} savol uchun javobingizni tanlang:",
+        reply_markup=get_answering_keys(new_cur, data.get("total"), donel, typesl, new_page, ans_confirm)
+    )
+    # await message.answer(f"#{curq} savoliga javob qabul qilindi.")
     # Optionally, proceed to next unanswered question or prompt submission...
 
-@chhw.callback_query(F.data == "submit_hw", check_hw_states.answer)
+@chhw.callback_query(F.data == "continue", check_hw_states.answer)
 async def request_submit_hw(query: types.CallbackQuery, state: FSMContext):
     # Ask for final confirmation before submission
-    await query.message.answer("Haqiqatan ham uyga vazifangizni topshirmoqchimisiz?", reply_markup=confirm_inl_key)
+    data = await state.get_data()
+    donel = data.get("donel")
+    typesl = data.get("typesl")
+    await query.message.edit_text(f"{get_user_ans_text(donel, typesl)}\nJavoblaringizni jo'natishni tasdiqlaysizmi?", reply_markup=submit_ans_user)
     await state.set_state(check_hw_states.confirm)
 
-@chhw.callback_query(F.data == "confirm_submit", check_hw_states.confirm)
+@chhw.callback_query(F.data == "submit", check_hw_states.confirm)
 async def confirm_submit(query: types.CallbackQuery, state: FSMContext):
+    await query.message.edit_text("Kutib turing...")
+    today = datetime.now(timezone(timedelta(hours=5))).strftime("%d %m %Y")
+    test = db.fetchone("SELECT * FROM exams WHERE sdate = %s", (today,))
+    if not test:
+        await query.message.answer("Siz topshirmoqchi bo'lgan vazifa o'chirib tashlanganga o'xshaydi.")
+        await state.clear()
+        return
+    exam_id = test[0]
+    # Check if user already submitted
+    submission = db.fetchone("SELECT * FROM submissions WHERE userid = %s AND exid = %s", (str(query.from_user.id), exam_id))
+    if submission and not test[7]:
+        await query.message.answer("Siz allaqachon vazifaga javoblaringizni topshirib bo'lgansiz va qayta topshirish mumkin emas.")
+        return
+    
     data = await state.get_data()
+    correct = data.get("correct")
     exam_id = data.get("exam_id")
     userid = query.from_user.id
     # Store the submission in DB (assumes store_submission is defined accordingly)
-    store_submission(userid, exam_id, data.get("donel"))
-    await query.message.edit_text("Uyga vazifangiz muvaffaqiyatli topshirildi.")
+    db.store_submission(userid, exam_id, data.get("donel"))
+    await query.answer("Muvaffaqiyatli jo'natildi.")
+    await query.message.edit_text(f"Vazifaga javoblaringiz muvaffaqiyatli topshirildi.\nNatijalaringiz quyidagicha:")
     await state.clear()
 
-@chhw.callback_query(F.data == "cancel_submit", check_hw_states.confirm)
+@chhw.callback_query(F.data == "back", check_hw_states.confirm)
 async def cancel_submit(query: types.CallbackQuery, state: FSMContext):
     await state.set_state(check_hw_states.answer)
-    await query.message.edit_reply_markup()
-    await query.answer("Topshirish bekor qilindi. Javob berishda davom eting.")
+    # await query.message.delete()
+    data = await state.get_data()
+    donel = data.get("donel")
+    typesl = data.get("typesl")
+    await query.message.edit_text(f"Topshirish bekor qilindi. Javob berishda davom eting.\n\n{get_user_ans_text(donel, typesl)}\nBarcha savollarga javob berib bo'ldingiz, javobingizni topshirishni davom ettirsangiz bo'ladi.\n\nIltimos, #{1}/{data.get("total")} savol uchun javobingizni tanlang:",
+        reply_markup=get_answering_keys(1, data.get("total"), donel, typesl, 1, 1))

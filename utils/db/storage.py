@@ -24,7 +24,7 @@ class DatabaseManager:
         try:
             self.query('''CREATE TABLE IF NOT EXISTS users (idx SERIAL PRIMARY KEY, userid TEXT, fullname TEXT, username TEXT, regdate TIMESTAMP DEFAULT CURRENT_TIMESTAMP, allowed INTEGER DEFAULT 0)''')
             self.query("CREATE TABLE IF NOT EXISTS folders (idx SERIAL PRIMARY KEY, title TEXT)")
-            self.query("CREATE TABLE IF NOT EXISTS exams (idx SERIAL PRIMARY KEY, title TEXT, about TEXT DEFAULT NULL, instructions TEXT, num_questions INTEGER, correct TEXT, sdate TEXT DEFAULT NULL, resub INTEGER DEFAULT 1, folder INTEGER DEFAULT 0, hide INTEGER DEFAULT 0, random TEXT)")
+            self.query("CREATE TABLE IF NOT EXISTS exams (idx SERIAL PRIMARY KEY, title TEXT, about TEXT DEFAULT NULL, instructions TEXT, num_questions INTEGER, correct TEXT, sdate TEXT DEFAULT NULL, resub INTEGER DEFAULT 0, folder INTEGER DEFAULT 0, hide INTEGER DEFAULT 0, random TEXT)")
             self.query("CREATE TABLE IF NOT EXISTS submissions(idx SERIAL PRIMARY KEY, userid TEXT, exid INTEGER, date TIMESTAMP DEFAULT CURRENT_TIMESTAMP, answers TEXT)")
             self.query("CREATE TABLE IF NOT EXISTS channel (idx SERIAL PRIMARY KEY, chid TEXT, title TEXT, link TEXT)")
             self.query("CREATE TABLE IF NOT EXISTS attachments (idx SERIAL PRIMARY KEY, ty TEXT DEFAULT NULL, tgfileid TEXT DEFAULT NULL, caption TEXT DEFAULT NULL, exid INTEGER DEFAULT NULL)")
@@ -93,6 +93,22 @@ class DatabaseManager:
             logging.error("SQL Execution error", exc_info=True)
             return None
 
+    def store_submission(self, userid, exid, answers):
+        """
+        Store a submission in the database.
+        
+        Parameters:
+        db: an instance of DatabaseManager
+        userid: user identifier (str)
+        exid: exam/test id (int)
+        answers: answers given by the user (str)
+        """
+        try:
+            self.query("INSERT INTO submissions(userid, exid, answers) VALUES (%s, %s, %s)", (userid, exid, answers))
+        except Exception:
+            import logging
+            logging.error("Error storing submission", exc_info=True)
+
     def get_last_n_rows(self, table, n):
         """
         Retrieve the last n rows from the specified table.
@@ -109,19 +125,3 @@ class DatabaseManager:
         if hasattr(self, 'conn') and self.conn:
             self.cur.close()
             self.conn.close()
-
-def store_submission(self, userid, exid, answers):
-    """
-    Store a submission in the database.
-    
-    Parameters:
-      db: an instance of DatabaseManager
-      userid: user identifier (str)
-      exid: exam/test id (int)
-      answers: answers given by the user (str)
-    """
-    try:
-        self.query("INSERT INTO submissions(userid, exid, answers) VALUES (%s, %s, %s)", (userid, exid, answers))
-    except Exception:
-        import logging
-        logging.error("Error storing submission", exc_info=True)
