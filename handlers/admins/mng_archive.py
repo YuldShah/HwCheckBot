@@ -55,7 +55,7 @@ async def add_folder(callback: types.CallbackQuery, state: FSMContext):
     await callback.message.answer("Enter the name of the folder")
     await state.set_state(arch_states.fol_title)
 
-@arch.message(state=arch_states.fol_title)
+@arch.message(arch_states.fol_title)
 async def save_folder(message: types.Message, state: FSMContext):
     folder_name = message.text
     db.execute("INSERT INTO folders (title) VALUES (%s)", (folder_name,))
