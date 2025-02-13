@@ -102,4 +102,5 @@ def get_correct_text(correct, answers):
         else:
             tex2 = ""
         res += tex1 + tex2 + "\n"
-    res = f"✅ To'g'ri javoblar: {html.bold(f"{cnt}/{len(correct)}")} - {html.bold(f"{cnt/len(correct)*100:.1f}%")}\nSAT taxminiy ball\n#Raq. Javob | Turi\n" 
+    res = html.expandable_blockquote(f"✅ To'g'ri javoblar: {html.bold(f"{cnt}/{len(correct)}")} - {html.bold(f"{cnt/len(correct)*100:.1f}%")}\nSAT taxminiy ball: {html.bold(int(round((cnt/len(correct)*600+200)/10))*10)}\n#Raq. Natija\n" + res)
+    return res

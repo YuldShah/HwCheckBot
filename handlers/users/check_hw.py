@@ -9,7 +9,7 @@ import json
 from time import sleep
 from datetime import datetime, timezone, timedelta
 from loader import db
-from utils.yau import get_user_ans_text, get_user_text
+from utils.yau import get_correct_text, get_user_ans_text, get_user_text
 from keyboards.inline import usr_inline, adm_inline, lets_start, get_answering_keys, ans_enter_method_usr, submit_ans_user
 
 chhw = Router()
@@ -271,11 +271,12 @@ async def confirm_submit(query: types.CallbackQuery, state: FSMContext):
     data = await state.get_data()
     correct = data.get("correct")
     exam_id = data.get("exam_id")
+    answers = data.get("donel")
     userid = query.from_user.id
     # Store the submission in DB (assumes store_submission is defined accordingly)
     db.store_submission(userid, exam_id, data.get("donel"))
     await query.answer("Muvaffaqiyatli jo'natildi.")
-    await query.message.edit_text(f"Vazifaga javoblaringiz muvaffaqiyatli topshirildi.\nNatijalaringiz quyidagicha:")
+    await query.message.edit_text(f"Vazifaga javoblaringiz muvaffaqiyatli topshirildi.\nNatijalaringiz quyidagicha:\n{get_correct_text(correct, answers)}")
     await state.clear()
 
 @chhw.callback_query(F.data == "back", check_hw_states.confirm)
