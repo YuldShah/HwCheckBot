@@ -233,14 +233,16 @@ async def handle_open_ended(message: types.Message, state: FSMContext):
         new_cur=1
         new_page=1
         await state.update_data(ans_confirm=ans_confirm)
-        await message.answer(f"{get_user_ans_text(donel, typesl)}\nBarcha savollarga javob berib bo'ldingiz, javobingizni topshirishni davom ettirsangiz bo'ladi.\n\nIltimos, #{new_cur}/{data.get("total")} savol uchun javobingizni tanlang:",
+        msg = await message.answer(f"{get_user_ans_text(donel, typesl)}\nBarcha savollarga javob berib bo'ldingiz, javobingizni topshirishni davom ettirsangiz bo'ladi.\n\nIltimos, #{new_cur}/{data.get("total")} savol uchun javobingizni tanlang:",
         reply_markup=get_answering_keys(new_cur, data.get("total"), donel, typesl, new_page, ans_confirm))
+        await state.update_data(msg=msg.message_id)
         return
     new_page = (new_cur-1)//config.MAX_QUESTION_IN_A_PAGE + 1
     await state.update_data(curq=new_cur, donel=donel, page=new_page)
-    await message.answer(f"{get_user_ans_text(donel, typesl)}\nIltimos, #{new_cur}/{data.get("total")} savol uchun javobingizni tanlang:",
+    msg = await message.answer(f"{get_user_ans_text(donel, typesl)}\nIltimos, #{new_cur}/{data.get("total")} savol uchun javobingizni tanlang:",
         reply_markup=get_answering_keys(new_cur, data.get("total"), donel, typesl, new_page, ans_confirm)
     )
+    await state.update_data(msg=msg.message_id)
     # await message.answer(f"#{curq} savoliga javob qabul qilindi.")
     # Optionally, proceed to next unanswered question or prompt submission...
 
