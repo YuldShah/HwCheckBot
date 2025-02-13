@@ -44,9 +44,7 @@ async def manage_test(callback: types.CallbackQuery, state: FSMContext):
     test_id = int(callback.data.split("_")[1])
     test = db.fetchone("SELECT * FROM exams WHERE idx = %s", (test_id,))
     data = await state.get_data()
-    await state.update_data(exam_id=test_id),
-                            total=test[4],           # num_questions
-                            current=1,
+    await state.update_data(exam_id=test_id)
                             # correct=test_info.get("answers", []),
                             # types=test_info.get("types", []),
                             # answers=[None]*test[4])
