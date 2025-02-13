@@ -88,7 +88,7 @@ def get_correct_text(correct, answers):
         i1 = i*2
         i2 = i1 + 1
         # print(i1, i2)
-        tex1 = f"{html.bold(i1)}. {html.code(answers[i1])} "
+        tex1 = f"{html.bold(i1+1)}. {html.code(answers[i1])} "
         tex2 = ""
         if correct[i1] == answers[i1]:
             cnt += 1
@@ -96,7 +96,7 @@ def get_correct_text(correct, answers):
         else:
             tex1 += "❌\t"
         if i2 != len(correct):
-            tex2 = f"{html.bold(i2)}. {html.code(answers[i2])} "
+            tex2 = f"{html.bold(i2+1)}. {html.code(answers[i2])} "
             if correct[i2] == answers[i2]:
                 cnt += 1
                 tex2 += "✅"
