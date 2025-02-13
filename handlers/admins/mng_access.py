@@ -170,8 +170,11 @@ async def manually(callback: types.CallbackQuery, state: FSMContext) -> None:
 
 @access.callback_query(CbData("back"), accstates.manl)
 async def back_to_m(callback: types.CallbackQuery, state: FSMContext) -> None:
+    await callback.message.answer(f"Back to {html.bold(f"{dict.man_access}")} menu", reply_markup=main_key)
     await state.set_state(accstates.acmenu)
-    await callback.message.edit_text(f"Here you can manage the access of users to the bot", reply_markup=access_menu)
+    await callback.message.answer(f"Here you can manage the access of users to the bot", reply_markup=access_menu)
+    # sleep(1)
+    await callback.message.delete()
     # await callback.message.delete()
 
 @access.callback_query(CbData("add_access"))
@@ -206,12 +209,12 @@ async def add_access(message: types.Message, state: FSMContext) -> None:
             await message.answer("You can give or remove access to users manually here", reply_markup=man_access)
             return
         else:
-            db.query("UPDATE users SET allowed = TRUE WHERE idx = %s", (exist[0],))
+            db.query("UPDATE users SET allowed = 1 WHERE idx = %s", (exist[0],))
             await message.answer(f"{mention} has been given access to the bot.\n\nBack to the access menu.")
             await state.set_state(accstates.manl)
             await message.answer("You can give or remove access to users manually here", reply_markup=man_access)
             return
-    db.query("INSERT INTO users (userid, allowed) VALUES (%s, TRUE)", (userid,))
+    db.query("INSERT INTO users (userid, allowed) VALUES (%s, 1)", (userid,))
 
     await message.answer(f"{mention} has been given access to the bot.\n\nBack to the access menu.")
     await state.set_state(accstates.manl)

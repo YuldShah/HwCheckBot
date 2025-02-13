@@ -14,8 +14,10 @@ def get_answering_keys(current, total, answers, typesl, page=1, confirm=False) -
     if not confirm:
         btns = []
     if typesl[current-1] > 0: # MCQ
+        arow = []
         for i in range(typesl[current-1]):
-            btns.append([InlineKeyboardButton(text=chr(65+i), callback_data=f"mcq_{chr(65+i)}")])
+            arow.append(InlineKeyboardButton(text=chr(65+i), callback_data=f"mcq_{chr(65+i)}"))
+        btns.append(arow)
     qforthis = min(config.MAX_QUESTION_IN_A_PAGE, total - (page-1)*config.MAX_QUESTION_IN_A_PAGE)
     for i in range((qforthis+4)//5):
         row = []
@@ -34,7 +36,7 @@ def get_answering_keys(current, total, answers, typesl, page=1, confirm=False) -
         InlineKeyboardButton(text="⇒", callback_data="page_next")
     ]
     btns.append(row)
-
+    return InlineKeyboardMarkup(inline_keyboard=btns)
 
 btns1 = [
     [
@@ -43,3 +45,10 @@ btns1 = [
 ]
 
 elbek = InlineKeyboardMarkup(inline_keyboard=btns1)
+
+btns2 = [
+    [
+        InlineKeyboardButton(text=dict.start_test, callback_data="start_test")
+    ]
+]
+lets_start = InlineKeyboardMarkup(inline_keyboard=btns2)

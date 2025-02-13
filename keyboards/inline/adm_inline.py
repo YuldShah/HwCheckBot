@@ -177,14 +177,17 @@ def inl_folders(folders):
 def get_create_folders(folders=[]):
     btns = [[InlineKeyboardButton(text=dict.null_folder, callback_data="fmng_0")]]
     for i, j in folders:
-        btns.append([InlineKeyboardButton(text=dict.j, callback_data=f"fmng_{i}")])
-    btns.append([InlineKeyboardButton(text=dict.add_folder, callback_data="add_folder")])
+        btns.append([InlineKeyboardButton(text=j, callback_data=f"fmng_{i}")])
+    arow = [InlineKeyboardButton(text=dict.add_folder, callback_data="add_folder")]
+    if folders:
+        arow.append(InlineKeyboardButton(text=dict.rm_folder, callback_data="rm_folder"))
+    btns.append(arow)
     return InlineKeyboardMarkup(inline_keyboard=btns)
 
 def get_folder_tests(tests):
     btns = []
     for i, j in tests:
-        btns.append([InlineKeyboardButton(text=dict.j, callback_data=f"exman_{i}")])
+        btns.append([InlineKeyboardButton(text=j, callback_data=f"exman_{i}")])
     btns.append([InlineKeyboardButton(text=dict.back, callback_data="back")])
     return InlineKeyboardMarkup(inline_keyboard=btns)
     # btns.append([InlineKeyboardButton(text=dict.add_folder, callback_data="")])
@@ -195,4 +198,57 @@ def remove_att(attach_id):
             InlineKeyboardButton(text=dict.unattach, callback_data=f"rma_{attach_id}")
         ]
     ]
+    return InlineKeyboardMarkup(inline_keyboard=btns)
+
+def edit_test_menu(visibility, resub):
+    btns = [
+        [
+            InlineKeyboardButton(text=dict.edit_title, callback_data="edit_title"),
+            InlineKeyboardButton(text=dict.edit_about, callback_data="edit_about")
+        ],
+        [
+            InlineKeyboardButton(text=dict.edit_instr, callback_data="edit_instr"),
+            InlineKeyboardButton(text=dict.edit_sdate, callback_data="edit_sdate")
+        ],
+        [
+            InlineKeyboardButton(text=dict.edit_attaches, callback_data="edit_attaches"),
+            InlineKeyboardButton(text=dict.edit_ans, callback_data="edit_ans")
+        ],
+    ]
+    btns.append([
+            InlineKeyboardButton(text=dict.vis_cur_off, callback_data=f"vis_on") if not visibility else InlineKeyboardButton(text=dict.vis_cur_on, callback_data="vis_off")
+        ])
+    btns.append([
+            InlineKeyboardButton(text=dict.resub_not, callback_data="resub_on") if not resub else InlineKeyboardButton(text=dict.resub_ok, callback_data="resub_off")
+        ])
+    btns += [
+        [
+            InlineKeyboardButton(text=dict.delete, callback_data="delete"),
+        ],
+        [
+            InlineKeyboardButton(text=dict.back, callback_data="back"),
+        ]
+    ]
+    return InlineKeyboardMarkup(inline_keyboard=btns)
+
+def details_test(code, folder):
+    btns = [
+        [
+            InlineKeyboardButton(text=dict.folder+folder if folder else dict.folder_not, callback_data="folder")
+        ],
+        [
+            InlineKeyboardButton(text=dict.edit, callback_data="edit"),
+            InlineKeyboardButton(text=dict.share, switch_inline_query=f"{code}")
+        ],
+        [
+            InlineKeyboardButton(text=dict.back, callback_data="back")
+        ]
+    ]
+    return InlineKeyboardMarkup(inline_keyboard=btns)
+
+def rm_folders_menu(folders):
+    btns = []
+    for i, j in folders:
+        btns.append([InlineKeyboardButton(text=j, callback_data=f"rmf_{i}")])
+    btns.append([InlineKeyboardButton(text=dict.back, callback_data="back")])
     return InlineKeyboardMarkup(inline_keyboard=btns)

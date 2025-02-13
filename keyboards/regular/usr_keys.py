@@ -1,4 +1,4 @@
-from data.dict import do_todays_hw, results, help_txt, archive
+from data.dict import do_todays_hw, results, help_txt, archive, bosh_menu
 from aiogram import types
 
 btns = [
@@ -15,3 +15,10 @@ btns = [
 ]
 
 user_markup = types.ReplyKeyboardMarkup(keyboard=btns, resize_keyboard=True)
+
+btn1 = [
+    [
+        types.KeyboardButton(text=bosh_menu, callback_data="main_menu")
+    ]
+]
+usr_main_key = types.ReplyKeyboardMarkup(keyboard=btn1, resize_keyboard=True)

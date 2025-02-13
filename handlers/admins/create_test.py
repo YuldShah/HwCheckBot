@@ -198,15 +198,17 @@ async def set_way_one(query: types.CallbackQuery, state: FSMContext):
     typesl = data.get("typesl")
     numq = int(data.get("numquest"))
     page = data.get("page")
+    ans_confirm = data.get("ans_confirm")
+    await state.update_data(entering="one")
     await query.message.edit_text(
         f"{html.blockquote('ps. 🟢 - done, 🟡 - current, 🔴 - not done (yes, traffic lights, you dumb*ss)')}"
         f"\n\n{get_ans_text(donel, typesl)}"
         f"\n\nPlease, {html.underline('choose')} the right answer for question {html.bold(f'#1/{numq}')}:",
-        reply_markup=obom(1, numq, donel, typesl, page)
+        reply_markup=obom(1, numq, donel, typesl, page, ans_confirm)
     )
     await state.set_state(creates.ans)
 
-@test.callback_query(CbDataStartsWith("mcq_"), creates.ans)
+@test.callback_query(F.data.startswith("mcq_"), creates.ans)
 async def set_mcq(query: types.CallbackQuery, state: FSMContext):
     data = await state.get_data()
     curq = data.get("curq")
@@ -273,10 +275,11 @@ async def test_plus(query: types.CallbackQuery, state: FSMContext):
         if typesl[curq-1] == 2:
             await query.answer("Can't have less than 2 choices.")
             return
-        diff = ord(donel[curq-1])-ord("A")
-        if diff+1 == typesl[curq-1]:
-            await query.answer("Can't have less choices than the answer.")
-            return
+        if donel[curq-1] is not None:
+            diff = ord(donel[curq-1])-ord("A")
+            if diff+1 == typesl[curq-1]:
+                await query.answer("Can't have less choices than the answer.")
+                return
         typesl[curq-1] -= 1
     await query.answer(f"Now {typesl[curq-1]} choices.")
     await state.update_data(typesl=typesl)
@@ -431,8 +434,9 @@ async def get_open_ans(message: types.Message, state: FSMContext):
             vis = data.get("vis")
             resub = data.get("resub")
             folder = data.get("folder")
-            await message.answer(f"{await get_text(state)}\n{get_ans_text(donel, typesl)}\nPlease, change the settings as you wish. (Pressing toggles on/off)", reply_markup=ans_set_fin(vis, resub, folder)
+            msg = await message.answer(f"{await get_text(state)}\n{get_ans_text(donel, typesl)}\nPlease, change the settings as you wish. (Pressing toggles on/off)", reply_markup=ans_set_fin(vis, resub, folder)
             )
+            await state.update_data(msg=msg.message_id)
             await state.set_state(creates.setts)
             return
         else:
@@ -446,7 +450,7 @@ async def get_open_ans(message: types.Message, state: FSMContext):
     ans_confirm = bool(data.get("ans_confirm"))
     if typesl[curq-1] == 0:
         donel[curq-1] = message.text
-        msg = await message.answer(f"🟢 #{curq} is {message.text}")
+        # bruh = await message.answer(f"🟢 #{curq} is {message.text}")
         new_cur = -1
         for i in range(len(donel)):
             if not donel[i]:
@@ -468,17 +472,20 @@ async def get_open_ans(message: types.Message, state: FSMContext):
         # if typesl[new_cur-1] == 0:
         #     typesl[new_cur-1] = config.MULTIPLE_CHOICE_DEF
         #     await state.update_data(typesl=typesl)
-        await message.bot.edit_message_text(
+        print(msg)
+        
+        await message.bot.edit_message_text(f"Please, {html.underline('send')} the right answer for question {html.bold(f'#{curq}/{numq}')}:", chat_id=message.chat.id, message_id=msg)
+        await message.answer(
             f"{html.blockquote('ps. 🟢 - done, 🟡 - current, 🔴 - not done (yes, traffic lights, you dumb*ss)')}"
             f"\n\n{get_ans_text(donel, typesl)}"
             f"\n\nPlease, {html.underline('choose')} the right answer for question {html.bold(f'#{new_cur}/{numq}')}:",
-            chat_id=message.chat.id,
-            message_id=msg.message_id,
+            # chat_id=message.chat.id,
+            # message_id=msg.message_id,
             reply_markup=obom(new_cur, numq, donel, typesl, page, ans_confirm)
         )
         # await state.set_state(creates.setts)
-        await message.delete()
-        await msg.delete()
+        # await message.delete()
+        # await msg.delete()
     else:
         msg = await message.answer("Not in open ended mode.")
         await message.delete()
@@ -607,6 +614,7 @@ async def set_folder(query: types.CallbackQuery, state: FSMContext):
 
 @test.callback_query(creates.setts, CbData("continue"))
 async def finalize_test(query: types.CallbackQuery, state: FSMContext):
+    await query.message.edit_text("Saving the test, please wait...")
     data = await state.get_data()
     title = data.get("title")
     about = data.get("about")

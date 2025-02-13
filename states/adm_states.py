@@ -45,6 +45,8 @@ class arch_states(StatesGroup):
     folders = State()
     fol_title = State()
     tests = State()
+    rdis = State()
+    rmfconfirm = State()
     emenu = State()
     edit = State()
     title = State()

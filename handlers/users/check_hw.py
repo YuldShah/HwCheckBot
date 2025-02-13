@@ -1,149 +1,195 @@
 from aiogram import types, Router, F, html
 from data import config, dict
 from keyboards.inline import access_menu, post_chan, confirm_inl_key
-from keyboards.regular import main_key, back_key
-from filters import IsUser, IsUserCallback, IsRegistered, IsSubscriber
+from keyboards.regular import main_key, back_key, usr_main_key
+from filters import IsUser, IsUserCallback, IsRegistered, IsSubscriber, CbData
 from aiogram.fsm.context import FSMContext
 from states import check_hw_states
 import json
 from datetime import datetime, timezone, timedelta
 from loader import db
-from utils.yau import get_ans_text
-from keyboards.inline import usr_inline, adm_inline, get_answering_keys
-
-
+from utils.yau import get_user_ans_text, get_user_text
+from keyboards.inline import usr_inline, adm_inline, lets_start, get_answering_keys
+from utils.db.storage import store_submission
 
 chhw = Router()
 chhw.message.filter(IsUser(), IsSubscriber())
 chhw.callback_query.filter(IsUserCallback(), IsSubscriber())
 
 @chhw.message(F.text == dict.do_todays_hw)
-# @chhw.message(F.text == dict.do_hw)
 async def do_today_hw(message: types.Message, state: FSMContext):
     # Get today's date in UTC+5
     today = datetime.now(timezone(timedelta(hours=5))).strftime("%d %m %Y")
-    
     # Fetch homework test scheduled for today from storage
     test = db.fetchone("SELECT * FROM exams WHERE sdate = %s", (today,))
     if not test:
-        await message.answer("Bugungi vazifa hali yuklangani yo'q yoki bugunga vazifa yo'q. Agar bu xato deb o'ylasangiz admin bilan bog'laning.")
+        await message.answer("Bugungi vazifa hali yuklanmagan yoki mavjud emas. Agar bu xato bo'lsa, iltimos admin bilan bog'laning.")
         return
-
     exam_id = test[0]
     # Check if user already submitted
     submission = db.fetchone("SELECT * FROM submissions WHERE userid = %s AND exid = %s", (str(message.from_user.id), exam_id))
     if submission:
         await message.answer("Siz allaqachon vazifaga javoblaringizni topshirib bo'lgansiz.")
         return
-
-    # Assume test[5] contains a JSON string with the correct answers and types, e.g.:
-    # {"answers": ["A", "B", "Answer3", ...], "types": [config.MULTIPLE_CHOICE_DEF, 0, ...]}
+    # Parse test info stored in JSON
     try:
+        import json
         test_info = json.loads(test[5])
     except Exception:
-        await message.answer("Homework data is corrupted.")
+        await message.answer("Test tafsilotlarini yuklashda xatolik yuz berdi.", reply_markup=usr_main_key)
         return
-
     await state.update_data(exam_id=exam_id,
-                            total=test[4],           # num_questions
-                            current=1,
+                            total=test[4], current=1,
                             correct=test_info.get("answers", []),
-                            types=test_info.get("types", []),
-                            answers=[None]*test[4])
-    # Send first question based on type:
+                            typesl=test_info.get("types", []),
+                            donel=[None]*test[4])
+    # Send first question based on type and attachments if any:
     current = 1
     attaches = db.fetchall("SELECT ty, tgfileid, caption FROM attachments WHERE exid = %s", (exam_id,))
     if attaches:
-        for attach in attaches:
-            if attach[0] == "photo":
-                await message.answer_photo(attach[1], caption=attach[2])
-            elif attach[0] == "document":
-                await message.answer_document(attach[1], caption=attach[2])
-            else:
-                print("Unknown attachment type:", attach[0])
-    res = f"{html.blockquote('ps. 🟢 - javobi tanlangan, 🟡 - hozirgi tanlanyotgan, 🔴 - hali bajarilmagan (xuddiki, svetafor chiroqlari kabi)')}"
-    q_type = test_info.get("types", [])[current-1]
-    if q_type and q_type > 0:
-        res+=f"\n\n{get_ans_text([None]*test[4], test_info.get("types", []))}"
-        # Use user's own MCQ keyboard instead of adm_inline.obom
-        # markup = usr_inline.create_mcq_keyboard(current, test[4], [None]*test[4], test_info.get("types", []), page=1)
-        await message.answer(f"Savol #{current} javobini quyidan {html.underline("belgilang")}:", reply_markup=get_answering_keys(current, test[4], [None]*test[4], test_info.get("types", [])))
-    
-    else:
-        # Open ended question: send a plain prompt
-        await message.answer(f"Savol #{current} javobini {html.underline("jo'nating")}:")
+        for ty, tgfileid, caption in attaches:
+            if ty == "photo":
+                await message.answer_photo(photo=tgfileid, caption=caption)
+            elif ty == "document":
+                await message.answer_document(document=tgfileid, caption=caption)
+    res = f"{get_user_text(test[1], test[2], test[3], test[4])}"
+    await message.answer(res, reply_markup=lets_start)
+    await state.set_state(check_hw_states.details)
+
+@chhw.callback_query(CbData("start_test"), check_hw_states.details)
+async def start_test(query: types.CallbackQuery, state: FSMContext):
+    data = await state.get_data()
     await state.set_state(check_hw_states.answer)
+    await query.message.edit_reply_markup()
+    current = data.get("current")
+    total = data.get("total")
+    typesl = data.get("typesl")
+    donel = data.get("donel")
+    markup = get_answering_keys(current, total, donel, typesl, page=1)
+    q_type = typesl[current-1]
+    # Send proper prompt based on question type:
+    if q_type and q_type > 0:
+        await query.message.answer(f"Variantli #{current}. Iltimos javobingizni tanlang.", reply_markup=markup)
+    else:
+        await query.message.answer("Ochiq javoblidir. Iltimos javobingizni xabar shaklida yuboring.")
 
-# @chhw.callback_query(check_hw_states.answer)
-# async def process_mcq_answer(query: types.CallbackQuery, state: FSMContext):
-#     data = await state.get_data()
-#     current = data.get("current")
-#     total = data.get("total")
-#     typesl = data.get("types")
-#     answers = data.get("answers")
-#     # Expect callback: format "user_mcq_{ANSWER}", e.g., "user_mcq_A"
-#     answer = query.data.split("_")[2]
-#     answers[current-1] = answer
-#     await state.update_data(answers=answers)
-    
-#     # Move to next question if any
-#     if current < total:
-#         current += 1
-#         await state.update_data(current=current)
-#         q_type = typesl[current-1]
-#         if q_type and q_type > 0:
-#             markup = usr_inline.create_mcq_keyboard(current, total, answers, typesl, page=1)
-#             await query.message.edit_text(f"Question #{current} (MCQ): Please choose your answer:", reply_markup=markup)
-#         else:
-#             await query.message.edit_text(f"Question #{current} (Open ended): Please send your answer as message.")
-#     else:
-#         # All questions answered: ask for confirmation via inline button
-#         # confirm_markup = usr_inline.start_inline()  # reuse or build a confirm inline
-#         await query.message.edit_text("All answers received. Press Confirm to submit your homework.", reply_markup=confirm_inl_key)
-#         await state.set_state(check_hw_states.confirm)
+@chhw.callback_query(F.data == "all", check_hw_states.way)
+async def all_at_once(query: types.CallbackQuery, state: FSMContext):
+    await query.message.answer("Javoblaringizni quyidagi ko'rinishda jo'nating")
 
-# @chhw.message(check_hw_states.answer)
-# async def process_open_answer(message: types.Message, state: FSMContext):
-#     data = await state.get_data()
-#     current = data.get("current")
-#     total = data.get("total")
-#     typesl = data.get("types")
-#     answers = data.get("answers")
-#     # Process open ended answer for open mode question only
-#     if typesl[current-1] == 0:
-#         answers[current-1] = message.text
-#         await state.update_data(answers=answers)
-#         if current < total:
-#             current += 1
-#             await state.update_data(current=current)
-#             q_type = typesl[current-1]
-#             if q_type and q_type > 0:
-#                 markup = adm_inline.obom(current, total, answers, typesl, page=1)
-#                 await message.answer(f"Question #{current} (MCQ): Please choose your answer:", reply_markup=markup)
-#             else:
-#                 await message.answer(f"Question #{current} (Open ended): Please send your answer as message.")
-#         else:
-#             confirm_markup = usr_inline.start_inline()  # reuse confirm inline
-#             await message.answer("All answers received. Press Confirm to submit your homework.", reply_markup=confirm_markup)
-#             await state.set_state(check_hw_states.confirm)
-#     else:
-#         # Ignore open text if question is MCQ
-#         await message.answer("This question requires selecting an option via buttons.")
+@chhw.callback_query(F.data.startswith("mcq_"), check_hw_states.answer)
+async def handle_mcq(query: types.CallbackQuery, state: FSMContext):
+    data = await state.get_data()
+    curq = data.get("curq") or data.get("current")
+    typesl = data.get("typesl")
+    from data import config
+    # Optionally, uncomment to force MCQ mode:
+    # typesl[curq-1] = config.MULTIPLE_CHOICE_DEF
+    donel = data.get("donel")
+    numq = data.get("total")  # changed from "numquest"
+    page = data.get("page")
+    cur_ans = query.data.split("_")[1]
+    donel[curq-1] = cur_ans
+    ans_confirm = bool(data.get("ans_confirm"))
+    await query.answer(f"🟢 #{curq}: {cur_ans}")
+    new_cur = -1
+    for i, ans in enumerate(donel):
+        if ans is None:
+            new_cur = i+1
+            break
+    if new_cur == -1:
+        ans_confirm = True
+        new_cur=1
+        await state.update_data(ans_confirm=ans_confirm)
+    new_page = (new_cur-1)//config.MAX_QUESTION_IN_A_PAGE + 1
+    await state.update_data(curq=new_cur, donel=donel, page=new_page)
+    await query.message.edit_text(
+        f"{get_user_ans_text(donel, typesl)}\nAnswer for question {curq}/{data.get('total')}:",
+        reply_markup=get_answering_keys(new_cur, numq, donel, typesl, new_page, ans_confirm)
+    )
 
-# @chhw.callback_query(check_hw_states.confirm)
-# async def confirm_submission(query: types.CallbackQuery, state: FSMContext):
-#     data = await state.get_data()
-#     exam_id = data.get("exam_id")
-#     user_answers = data.get("answers")
-#     correct = data.get("correct")
-#     score = 0
-#     for ua, ca in zip(user_answers, correct):
-#         if ua and ua.lower() == ca.lower():
-#             score += 1
-#     # Save submission
-#     db.query("INSERT INTO submissions (userid, exid, answers) VALUES (%s, %s, %s)",
-#              (str(query.from_user.id), exam_id, json.dumps(user_answers)))
-#     await query.message.edit_text(f"Homework submitted successfully! Your score: {score}/{data.get('total')}")
-#     await state.clear()
+@chhw.callback_query(F.data.startswith("jump_"), check_hw_states.answer)
+async def handle_jump(query: types.CallbackQuery, state: FSMContext):
+    data = await state.get_data()
+    new_cur = int(query.data.split("_")[1])
+    curq = data.get("curq") or data.get("current")
+    if new_cur == curq:
+        await query.answer("Siz allaqachon shu savolda turibsiz.")
+        return
+    donel = data.get("donel")
+    typesl = data.get("typesl")
+    numq = data.get("total")  # changed from "numquest"
+    page = data.get("page")
+    ans_confirm = bool(data.get("ans_confirm"))
+    await state.update_data(curq=new_cur)
+    if typesl[new_cur-1] == 0:
+        await query.message.edit_text(
+            f"{get_user_ans_text(donel, typesl)}\nIltimos, #{new_cur}/{numq} savol uchun javobingizni yuboring:",
+            reply_markup=get_answering_keys(new_cur, numq, donel, typesl, page, ans_confirm)
+        )
+    else:
+        await query.message.edit_text(
+            f"{get_user_ans_text(donel, typesl)}\nIltimos, #{new_cur}/{numq} savol uchun to'g'ri javobingizni tanlang:",
+            reply_markup=get_answering_keys(new_cur, numq, donel, typesl, page, ans_confirm)
+        )
 
-# # ...existing code...
+@chhw.callback_query(F.data.startswith("page_"), check_hw_states.answer)
+async def handle_page(query: types.CallbackQuery, state: FSMContext):
+    data = await state.get_data()
+    total = data.get("total")  # now using total key
+    donel = data.get("donel")
+    typesl = data.get("typesl")
+    page = data.get("page") or 1
+    sign = query.data.split("_")[1]  # "next", "prev", or "now"
+    from data import config
+    max_page = (total + config.MAX_QUESTION_IN_A_PAGE - 1) // config.MAX_QUESTION_IN_A_PAGE
+    if sign == "next":
+        if page >= max_page:
+            await query.answer("Siz allaqachon oxirgi sahifadasiz.")
+            return
+        page += 1
+    elif sign == "prev":
+        if page <= 1:
+            await query.answer("Siz allaqachon birinchi sahifadasiz.")
+            return
+        page -= 1
+    else:
+        await query.answer("Hozirgi sahifani ko'rsatish uchun.")
+        return
+    await state.update_data(page=page)
+    await query.message.edit_text(
+        f"{get_user_ans_text(donel, typesl)}\nDavom etmoqda - joriy sahifa: {page}",
+        reply_markup=get_answering_keys(data.get("curq") or 1, total, donel, typesl, page, bool(data.get("ans_confirm")))
+    )
+
+@chhw.message(check_hw_states.answer)
+async def handle_open_ended(message: types.Message, state: FSMContext):
+    data = await state.get_data()
+    curq = data.get("curq") or data.get("current")
+    donel = data.get("donel")
+    donel[curq-1] = message.text
+    await state.update_data(donel=donel)
+    await message.answer(f"#{curq} savoliga javob qabul qilindi.")
+    # Optionally, proceed to next unanswered question or prompt submission...
+
+@chhw.callback_query(F.data == "submit_hw", check_hw_states.answer)
+async def request_submit_hw(query: types.CallbackQuery, state: FSMContext):
+    # Ask for final confirmation before submission
+    await query.message.answer("Haqiqatan ham uyga vazifangizni topshirmoqchimisiz?", reply_markup=confirm_inl_key)
+    await state.set_state(check_hw_states.confirm)
+
+@chhw.callback_query(F.data == "confirm_submit", check_hw_states.confirm)
+async def confirm_submit(query: types.CallbackQuery, state: FSMContext):
+    data = await state.get_data()
+    exam_id = data.get("exam_id")
+    userid = query.from_user.id
+    # Store the submission in DB (assumes store_submission is defined accordingly)
+    store_submission(userid, exam_id, data.get("donel"))
+    await query.message.edit_text("Uyga vazifangiz muvaffaqiyatli topshirildi.")
+    await state.clear()
+
+@chhw.callback_query(F.data == "cancel_submit", check_hw_states.confirm)
+async def cancel_submit(query: types.CallbackQuery, state: FSMContext):
+    await state.set_state(check_hw_states.answer)
+    await query.message.edit_reply_markup()
+    await query.answer("Topshirish bekor qilindi. Javob berishda davom eting.")

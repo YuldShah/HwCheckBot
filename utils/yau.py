@@ -51,3 +51,31 @@ def get_ans_text(donel, typesl):
         res += "\n"
     res = f"✅ Done: {cnt}/{numq}\n\n#No. Ans | Type\n" + res
     return html.expandable_blockquote(res)
+
+def get_user_text(title, about, instructions, numquest):
+    res = ""
+    res += f"{html.italic('Nomi')}: {html.bold(title)}\n" if title else ""
+    res += f"{html.italic('Izoh')}: {html.expandable_blockquote(about)}\n" if about else ""
+    res += f"{html.italic("Yo'llanma")}: {html.expandable_blockquote(instructions)}\n" if instructions else ""
+    res += f"{html.italic('Savollar soni')}: {html.bold(numquest)}\n" if numquest else ""
+    return res
+
+def get_user_ans_text(donel, typesl):
+    numq = len(donel)
+    res = ""
+    cnt = 0
+    for i in range(numq):
+        res += f"{html.bold(f"{i+1}.")}"
+        if donel[i]:
+            if type(donel[i]) == list:
+                res += f" {html.code(f"{','.join(donel[i])}")}"
+            else:
+                res += f" {html.code(f"{donel[i]}")}"
+        if typesl[i] == 0:
+            res += " | OS"
+        else:
+            res += f" | V[{typesl[i]}]"
+            cnt += 1
+        res += "\n"
+    res = f"✅ Javob berildi: {cnt}/{numq}\n\n#Raq. Javob | Turi\n" + res
+    return html.expandable_blockquote(res)
