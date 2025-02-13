@@ -119,7 +119,7 @@ async def handle_mcq(query: types.CallbackQuery, state: FSMContext):
         return
     new_page = (new_cur-1)//config.MAX_QUESTION_IN_A_PAGE + 1
     await state.update_data(curq=new_cur, donel=donel, page=new_page)
-    await query.message.edit_text(f"{get_user_ans_text(donel, typesl)}\nIltimos, #{new_cur}/{numq} savol uchun javobingizni tanlang:",
+    await query.message.edit_text(f"{get_user_ans_text(donel, typesl)}\nIltimos, #{new_cur}/{numq} savol uchun javobingizni {html.underline("tanlang" if typesl[new_cur-1] > 0 else "jo'nating")}:",
         reply_markup=get_answering_keys(new_cur, numq, donel, typesl, new_page, ans_confirm)
     )
 
@@ -226,7 +226,7 @@ async def handle_open_ended(message: types.Message, state: FSMContext):
             break
     await state.update_data(donel=donel)
     msg = data.get("msg")
-    await message.bot.edit_message_text(message.chat.id, msg, f"Iltimos, #{curq}/{data.get('total')} savol uchun javobingizni jo'nating:")
+    await message.bot.edit_message_text(chat_id=message.chat.id, message_id=msg, text=f"Iltimos, #{curq}/{data.get('total')} savol uchun javobingizni jo'nating:")
     if new_cur == -1:
         ans_confirm = True
         new_cur=1
