@@ -289,5 +289,6 @@ async def cancel_submit(query: types.CallbackQuery, state: FSMContext):
     data = await state.get_data()
     donel = data.get("donel")
     typesl = data.get("typesl")
+    await state.update_data(curq=1)
     await query.message.edit_text(f"Topshirish bekor qilindi. Javob berishda davom eting.\n\n{get_user_ans_text(donel, typesl)}\nBarcha savollarga javob berib bo'ldingiz, javobingizni topshirishni davom ettirsangiz bo'ladi.\n\nIltimos, #{1}/{data.get("total")} savol uchun javobingizni tanlang:",
         reply_markup=get_answering_keys(1, data.get("total"), donel, typesl, 1, 1))
