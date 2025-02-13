@@ -258,6 +258,7 @@ async def request_submit_hw(query: types.CallbackQuery, state: FSMContext):
 @chhw.callback_query(F.data == "submit", check_hw_states.confirm)
 async def confirm_submit(query: types.CallbackQuery, state: FSMContext):
     await query.message.edit_text("Kutib turing...")
+    data = await state.get_data()
     today = datetime.now(timezone(timedelta(hours=5))).strftime("%d %m %Y")
     exam_id = data.get("exam_id")
     test = db.fetchone("SELECT * FROM exams WHERE sdate = %s AND idx = %s", (today, exam_id))
@@ -272,7 +273,6 @@ async def confirm_submit(query: types.CallbackQuery, state: FSMContext):
         await query.message.answer("Siz allaqachon vazifaga javoblaringizni topshirib bo'lgansiz va qayta topshirish mumkin emas.")
         return
     
-    data = await state.get_data()
     correct = data.get("correct")
     answers = data.get("donel")
     userid = query.from_user.id
