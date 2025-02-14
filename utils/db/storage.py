@@ -1,5 +1,6 @@
 import logging
 import psycopg2
+import json
 from psycopg2 import sql, DatabaseError
 
 # Configure logging as needed
@@ -93,7 +94,7 @@ class DatabaseManager:
             logging.error("SQL Execution error", exc_info=True)
             return None
 
-    def store_submission(self, userid, exid, answers):
+    def store_submission(self, userid, exid, answers, code):
         """
         Store a submission in the database.
         
@@ -103,15 +104,14 @@ class DatabaseManager:
         exid: exam/test id (int)
         answers: answers given by the user (str)
         """
-        from utils.yau import gen_code
-        code = gen_code(10)
+        answers = json.dumps(answers)
         try:
             self.query("INSERT INTO submissions(userid, exid, answers, random) VALUES (%s, %s, %s, %s)", (userid, exid, answers, code))
         except Exception:
             import logging
             logging.error("Error storing submission", exc_info=True)
             return False
-        return code
+        return True
 
     def get_last_n_rows(self, table, n):
         """
