@@ -10,22 +10,23 @@ pub = Router()
 @pub.inline_query(F.query.startswith("sub_"))
 async def search_results(query: types.InlineQuery):
     sub_code = query.query.split("_")[1]
+    print(sub_code)
     sub = db.fetchone("SELECT * FROM submissions WHERE random = %s", (sub_code,))
     if not sub:
-        res = types.InlineQueryResultsButton(
-            title="No results",
-            description="No results found",
+        res = types.InlineQueryResultArticle(
+            id="no_result",
+            title="🚫 Natija topilmadi",
             input_message_content=types.InputTextMessageContent(
-                message_text="No results found"
+                message_text="🚫 Siz qidirgan natija topilmadi."
             )
         )
-        return await query.answer([res], cache_time=1, is_personal=True)
+        return await query.answer([res], cache_time=1, is_personal=True, switch_pm_parameter="myres", switch_pm_text="📊 Natijalarim")
     exam_det = db.fetchone("SELECT title, correct FROM exams WHERE idx = %s", (sub[2],))
     title_of_exam = None
 
     user_name = db.fetchone("SELECT fullname FROM users WHERE userid = %s", (sub[1],))
     if not user_name:
-        user_name = "Anonim"
+        user_name = "Noma'lum"
     else:
         user_name = user_name[0]
     if not exam_det:

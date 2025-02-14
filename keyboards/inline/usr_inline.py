@@ -68,3 +68,24 @@ btns4 = [
     ]
 ]
 submit_ans_user = InlineKeyboardMarkup(inline_keyboard=btns4)
+
+def share_sub_usr(code):
+    btns = [
+        [
+            InlineKeyboardButton(text=dict.share_uz, switch_inline_query=f"sub_{code}")
+        ]
+    ]
+    return InlineKeyboardMarkup(inline_keyboard=btns)
+
+
+def results_time(subid, ccode):
+    btns = [
+        [
+            InlineKeyboardButton(text=dict.share_uz, switch_inline_query=f"sub_{ccode}")
+        ],
+        [
+            InlineKeyboardButton(text=dict.earlier, callback_data=f"result_earlier_{subid}"),
+            InlineKeyboardButton(text=dict.later, callback_data=f"result_later_{subid}")
+        ]
+    ]
+    return InlineKeyboardMarkup(inline_keyboard=btns)

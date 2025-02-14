@@ -4,6 +4,7 @@ from aiogram.filters import CommandStart, Command
 from aiogram.fsm.context import FSMContext
 from keyboards.regular import user_markup
 from keyboards.inline import goto_bot
+from .results import results
 from filters import IsUser, IsUserCallback, CbData, CbDataStartsWith, IsSubscriber
 
 user = Router()
@@ -15,16 +16,15 @@ user.callback_query.filter(IsUserCallback(), IsSubscriber())
 @user.message(F.text == dict.bosh_menu)
 async def start(message: types.Message, state: FSMContext):
     await state.clear()
+    if message.text.find("myres")!=-1:
+        await results(message, state)
+        return
     await message.answer_sticker("CAACAgIAAxkBAAIBt2emDv__wEe3FxrexsQkuXhfqM63AAJAAQACVp29CmzpW0AsSdYlNgQ")
     await message.answer(f"👋 Salom, {html.bold(message.from_user.mention_html())}! Botga xush kelibsiz!", reply_markup=user_markup)
 
 @user.message(F.text == dict.archive)
 async def archive(message: types.Message):
     await message.answer("Bu yerda arxivdagi vazifalar bo'ladi. Hozircha arxivda hech narsa yo'q.")
-
-@user.message(F.text == dict.results)
-async def results(message: types.Message):
-    await message.answer("Bu yerda sizning natijalaringiz bo'ladi. Hozircha natijalaringiz yo'q.")
 
 @user.message(F.text == dict.help_txt)
 async def help(message: types.Message):

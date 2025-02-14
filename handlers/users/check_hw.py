@@ -1,6 +1,6 @@
 from aiogram import types, Router, F, html
 from data import config, dict
-from keyboards.inline import access_menu, post_chan, confirm_inl_key
+from keyboards.inline import access_menu, post_chan, confirm_inl_key, share_sub_usr
 from keyboards.regular import main_key, back_key, usr_main_key
 from filters import IsUser, IsUserCallback, IsRegistered, IsSubscriber, CbData
 from aiogram.fsm.context import FSMContext
@@ -280,7 +280,7 @@ async def confirm_submit(query: types.CallbackQuery, state: FSMContext):
     # Store the submission in DB (assumes store_submission is defined accordingly)
     db.store_submission(userid, exam_id, data.get("donel"), code)
     await query.answer("Muvaffaqiyatli jo'natildi.")
-    await query.message.edit_text(f"Vazifaga javoblaringiz muvaffaqiyatli topshirildi.\nNatijalaringiz quyidagicha:\n{get_correct_text(correct, answers)}")
+    await query.message.edit_text(f"Vazifaga javoblaringiz muvaffaqiyatli topshirildi.\n\nNatijalaringiz quyidagicha:\n{get_correct_text(correct, answers)}", reply_markup=share_sub_usr(code))
     await state.clear()
 
 @chhw.callback_query(F.data == "back", check_hw_states.confirm)

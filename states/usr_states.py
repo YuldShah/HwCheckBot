@@ -5,3 +5,6 @@ class check_hw_states(StatesGroup):
     way = State()
     answer = State()
     confirm = State()
+
+class result_states(StatesGroup):
+    show = State()
