@@ -105,3 +105,10 @@ def get_correct_text(correct, answers):
         res += tex1 + tex2 + "\n"
     res = html.expandable_blockquote(f"✅ To'g'ri javoblar: {html.bold(f"{cnt}/{len(correct)}")} - {html.bold(f"{cnt/len(correct)*100:.1f}%")}\nSAT taxminiy ball: {html.bold(int(round((cnt/len(correct)*600+200)/10))*10)}\n#Raq. Natija\n" + res)
     return res
+
+def gen_code(length):
+    import random
+    import string
+    letters = string.ascii_letters
+    digits = string.digits
+    return ''.join(random.choice(letters + digits) for i in range(length))

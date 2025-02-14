@@ -103,11 +103,15 @@ class DatabaseManager:
         exid: exam/test id (int)
         answers: answers given by the user (str)
         """
+        from utils.yau import gen_code
+        code = gen_code(10)
         try:
-            self.query("INSERT INTO submissions(userid, exid, answers) VALUES (%s, %s, %s)", (userid, exid, answers))
+            self.query("INSERT INTO submissions(userid, exid, answers, random) VALUES (%s, %s, %s, %s)", (userid, exid, answers, code))
         except Exception:
             import logging
             logging.error("Error storing submission", exc_info=True)
+            return False
+        return code
 
     def get_last_n_rows(self, table, n):
         """
