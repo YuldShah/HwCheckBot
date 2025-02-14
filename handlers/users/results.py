@@ -18,12 +18,12 @@ UTC_OFFSET = timezone(timedelta(hours=5))  # UTC+5 timezone
 @reshow.message(F.text == dict.results)
 async def results(message: types.Message, state: FSMContext):
     await state.set_state(result_states.show)
-    await message.answer("Yuklanmoqda...", reply_markup=usr_main_key)
+    msg = await message.answer("Yuklanmoqda...", reply_markup=usr_main_key)
     sub = db.fetchone("SELECT * FROM submissions ORDER BY idx DESC LIMIT 1")
     if not sub:
         await message.edit_text("Bu yerda sizning natijalaringiz bo'ladi. Hozircha natijalaringiz yo'q.")
         return
-    await show_result(message, sub)
+    await show_result(msg, sub)
 
 
 async def show_result(message: types.Message, sub):
