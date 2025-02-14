@@ -20,7 +20,7 @@ async def adminstart(message: types.Message, state: FSMContext) -> None:
     await state.clear()
     # await bot.get_chat(message.from_user.id)
     await message.answer_sticker("CAACAgIAAxkBAANHZ6OBeJYZztktbr8YZHZ3muuKlr0AAqYCAAJWnb0K5jqXX4k9st02BA")
-    await message.answer(f"👋 Hi, {html.bold(message.from_user.mention_html())}\n\n👀 You're an admin, do whatever you want!", reply_markup=adm_default)
+    await message.answer(f"👋 Hello, {html.bold(message.from_user.mention_html())}\n\n👀 You're an admin, do whatever you want!", reply_markup=adm_default)
 
 
 @admin.callback_query(CbData("main_menu"))
