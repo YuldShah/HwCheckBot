@@ -624,13 +624,15 @@ async def finalize_test(query: types.CallbackQuery, state: FSMContext):
     # Assume that the correct answers and types are stored in state under keys 'donel' and 'typesl'
     donel = data.get("donel")
     typesl = data.get("typesl")
+    vis = not data.get("vis")
+    resub = data.get("resub")
     # Pack correct answers and types in JSON for later homework processing
     test_info = {"answers": donel, "types": typesl}
     # Insert new exam/test record. Field order: idx, title, about, instructions, num_questions, correct, sdate, resub, folder, hide
-    query_str = """INSERT INTO exams (title, about, instructions, num_questions, correct, sdate, random) 
-                   VALUES (%s, %s, %s, %s, %s, %s, %s)"""
+    query_str = """INSERT INTO exams (title, about, instructions, num_questions, correct, sdate, hide, resub, random) 
+                   VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)"""
     random_text = datetime.now().strftime("%Y%m%d%H%M%S")
-    db.query(query_str, (title, about, instructions, numquest, json.dumps(test_info), sdate, random_text))
+    db.query(query_str, (title, about, instructions, numquest, json.dumps(test_info), sdate, int(vis), int(resub), random_text))
     attaches = data.get("attaches")
     exid = db.fetchone("SELECT idx FROM exams WHERE random = %s", (random_text,))[0]
     if attaches:

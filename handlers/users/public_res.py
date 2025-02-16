@@ -20,7 +20,7 @@ async def search_results(query: types.InlineQuery):
                 message_text="🚫 Siz qidirgan natija topilmadi."
             )
         )
-        return await query.answer([res], cache_time=1, is_personal=True, switch_pm_parameter="myres", switch_pm_text="📊 Natijalarim")
+        return await query.answer([res], cache_time=1, is_personal=True, switch_pm_parameter="myres", switch_pm_text="📊 Natijalarimni botda ko'rish")
     exam_det = db.fetchone("SELECT title, correct FROM exams WHERE idx = %s", (sub[2],))
     title_of_exam = None
 
@@ -42,7 +42,7 @@ async def search_results(query: types.InlineQuery):
             cnt += 1
     ter = (
         f"📝 {html.bold(title_of_exam)} uchun natija {html.bold(f'#{sub[0]}')}"
-        f"\n\n👤 Egasi: {html.bold(html.link(user_name, f'tg://user?id={sub[1]}'))}"
+        f"\n\n👤 Egasi: {html.bold(query.from_user.mention_html() if str(query.from_user.id) == sub[1] else html.link(user_name, f'tg://user?id={sub[1]}'))}"
         f"\n⏰ Topshirilgan vaqti: {html.code(sub[3].strftime('%H:%M:%S — %Y-%m-%d'))}"
         f"\n✅ To'g'ri javoblar: {html.bold(f'{cnt}/{len(correct)}')} - {html.bold(f'{cnt/len(correct)*100:.1f}%')}"
         f"\n📑 SAT taxminiy ball: {html.bold(int(round((cnt/len(correct)*600+200)/10))*10)}"

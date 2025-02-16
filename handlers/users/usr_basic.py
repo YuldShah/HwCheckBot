@@ -39,5 +39,6 @@ async def get_perm(callback: types.CallbackQuery):
 @user.callback_query(CbData("main_menu"))
 async def main_menu(callback: types.CallbackQuery, state: FSMContext):
     await state.clear()
+    await callback.message.delete()
     await callback.message.answer_sticker("CAACAgIAAxkBAAIBt2emDv__wEe3FxrexsQkuXhfqM63AAJAAQACVp29CmzpW0AsSdYlNgQ")
     await callback.message.answer(f"👋 Salom, {html.bold(callback.from_user.mention_html())}! Botga xush kelibsiz!", reply_markup=user_markup)

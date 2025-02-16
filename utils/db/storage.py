@@ -94,19 +94,23 @@ class DatabaseManager:
             logging.error("SQL Execution error", exc_info=True)
             return None
 
-    def store_submission(self, userid, exid, answers, code):
+    def store_submission(self, userid, exid, answers, code, sub_time):
         """
-        Store a submission in the database.
+        Store a submission in the database with the submission time.
         
         Parameters:
-        db: an instance of DatabaseManager
         userid: user identifier (str)
         exid: exam/test id (int)
-        answers: answers given by the user (str)
+        answers: answers given by the user (list)
+        code: submission code (str)
+        sub_time: submission timestamp (datetime)
         """
         answers = json.dumps(answers)
         try:
-            self.query("INSERT INTO submissions(userid, exid, answers, random) VALUES (%s, %s, %s, %s)", (userid, exid, answers, code))
+            self.query(
+                "INSERT INTO submissions(userid, exid, answers, random, date) VALUES (%s, %s, %s, %s, %s)", 
+                (userid, exid, answers, code, sub_time)
+            )
         except Exception:
             import logging
             logging.error("Error storing submission", exc_info=True)

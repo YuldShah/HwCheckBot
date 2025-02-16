@@ -50,9 +50,32 @@ async def show_result(message: types.Message, sub):
         f"✅ To'g'ri javoblar: {html.bold(f'{cnt}/{len(correct)}')} ({cnt/len(correct)*100:.1f}%)\n"
         f"📑 SAT taxminiy ball: {html.bold(int(round((cnt/len(correct)*600+200)/10))*10)}"
     )
-    print(message.text)
+    res = ""
+    print(correct, answers)
+    cnt = 0
+    for i in range((len(correct)+1)//2):
+        i1 = i
+        i2 = (len(correct)+1)//2+i
+        # print(i1, i2)
+        tex1 = f"{html.bold(i1+1)}. {html.code(answers[i1])} "
+        tex2 = ""
+        if correct[i1] == answers[i1]:
+            cnt += 1
+            tex1 += "✅\t"
+        else:
+            tex1 += "❌\t"
+        if i2 != len(correct):
+            tex2 = f"{html.bold(i2+1)}. {html.code(answers[i2])} "
+            if correct[i2] == answers[i2]:
+                cnt += 1
+                tex2 += "✅"
+            else:
+                tex2 += "❌"
+        res += tex1 + tex2 + "\n"
+    result_text += "\n\n" + html.expandable_blockquote("#Raq. Natija\n" + res)
+    # print(message.text)
     # await message.reply("this one")
-    await message.edit_text(result_text, reply_markup=results_time(sub[0], ccode))
+    await message.edit_text(result_text, reply_markup=results_time(sub[0], ccode, 0))
     return 0
 
 

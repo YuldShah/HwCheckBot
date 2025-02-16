@@ -95,9 +95,12 @@ def obom(cur, numq, donel, typesl, page=1, confirm=False):
             else:
                 row.append(InlineKeyboardButton(text=f"🔴{now}", callback_data=f"jump_{now}"))
         btns.append(row)
+    allp = (numq+config.MAX_QUESTION_IN_A_PAGE-1)//config.MAX_QUESTION_IN_A_PAGE
+    if allp==1:
+        return InlineKeyboardMarkup(inline_keyboard=btns)
     row = [
         InlineKeyboardButton(text="⇐", callback_data="page_prev"),
-        InlineKeyboardButton(text=f"Pg: {page}/{(numq+config.MAX_QUESTION_IN_A_PAGE-1)//config.MAX_QUESTION_IN_A_PAGE}", callback_data="page_now"),
+        InlineKeyboardButton(text=f"Pg: {page}/{allp}", callback_data="page_now"),
         InlineKeyboardButton(text="⇒", callback_data="page_next")
     ]
     btns.append(row)

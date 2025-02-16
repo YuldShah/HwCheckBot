@@ -75,7 +75,7 @@ def get_user_ans_text(donel, typesl):
             res += " | OS"
         else:
             res += f" | V[{typesl[i]}]"
-            cnt += 1
+        cnt += 1
         res += "\n"
     res = f"✅ Javob berildi: {cnt}/{numq}\n\n#Raq. Javob | Turi\n" + res
     return html.expandable_blockquote(res)

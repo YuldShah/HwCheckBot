@@ -9,6 +9,8 @@ def mand_chans(channels) -> InlineKeyboardMarkup:
     btns.append([InlineKeyboardButton(text=check_subs, callback_data="check_subs")])
     return InlineKeyboardMarkup(inline_keyboard=btns)
 
+
+
 def get_answering_keys(current, total, answers, typesl, page=1, confirm=False) -> InlineKeyboardMarkup:
     btns = [[InlineKeyboardButton(text=dict.continue_uz, callback_data="continue")]]
     if not confirm:
@@ -30,9 +32,12 @@ def get_answering_keys(current, total, answers, typesl, page=1, confirm=False) -
             else:
                 row.append(InlineKeyboardButton(text=f"🔴{now}", callback_data=f"jump_{now}"))
         btns.append(row)
+    allp = (total+config.MAX_QUESTION_IN_A_PAGE-1)//config.MAX_QUESTION_IN_A_PAGE
+    if allp==1:
+        return InlineKeyboardMarkup(inline_keyboard=btns)
     row = [
         InlineKeyboardButton(text="⇐", callback_data="page_prev"),
-        InlineKeyboardButton(text=f"Bet: {page}/{(total+config.MAX_QUESTION_IN_A_PAGE-1)//config.MAX_QUESTION_IN_A_PAGE}", callback_data="page_now"),
+        InlineKeyboardButton(text=f"Bet: {page}/{allp}", callback_data="page_now"),
         InlineKeyboardButton(text="⇒", callback_data="page_next")
     ]
     btns.append(row)
@@ -78,7 +83,7 @@ def share_sub_usr(code):
     return InlineKeyboardMarkup(inline_keyboard=btns)
 
 
-def results_time(subid, ccode):
+def results_time(subid, ccode, vis):
     btns = [
         [
             InlineKeyboardButton(text=dict.share_uz, switch_inline_query=f"sub_{ccode}")
@@ -89,3 +94,10 @@ def results_time(subid, ccode):
         ]
     ]
     return InlineKeyboardMarkup(inline_keyboard=btns)
+
+btns5 = [
+    [
+        InlineKeyboardButton(text=dict.continue_uz, callback_data="continue")
+    ]
+]
+all_continue_usr = InlineKeyboardMarkup(inline_keyboard=btns5)
