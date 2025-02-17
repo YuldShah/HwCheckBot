@@ -133,6 +133,35 @@ async def delete_test(callback: types.CallbackQuery, state: FSMContext):
     await state.set_state(arch_states.rmtconfirm)
     await callback.message.edit_text("Please, confirm you want to delete the test!", reply_markup=confirm_inl_key)
 
+@arch.callback_query(arch_states.edit, CbDataStartsWith("vis_"))
+async def toggle_visibility(query: types.CallbackQuery, state: FSMContext):
+    data = await state.get_data()
+    vis = query.data.split("_")[1]
+    await query.answer(f"👁 Visibility now - {vis.capitalize()}.")
+    if vis == "on":
+        await query.answer("Visibility now on.")
+    else:
+        await query.answer("Visibility now off.")
+        vis = "off"
+    # await state.update_data(vis=vis=="on")
+
+    # await query.message.edit_text(f"{await get_text(state)}\n{get_ans_text(donel, typesl)}\nPlease, change the settings as you wish. (Pressing toggles on/off)", reply_markup=ans_set_fin(vis=="on", resub, folder))
+
+@arch.callback_query(arch_states.edit, CbDataStartsWith("resub_"))
+async def toggle_resubmission(query: types.CallbackQuery, state: FSMContext):
+    data = await state.get_data()
+    resub = query.data.split("_")[1]
+    await query.answer(f"Resubmission now - {resub.capitalize()}.")
+    if vis == "on":
+        await query.answer("Visibility now on.")
+    else:
+        await query.answer("Visibility now off.")
+        vis = "off"
+    # await state.update_data(resub=resub=="on")
+
+    # await query.message.edit_text(f"{await get_text(state)}\n{get_ans_text(donel, typesl)}\nPlease, change the settings as you wish. (Pressing toggles on/off)", reply_markup=ans_set_fin(vis, resub=="on", folder))
+
+
 @arch.callback_query(F.data == "confirm", arch_states.rmtconfirm)
 async def delete_confirm_test(callback: types.CallbackQuery, state: FSMContext):
     await callback.message.edit_text("Deleting...")
