@@ -170,10 +170,12 @@ def ans_set_fin(visibility, resub, folder=None):
     # btns.append()
     return InlineKeyboardMarkup(inline_keyboard=btns)
 
-def inl_folders(folders):
+def inl_folders(folders, curf):
     btns = []
+    if curf:
+        btns.append([InlineKeyboardButton(text=dict.folder_dont, callback_data="folder_0")])
     for idx, title in folders:
-        btns.append([InlineKeyboardButton(text=title, callback_data=f"folder_{idx}")])
+        btns.append([InlineKeyboardButton(text=("✅ " if idx == curf else "") + title, callback_data=f"folder_{idx}")])
     btns.append([InlineKeyboardButton(text=dict.back, callback_data="back")])
     return InlineKeyboardMarkup(inline_keyboard=btns)
 
@@ -229,19 +231,19 @@ def edit_test_menu(visibility, resub):
             InlineKeyboardButton(text=dict.delete, callback_data="delete"),
         ],
         [
-            InlineKeyboardButton(text=dict.back, callback_data="back"),
+            InlineKeyboardButton(text=dict.save_changes, callback_data="back"),
         ]
     ]
     return InlineKeyboardMarkup(inline_keyboard=btns)
 
-def details_test(code, folder):
+def details_test(code, folder, exid):
     btns = [
         [
             InlineKeyboardButton(text=dict.folder+folder if folder else dict.folder_not, callback_data="folder")
         ],
         [
-            InlineKeyboardButton(text=dict.edit, callback_data="edit"),
-            InlineKeyboardButton(text=dict.share, switch_inline_query=f"{code}")
+            InlineKeyboardButton(text=dict.edit, callback_data=f"edit_{exid}"),
+            InlineKeyboardButton(text=dict.share, switch_inline_query=f"ex_{code}")
         ],
         [
             InlineKeyboardButton(text=dict.back, callback_data="back")

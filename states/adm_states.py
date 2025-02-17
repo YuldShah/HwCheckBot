@@ -39,6 +39,7 @@ class creates(StatesGroup):
     way = State()
     ans = State()
     setts = State()
+    folder_change = State()
     confirm = State()
 
 class arch_states(StatesGroup):
@@ -46,6 +47,7 @@ class arch_states(StatesGroup):
     fol_title = State()
     tests = State()
     rdis = State()
+    folder_change = State()
     rmfconfirm = State()
     emenu = State()
     edit = State()
@@ -54,6 +56,7 @@ class arch_states(StatesGroup):
     edans = State()
     share = State()
     post = State()
+    rmtconfirm = State()
 
 class statsstates(StatesGroup):
     stmenu = State()

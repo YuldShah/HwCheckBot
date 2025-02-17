@@ -530,13 +530,13 @@ async def confirm_ans(query: types.CallbackQuery, state: FSMContext):
     # await state.update_data()
     await query.message.edit_text(f"{await get_text(state)}\n{get_ans_text(donel, typesl)}\nPlease, change the settings as you wish. (Pressing toggles on/off)", reply_markup=ans_set_fin(vis, resub, folder))
 
-@test.callback_query(creates.setts, CbData("folder"))
-async def set_folder(query: types.CallbackQuery, state: FSMContext):
-    folders = db.fetchall("SELECT * FROM folders")
-    if not folders:
-        await query.answer("No folders found, create one first")
-        return
-    await query.message.edit_text("Please, choose the folder:", reply_markup=inl_folders(folders))
+# @test.callback_query(creates.setts, CbData("folder"))
+# async def set_folder(query: types.CallbackQuery, state: FSMContext):
+#     folders = db.fetchall("SELECT * FROM folders")
+#     if not folders:
+#         await query.answer("No folders found, create one first")
+#         return
+#     await query.message.edit_text("Please, choose the folder:", reply_markup=inl_folders(folders))
 
 @test.callback_query(creates.setts, CbData("back"))
 async def back_to_ans(callback: types.CallbackQuery, state: FSMContext):
@@ -606,11 +606,62 @@ async def toggle_resubmission(query: types.CallbackQuery, state: FSMContext):
 
 @test.callback_query(creates.setts, CbData("folder"))
 async def set_folder(query: types.CallbackQuery, state: FSMContext):
+    data = await state.get_data()
+    typesl = data.get("typesl")
+    donel = data.get("donel")
+    fd = data.get("folder")
     folders = db.fetchall("SELECT * FROM folders")
     if not folders:
         await query.answer("No folders found, create one first")
         return
-    await query.message.edit_text("Please, choose the folder:", reply_markup=inl_folders(folders))
+    await state.set_state(creates.folder_change)
+    await query.message.edit_text(f"{await get_text(state)}\n{get_ans_text(donel, typesl)}\nPlease, choose the folder:", reply_markup=inl_folders(folders, fd))
+
+@test.callback_query(F.data.startswith("folder_"), creates.folder_change)
+async def change_folder_chosen(callback: types.CallbackQuery, state: FSMContext):
+    data = await state.get_data()
+    fid = callback.data.split("_")[1]
+    exid = data.get("exam_id")
+    # folder_id = fid
+    # db.query("UPDATE exams SET folder=%s WHERE idx=%s", (fid, exid,))
+    folder = None
+    if fid!="0":
+        folder = db.fetchone("SELECT title FROM folders WHERE idx = %s", (fid,))[0]
+    await state.update_data(folder_id=fid, folder=folder)
+    await callback.answer("Folder changed successfully")
+    # await callback.message.edit_text("🗂 Folder changed successfully")
+    # data = await state.get_data()
+    numq = data.get("numquest")
+    typesl = data.get("typesl")
+    donel = data.get("donel")
+    curq = data.get("curq")
+    resub = data.get("resub")
+    # folder = fid
+    vis = data.get("vis")
+    # await callback.answer(f"👁 Visibility now - {vis.capitalize()}.")
+    # if vis == "on":
+    #     await query.answer("Visibility now on.")
+    # else:
+    #     await query.answer("Visibility now off.")
+        # vis = "off"
+    # await state.update_data(vis=vis=="on")
+    await state.set_state(creates.setts)
+    await callback.message.edit_text(f"{await get_text(state)}\n{get_ans_text(donel, typesl)}\nPlease, change the settings as you wish. (Pressing toggles on/off)", reply_markup=ans_set_fin(vis, resub, folder))
+
+@test.callback_query(F.data == "back", creates.folder_change)
+async def back_to_idk(callback: types.CallbackQuery, state: FSMContext):
+    data = await state.get_data()
+    numq = data.get("numquest")
+    typesl = data.get("typesl")
+    donel = data.get("donel")
+    curq = data.get("curq")
+    resub = data.get("resub")
+    folder = data.get("folder")
+    vis = data.get("vis")
+    # await state.update_data(vis=vis=="on")
+    await state.set_state(creates.setts)
+    await callback.message.edit_text(f"{await get_text(state)}\n{get_ans_text(donel, typesl)}\nPlease, change the settings as you wish. (Pressing toggles on/off)", reply_markup=ans_set_fin(vis, resub, folder))
+
 
 @test.callback_query(creates.setts, CbData("continue"))
 async def finalize_test(query: types.CallbackQuery, state: FSMContext):
@@ -626,13 +677,14 @@ async def finalize_test(query: types.CallbackQuery, state: FSMContext):
     typesl = data.get("typesl")
     vis = not data.get("vis")
     resub = data.get("resub")
+    folder_id = data.get("folder_id") or 0
     # Pack correct answers and types in JSON for later homework processing
     test_info = {"answers": donel, "types": typesl}
     # Insert new exam/test record. Field order: idx, title, about, instructions, num_questions, correct, sdate, resub, folder, hide
-    query_str = """INSERT INTO exams (title, about, instructions, num_questions, correct, sdate, hide, resub, random) 
-                   VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)"""
+    query_str = """INSERT INTO exams (title, about, instructions, num_questions, correct, sdate, hide, resub, folder, random) 
+                   VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)"""
     random_text = datetime.now().strftime("%Y%m%d%H%M%S")
-    db.query(query_str, (title, about, instructions, numquest, json.dumps(test_info), sdate, int(vis), int(resub), random_text))
+    db.query(query_str, (title, about, instructions, numquest, json.dumps(test_info), sdate, int(vis), int(resub), folder_id, random_text))
     attaches = data.get("attaches")
     exid = db.fetchone("SELECT idx FROM exams WHERE random = %s", (random_text,))[0]
     if attaches:
