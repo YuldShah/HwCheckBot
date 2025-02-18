@@ -19,14 +19,14 @@ admin.callback_query.filter(IsAdminCallback())
 async def adminstart(message: types.Message, state: FSMContext) -> None:
     await state.clear()
     # await bot.get_chat(message.from_user.id)
-    await message.answer_sticker("CAACAgIAAxkBAANHZ6OBeJYZztktbr8YZHZ3muuKlr0AAqYCAAJWnb0K5jqXX4k9st02BA")
+    await message.answer_sticker("CAACAgIAAxkBAAMsZ7RQOl346-zTcJXpWdn8XgJr-64AAtMAA1advQr1Mo-X1RL5PTYE")
     await message.answer(f"👋 Hello, {html.bold(message.from_user.mention_html())}\n\n👀 You're an admin, do whatever you want!", reply_markup=adm_default)
 
 
 @admin.callback_query(CbData("main_menu"))
 async def adminmenu(callback: types.CallbackQuery, state: FSMContext) -> None:
     await state.clear()
-    await callback.message.answer_sticker("CAACAgIAAxkBAANHZ6OBeJYZztktbr8YZHZ3muuKlr0AAqYCAAJWnb0K5jqXX4k9st02BA")
+    await callback.message.answer_sticker("CAACAgIAAxkBAAMsZ7RQOl346-zTcJXpWdn8XgJr-64AAtMAA1advQr1Mo-X1RL5PTYE")
     await callback.message.answer(f"Back to {html.bold(f"{dict.main_menu}")}", reply_markup=adm_default)
     await callback.message.delete()
 
