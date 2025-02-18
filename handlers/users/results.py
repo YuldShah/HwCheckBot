@@ -21,7 +21,7 @@ async def results(message: types.Message, state: FSMContext):
     await state.set_state(result_states.show)
     await message.answer(f"Menu {html.bold(dict.results)}", reply_markup=usr_main_key)
     msg = await message.answer("Yuklanmoqda...")
-    sub = db.fetchone("SELECT * FROM submissions WHERE userid = %s ORDER BY idx DESC LIMIT 1", (message.from_user.id,))
+    sub = db.fetchone("SELECT * FROM submissions WHERE userid = %s ORDER BY idx DESC LIMIT 1", (str(message.from_user.id),))
     if not sub:
         await msg.edit_text("Bu yerda sizning natijalaringiz bo'ladi. Hozircha natijalaringiz yo'q.")
         return
@@ -87,7 +87,7 @@ async def navigate_results(callback: types.CallbackQuery):
     else:
         query = "SELECT * FROM submissions WHERE idx > %s AND userid = %s ORDER BY idx ASC LIMIT 1"
 
-    sub = db.fetchone(query, (sub_id, callback.from_user.id,))
+    sub = db.fetchone(query, (sub_id, str(callback.from_user.id),))
     if not sub:
         await callback.answer("Boshqa natijalar topilmadi.", show_alert=True)
     else:
