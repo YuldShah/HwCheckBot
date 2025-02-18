@@ -1,10 +1,13 @@
 from aiogram import Router, F, types, html
 from data import dict
 from loader import db
+from datetime import timezone, timedelta
 import json
 
 
 pub = Router()
+
+UTC_OFFSET = timezone(timedelta(hours=5))  # UTC+5 timezone
 
 
 @pub.inline_query(F.query.startswith("sub_"))
@@ -43,7 +46,7 @@ async def search_results(query: types.InlineQuery):
     ter = (
         f"📝 {html.bold(title_of_exam)} uchun natija {html.bold(f'#{sub[0]}')}"
         f"\n\n👤 Egasi: {html.bold(query.from_user.mention_html() if str(query.from_user.id) == sub[1] else html.link(user_name, f'tg://user?id={sub[1]}'))}"
-        f"\n⏰ Topshirilgan vaqti: {html.code(sub[3].strftime('%H:%M:%S — %Y-%m-%d'))}"
+        f"\n⏰ Topshirilgan vaqti: {html.code(sub[3].astimezone(UTC_OFFSET).strftime('%H:%M:%S — %Y-%m-%d'))}"
         f"\n✅ To'g'ri javoblar: {html.bold(f'{cnt}/{len(correct)}')} - {html.bold(f'{cnt/len(correct)*100:.1f}%')}"
         f"\n📑 SAT taxminiy ball: {html.bold(int(round((cnt/len(correct)*600+200)/10))*10)}"
     )
