@@ -3,7 +3,7 @@ from data import config, dict
 from aiogram.filters import CommandStart, Command
 from aiogram.fsm.context import FSMContext
 from keyboards.regular import user_markup
-from keyboards.inline import goto_bot
+from keyboards.inline import goto_bot, elbek
 from .results import results
 from filters import IsUser, IsUserCallback, CbData, CbDataStartsWith, IsSubscriber
 
@@ -24,6 +24,7 @@ async def start(message: types.Message, state: FSMContext):
 
 @user.message(F.text == dict.archive)
 async def archive(message: types.Message):
+    cnt = db.fetchone("SELECT COUNT(*) FROM ")
     await message.answer("Bu yerda arxivdagi vazifalar bo'ladi. Hozircha arxivda hech narsa yo'q.")
 
 @user.message(F.text == dict.help_txt)

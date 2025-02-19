@@ -1,9 +1,12 @@
 from aiogram import Router
 from aiogram.types import Message, CallbackQuery
 from keyboards.inline import main_menu_in
-from filters import IsFromInlineMessageCallback
+from filters import IsFromInlineMessageCallback, IsPrivate, IsPrivateCallback
 
 remover = Router()
+remover.message.filter(IsPrivate())
+remover.callback_query.filter(IsPrivateCallback())
+
 
 @remover.message()
 async def remove(message: Message) -> None:
