@@ -30,7 +30,15 @@ async def results(message: types.Message, state: FSMContext):
 
 async def show_result(message: types.Message, sub):
     # await message.edit_text("Yuklanmoqda...")
-    exam_det = db.fetchone("SELECT title, correct FROM exams WHERE idx = %s", (sub[2],))
+    # Modified query to select deadline as third field
+    exam_det = db.fetchone("SELECT title, correct, sdate FROM exams WHERE idx = %s", (sub[2],))
+    
+    deadline_str = exam_det[2]
+    try:
+        deadline_dt = datetime.strptime(deadline_str, "%d %m %Y").replace(tzinfo=UTC_OFFSET)
+    except Exception as e:
+        logging.error(f"Deadline parsing error: {e}", exc_info=True)
+        deadline_dt = None
 
     ccode = sub[5]
 
@@ -43,7 +51,11 @@ async def show_result(message: types.Message, sub):
         return 1
     cnt = sum(a == b for a, b in zip(answers, correct))
 
+    # Format submission time and add warning if submitted after deadline
     date_str = sub[3].astimezone(UTC_OFFSET).strftime('%H:%M:%S — %Y-%m-%d')
+    if deadline_dt and sub[3] > deadline_dt:
+        date_str += " (⚠️ Vaqtidan keyin topshirilgan)"
+
     result_text = (
         f"📝 {html.bold(exam_det[0])} uchun natija #{sub[0]}\n"
         f"⏰ Topshirilgan vaqti: {html.code(date_str)}\n"
