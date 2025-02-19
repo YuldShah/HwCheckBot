@@ -7,10 +7,10 @@ btns = [
     ],
     [
         types.KeyboardButton(text=results),
-        types.KeyboardButton(text=archive)
+        types.KeyboardButton(text=help_txt)
     ],
     [
-        types.KeyboardButton(text=help_txt)
+        types.KeyboardButton(text=archive)
     ]
 ]
 

@@ -3,9 +3,10 @@ from data import config, dict
 from aiogram.filters import CommandStart, Command
 from aiogram.fsm.context import FSMContext
 from keyboards.regular import user_markup
-from keyboards.inline import goto_bot
+from keyboards.inline import goto_bot, elbek
 from .results import results
-from filters import IsUser, IsUserCallback, CbData, CbDataStartsWith, IsSubscriber
+from filters import IsUser, IsUserCallback, CbData, CbDataStartsWith, IsSubscriber, IsNotArchiveAllowed
+from loader import db
 
 user = Router()
 
@@ -22,9 +23,13 @@ async def start(message: types.Message, state: FSMContext):
     await message.answer_sticker("CAACAgIAAxkBAAIBt2emDv__wEe3FxrexsQkuXhfqM63AAJAAQACVp29CmzpW0AsSdYlNgQ")
     await message.answer(f"👋 Salom, {html.bold(message.from_user.mention_html())}! Botga xush kelibsiz!", reply_markup=user_markup)
 
-@user.message(F.text == dict.archive)
+@user.message(F.text == dict.archive, IsNotArchiveAllowed())
 async def archive(message: types.Message):
-    await message.answer("Bu yerda arxivdagi vazifalar bo'ladi. Hozircha arxivda hech narsa yo'q.")
+    cnt = db.fetchone("SELECT COUNT(*) FROM exams LEFT JOIN submissions ON exams.idx = submissions.exid AND submissions.userid = ? WHERE submissions.exid IS NULL AND exams.hide = 0", (message.from_user.id,))
+    if cnt[0]:
+        await message.answer(f"❗️ Sizda {html.bold(cnt)} ta qoldirilgan vazifalar mavjud.\n\nAmmo, sizda hozircha qoldirilgan vazifalarni bajarish ruxsati yo'q. Ruxsat olish uchun admin bilan bog'laning.", reply_markup=elbek)
+    else:
+        await message.answer(f"🎉 Sizda hech qanday qoldirilgan vazifalar yo'q. Albatta, bu yaxshi! 😊")
 
 @user.message(F.text == dict.help_txt)
 async def help(message: types.Message):

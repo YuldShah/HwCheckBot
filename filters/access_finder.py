@@ -82,6 +82,26 @@ class IsUserCallback(BaseFilter):
         res = callback.from_user.id not in config.ADMINS
         return res and (callback.inline_message_id is not None or (callback.inline_message_id is None and callback.message and callback.message.chat.type == "private"))
 
+class IsArchiveAllowed(BaseFilter):
+    async def __call__(self, message: Message) -> bool:
+        return db.fetchone("SELECT arch FROM users WHERE userid=%s", (message.from_user.id,))[0] == 1
+
+class IsNotArchiveAllowed(BaseFilter):
+    async def __call__(self, message: Message) -> bool:
+        return db.fetchone("SELECT arch FROM users WHERE userid=%s", (message.from_user.id,))[0] == 0
+
+class IsArchiveAllowedCallback(BaseFilter):
+    async def __call__(self, callback: CallbackQuery) -> bool:
+        return db.fetchone("SELECT arch FROM users WHERE userid=%s", (callback.from_user.id,))[0] == 1
+
+class IsNotArchiveAllowedCallback(BaseFilter):
+    async def __call__(self, callback: CallbackQuery) -> bool:
+        return db.fetchone("SELECT arch FROM users WHERE userid=%s", (callback.from_user.id,))[0] == 0
+
+class IsPrivate(BaseFilter):
+    async def __call__(self, message: Message) -> bool:
+        return message.chat.type == "private"
+
 class IsPrivateCallback(BaseFilter):
     async def __call__(self, callback: CallbackQuery) -> bool:
         return callback.message.chat.type == "private"
