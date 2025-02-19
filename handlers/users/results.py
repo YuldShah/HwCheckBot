@@ -40,6 +40,8 @@ async def show_result(message: types.Message, sub):
         logging.error(f"Deadline parsing error: {e}", exc_info=True)
         deadline_dt = None
 
+    # Ensure sub[3] is offset-aware
+    sub_dt = sub[3] if sub[3].tzinfo else sub[3].replace(tzinfo=UTC_OFFSET)
     ccode = sub[5]
 
     correct, answers = [], []
@@ -52,8 +54,8 @@ async def show_result(message: types.Message, sub):
     cnt = sum(a == b for a, b in zip(answers, correct))
 
     # Format submission time and add warning if submitted after deadline
-    date_str = sub[3].astimezone(UTC_OFFSET).strftime('%H:%M:%S — %Y-%m-%d')
-    if deadline_dt and sub[3] > deadline_dt:
+    date_str = sub_dt.astimezone(UTC_OFFSET).strftime('%H:%M:%S — %Y-%m-%d')
+    if deadline_dt and sub_dt > deadline_dt:
         date_str += " (⚠️ Vaqtidan keyin topshirilgan)"
 
     result_text = (
