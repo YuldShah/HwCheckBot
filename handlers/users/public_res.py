@@ -32,12 +32,11 @@ async def search_results(query: types.InlineQuery):
         deadline_dt = None
     # Ensure sub[3] is offset-aware
     sub_dt = sub[3] if sub[3].tzinfo else sub[3].replace(tzinfo=UTC_OFFSET)
-    # Format submission time and add warning if appropriate
+    # Format submission time and add warning if appropriate (only if submission date is later than deadline date)
     sub_time = sub_dt.astimezone(UTC_OFFSET).strftime('%H:%M:%S — %Y-%m-%d')
     exsub_time = ""
-    print(sub_dt, deadline_dt)
-    if deadline_dt and sub_dt > deadline_dt:
-        exsub_time = html.underline("\n⚠️ Vaqtidan keyin topshirilgan")
+    if deadline_dt and sub_dt.date() > deadline_dt.date():
+        exsub_time = f"⚠️ {html.underline("\nVaqtidan keyin topshirilgan")}"
     
     title_of_exam = exam_det[0] if exam_det else "O'chirilgan test"
 

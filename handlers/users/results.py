@@ -53,12 +53,12 @@ async def show_result(message: types.Message, sub):
         return 1
     cnt = sum(a == b for a, b in zip(answers, correct))
 
-    # Format submission time and add warning if submitted after deadline
+    # Format submission time and add warning if submitted after deadline (only if submission date is later than deadline date)
     date_str = sub_dt.astimezone(UTC_OFFSET).strftime('%H:%M:%S — %Y-%m-%d')
     exsub_time = ""
     print(sub_dt, deadline_dt)
-    if deadline_dt and sub_dt > deadline_dt:
-        exsub_time = html.underline("\n⚠️ Vaqtidan keyin topshirilgan")
+    if deadline_dt and sub_dt.date() > deadline_dt.date():
+        exsub_time = f"⚠️ {html.underline("\nVaqtidan keyin topshirilgan")}"
 
     result_text = (
         f"📝 {html.bold(exam_det[0])} uchun natija #{sub[0]}\n"
