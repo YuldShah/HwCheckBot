@@ -17,7 +17,7 @@ usrarch.callback_query.filter(IsUserCallback(), IsSubscriberCallback(), IsArchiv
 async def show_archive(message: types.Message, state: FSMContext):
     await message.answer(f"{html.bold(dict.archive)} menyusi", reply_markup=usr_main_key)
     msg = await message.answer("Yuklanmoqda...")
-    mexams = db.fetchall("SELECT title, idx FROM exams LEFT JOIN submissions ON exams.idx = submissions.exid AND submissions.userid = %s::text WHERE submissions.exid IS NULL AND exams.hide = 0", (message.from_user.id,))
+    mexams = db.fetchall("SELECT exams.title, exams.idx FROM exams LEFT JOIN submissions ON exams.idx = submissions.exid AND submissions.userid = %s::text WHERE submissions.exid IS NULL AND exams.hide = 0;", (message.from_user.id,))
     if mexams:
         await state.set_state(missing_hw_states.exams)
         await msg.edit_text(f"❗️ Sizda {len(mexams)} ta qoldirilgan vazifa mavjud. Quyida ro'yxat keltirilgan. Ulardan birini tanlang va bajarishni boshlang:", reply_markup=get_missing_exams(mexams))
