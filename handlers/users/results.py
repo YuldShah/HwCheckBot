@@ -43,12 +43,12 @@ async def show_result(message: types.Message, sub):
 
     # Ensure sub[3] is offset-aware by treating naive datetime as UTC
     sub_dt = sub[3] if sub[3].tzinfo else sub[3].replace(tzinfo=timezone.utc)
-    # Compute dates in the same timezone
-    sub_date = sub_dt.astimezone(UTC_OFFSET).date()
-    deadline_date = deadline_dt.astimezone(UTC_OFFSET).date() if deadline_dt else None
-    date_str = sub_dt.astimezone(UTC_OFFSET).strftime('%H:%M:%S — %Y-%m-%d')
+    sub_dt = sub_dt.astimezone(UTC_OFFSET)  # Convert to UTC+5
+    
+    date_str = sub_dt.strftime('%H:%M:%S — %Y-%m-%d')
     exsub_time = ""
-    if deadline_date and sub_date > deadline_date:
+    print(f"Sub: {sub_dt}, Deadline: {deadline_dt}")
+    if deadline_dt and sub_dt > deadline_dt:
         exsub_time = html.underline("\n⚠️ Vaqtidan keyin topshirilgan")
     ccode = sub[5]
 
@@ -60,13 +60,6 @@ async def show_result(message: types.Message, sub):
         logging.error(f"Error parsing answers: {e}", exc_info=True)
         return 1
     cnt = sum(a == b for a, b in zip(answers, correct))
-
-    # Format submission time and add warning if submitted after deadline (only if submission date is later than deadline date)
-    date_str = sub_dt.astimezone(UTC_OFFSET).strftime('%H:%M:%S — %Y-%m-%d')
-    exsub_time = ""
-    print(sub_dt, deadline_dt)
-    if deadline_dt and sub_dt.date() > deadline_dt.date():
-        exsub_time = f"⚠️ {html.underline("\nVaqtidan keyin topshirilgan")}"
 
     result_text = (
         f"📝 {html.bold(exam_det[0])} uchun natija #{sub[0]}\n"

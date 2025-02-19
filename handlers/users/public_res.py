@@ -33,11 +33,12 @@ async def search_results(query: types.InlineQuery):
         deadline_dt = None
     # Ensure sub[3] is offset-aware by treating naive datetime as UTC
     sub_dt = sub[3] if sub[3].tzinfo else sub[3].replace(tzinfo=timezone.utc)
-    sub_date = sub_dt.astimezone(UTC_OFFSET).date()
-    deadline_date = deadline_dt.astimezone(UTC_OFFSET).date() if deadline_dt else None
-    sub_time = sub_dt.astimezone(UTC_OFFSET).strftime('%H:%M:%S — %Y-%m-%d')
+    sub_dt = sub_dt.astimezone(UTC_OFFSET)  # Convert to UTC+5
+    
+    sub_time = sub_dt.strftime('%H:%M:%S — %Y-%m-%d')
     exsub_time = ""
-    if deadline_date and sub_date > deadline_date:
+    print(f"Sub: {sub_dt}, Deadline: {deadline_dt}")
+    if deadline_dt and sub_dt > deadline_dt:
         exsub_time = html.underline("\n⚠️ Vaqtidan keyin topshirilgan")
     
     title_of_exam = exam_det[0] if exam_det else "O'chirilgan test"
