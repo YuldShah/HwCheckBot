@@ -55,12 +55,13 @@ async def show_result(message: types.Message, sub):
 
     # Format submission time and add warning if submitted after deadline
     date_str = sub_dt.astimezone(UTC_OFFSET).strftime('%H:%M:%S — %Y-%m-%d')
+    exsub_time = ""
     if deadline_dt and sub_dt > deadline_dt:
-        date_str += " (⚠️ Vaqtidan keyin topshirilgan)"
+        exsub_time = html.underline("\n⚠️ Vaqtidan keyin topshirilgan")
 
     result_text = (
         f"📝 {html.bold(exam_det[0])} uchun natija #{sub[0]}\n"
-        f"⏰ Topshirilgan vaqti: {html.code(date_str)}\n"
+        f"⏰ Topshirilgan vaqti: {html.code(date_str)}{exsub_time}\n"
         f"✅ To'g'ri javoblar: {html.bold(f'{cnt}/{len(correct)}')} ({cnt/len(correct)*100:.1f}%)\n"
         f"📑 SAT taxminiy ball: {html.bold(int(round((cnt/len(correct)*600+200)/10))*10)}"
     )

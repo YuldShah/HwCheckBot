@@ -34,8 +34,9 @@ async def search_results(query: types.InlineQuery):
     sub_dt = sub[3] if sub[3].tzinfo else sub[3].replace(tzinfo=UTC_OFFSET)
     # Format submission time and add warning if appropriate
     sub_time = sub_dt.astimezone(UTC_OFFSET).strftime('%H:%M:%S — %Y-%m-%d')
+    exsub_time = ""
     if deadline_dt and sub_dt > deadline_dt:
-        sub_time += " (⚠️ Vaqtidan keyin topshirilgan)"
+        exsub_time = html.underline("\n⚠️ Vaqtidan keyin topshirilgan")
     
     title_of_exam = exam_det[0] if exam_det else "O'chirilgan test"
 
@@ -54,7 +55,7 @@ async def search_results(query: types.InlineQuery):
     ter = (
         f"📝 {html.bold(title_of_exam)} uchun natija {html.bold(f'#{sub[0]}')}"
         f"\n\n👤 Egasi: {html.bold(query.from_user.mention_html() if str(query.from_user.id) == sub[1] else html.link(user_name, f'tg://user?id={sub[1]}'))}"
-        f"\n⏰ Topshirilgan vaqti: {html.code(sub_time)}"
+        f"\n⏰ Topshirilgan vaqti: {html.code(sub_time)}{exsub_time}"
         f"\n✅ To'g'ri javoblar: {html.bold(f'{cnt}/{len(correct)}')} - {html.bold(f'{cnt/len(correct)*100:.1f}%')}"
         f"\n📑 SAT taxminiy ball: {html.bold(int(round((cnt/len(correct)*600+200)/10))*10)}"
     )
