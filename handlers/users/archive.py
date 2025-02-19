@@ -34,7 +34,7 @@ async def start_missing_exam(callback: types.CallbackQuery, state: FSMContext):
         await callback.message.answer("Vazifa topilmadi. Iltimos, admin bilan bog'laning.")
         return
     # Check if user already submitted (simple check without deadline logic)
-    submission = db.fetchone("SELECT * FROM submissions WHERE userid = ? AND exid = %s", (str(callback.from_user.id), exam_id))
+    submission = db.fetchone("SELECT * FROM submissions WHERE userid = %s AND exid = %s", (str(callback.from_user.id), exam_id))
     if submission:
         await callback.message.answer("Siz bu vazifaga javoblaringizni allaqachon topshirgansiz.")
         return
@@ -279,7 +279,7 @@ async def confirm_submit(callback: types.CallbackQuery, state: FSMContext):
         await callback.message.answer("Javobingizni saqlashni iloji yo'q! Iltimos, admin bilan bog'laning.", reply_markup=usr_main_key)
         await state.clear()
         return
-    submission = db.fetchone("SELECT * FROM submissions WHERE userid = ? AND exid = %s", (str(callback.from_user.id), exam_id))
+    submission = db.fetchone("SELECT * FROM submissions WHERE userid = %s AND exid = %s", (str(callback.from_user.id), exam_id))
     if submission:
         await callback.message.answer("Siz allaqachon vazifaga javoblaringizni topshirib bo'lgansiz.")
         return
