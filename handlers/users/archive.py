@@ -116,7 +116,6 @@ async def handle_mcq(callback: types.CallbackQuery, state: FSMContext):
         return
     donel = data.get("donel")
     numq = data.get("total")
-    MAX_QUESTIONS = data.get("MAX_QUESTION_IN_A_PAGE", 10)
     cur_ans = callback.data.split("_")[1]
     donel[curq-1] = cur_ans
     ans_confirm = bool(data.get("ans_confirm"))
@@ -127,7 +126,7 @@ async def handle_mcq(callback: types.CallbackQuery, state: FSMContext):
         await state.update_data(ans_confirm=ans_confirm)
     else:
         # Calculate new page based on the next question
-        new_page = ((new_cur - 1) // MAX_QUESTIONS) + 1
+        new_page = ((new_cur - 1) // config.MAX_QUESTION_IN_A_PAGE) + 1
         await state.update_data(curq=new_cur, donel=donel, page=new_page)
 
     current_page = data.get("page", 1) if new_cur == -1 else new_page
@@ -174,7 +173,7 @@ async def handle_page(callback: types.CallbackQuery, state: FSMContext):
     page = data.get("page") or 1
     ans_confirm = bool(data.get("ans_confirm"))
     sign = callback.data.split("_")[1]
-    max_page = (total + data.get("MAX_QUESTION_IN_A_PAGE", 10) - 1) // data.get("MAX_QUESTION_IN_A_PAGE", 10)
+    max_page = (total + config.MAX_QUESTION_IN_A_PAGE - 1) // config.MAX_QUESTION_IN_A_PAGE
     if sign == "next":
         if page >= max_page:
             await callback.answer("Siz allaqachon oxirgi sahifadasiz.")
@@ -207,7 +206,6 @@ async def handle_open_ended(message: types.Message, state: FSMContext):
     donel = data.get("donel")
     total = data.get("total")
     msg = data.get("msg")
-    MAX_QUESTIONS = data.get("MAX_QUESTION_IN_A_PAGE", 10)
 
     # ... existing all answers handling code ...
 
@@ -227,7 +225,7 @@ async def handle_open_ended(message: types.Message, state: FSMContext):
         await state.update_data(ans_confirm=ans_confirm)
     else:
         # Calculate new page based on the next question
-        current_page = ((new_cur - 1) // MAX_QUESTIONS) + 1
+        current_page = ((new_cur - 1) // config.MAX_QUESTION_IN_A_PAGE) + 1
         await state.update_data(curq=new_cur, page=current_page)
 
     prompt_text = html.underline("yuboring") if typesl[new_cur-1 if new_cur != -1 else curq-1] == 0 else html.underline("tanlang")
