@@ -27,16 +27,18 @@ async def search_results(query: types.InlineQuery):
     exam_det = db.fetchone("SELECT title, correct, sdate FROM exams WHERE idx = %s", (sub[2],))
     deadline_str = exam_det[2]
     try:
-        deadline_dt = datetime.strptime(deadline_str, "%d %m %Y").replace(tzinfo=UTC_OFFSET)
+        parsed_deadline = datetime.strptime(deadline_str, "%d %m %Y")
+        deadline_dt = parsed_deadline.replace(hour=23, minute=59, second=59, tzinfo=UTC_OFFSET)
     except Exception as e:
         deadline_dt = None
     # Ensure sub[3] is offset-aware
     sub_dt = sub[3] if sub[3].tzinfo else sub[3].replace(tzinfo=UTC_OFFSET)
-    # Format submission time and add warning if appropriate (only if submission date is later than deadline date)
+    sub_date = sub_dt.astimezone(UTC_OFFSET).date()
+    deadline_date = deadline_dt.astimezone(UTC_OFFSET).date() if deadline_dt else None
     sub_time = sub_dt.astimezone(UTC_OFFSET).strftime('%H:%M:%S — %Y-%m-%d')
     exsub_time = ""
-    if deadline_dt and sub_dt.date() > deadline_dt.date():
-        exsub_time = f"⚠️ {html.underline("\nVaqtidan keyin topshirilgan")}"
+    if deadline_date and sub_date > deadline_date:
+        exsub_time = html.underline("\n⚠️ Vaqtidan keyin topshirilgan")
     
     title_of_exam = exam_det[0] if exam_det else "O'chirilgan test"
 
