@@ -84,19 +84,19 @@ class IsUserCallback(BaseFilter):
 
 class IsArchiveAllowed(BaseFilter):
     async def __call__(self, message: Message) -> bool:
-        return db.fetchone("SELECT arch FROM users WHERE userid=%s", (message.from_user.id,))[0] == 1
+        return db.fetchone("SELECT arch FROM users WHERE userid=%s::text", (message.from_user.id,))[0] == 1
 
 class IsNotArchiveAllowed(BaseFilter):
     async def __call__(self, message: Message) -> bool:
-        return db.fetchone("SELECT arch FROM users WHERE userid=%s", (message.from_user.id,))[0] == 0
+        return db.fetchone("SELECT arch FROM users WHERE userid=%s::text", (message.from_user.id,))[0] == 0
 
 class IsArchiveAllowedCallback(BaseFilter):
     async def __call__(self, callback: CallbackQuery) -> bool:
-        return db.fetchone("SELECT arch FROM users WHERE userid=%s", (callback.from_user.id,))[0] == 1
+        return db.fetchone("SELECT arch FROM users WHERE userid=%s::text", (callback.from_user.id,))[0] == 1
 
 class IsNotArchiveAllowedCallback(BaseFilter):
     async def __call__(self, callback: CallbackQuery) -> bool:
-        return db.fetchone("SELECT arch FROM users WHERE userid=%s", (callback.from_user.id,))[0] == 0
+        return db.fetchone("SELECT arch FROM users WHERE userid=%s::text", (callback.from_user.id,))[0] == 0
 
 class IsPrivate(BaseFilter):
     async def __call__(self, message: Message) -> bool:
