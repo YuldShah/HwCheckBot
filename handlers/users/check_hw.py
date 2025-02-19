@@ -19,7 +19,7 @@ chhw.callback_query.filter(IsUserCallback(), IsSubscriber())
 @chhw.message(F.text == dict.do_todays_hw)
 async def do_today_hw(message: types.Message, state: FSMContext):
     # Get today's date in UTC+5
-    await message.answer("Yuklanmoqda...", reply_markup=usr_main_key)
+    await message.answer(f"{html.bold(dict.do_todays_hw)} menyusi", reply_markup=usr_main_key)
     today = datetime.now(timezone(timedelta(hours=5))).strftime("%d %m %Y")
     # Fetch homework test scheduled for today from storage
     test = db.fetchone("SELECT * FROM exams WHERE sdate = %s", (today,))

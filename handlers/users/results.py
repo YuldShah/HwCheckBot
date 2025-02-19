@@ -19,7 +19,7 @@ UTC_OFFSET = timezone(timedelta(hours=5))  # UTC+5 timezone
 @reshow.message(F.text == dict.results)
 async def results(message: types.Message, state: FSMContext):
     await state.set_state(result_states.show)
-    await message.answer(f"Menu {html.bold(dict.results)}", reply_markup=usr_main_key)
+    await message.answer(f"{html.bold(dict.results)} menyusi", reply_markup=usr_main_key)
     msg = await message.answer("Yuklanmoqda...")
     sub = db.fetchone("SELECT * FROM submissions WHERE userid = %s ORDER BY idx DESC LIMIT 1", (str(message.from_user.id),))
     if not sub:
