@@ -39,7 +39,7 @@ async def search_results(query: types.InlineQuery):
     exsub_time = ""
     print(f"Sub: {sub_dt}, Deadline: {deadline_dt}")
     if deadline_dt and sub_dt > deadline_dt:
-        exsub_time = html.underline("\n⚠️ Vaqtidan keyin topshirilgan")
+        exsub_time = html.italic("\n⚠️ Vaqtidan keyin topshirilgan")
     
     title_of_exam = exam_det[0] if exam_det else "O'chirilgan test"
 

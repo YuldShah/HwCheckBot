@@ -1,10 +1,10 @@
 from aiogram import Router, F, html, types
 from filters import IsUser, IsSubscriber, IsUserCallback, IsSubscriberCallback, IsArchiveAllowed, IsArchiveAllowedCallback
-from data import dict
+from data import dict, config
 from loader import db
 from aiogram.fsm.context import FSMContext
 from keyboards.regular import usr_main_key
-from keyboards.inline import lets_start, ans_enter_method_usr, submit_ans_user, all_continue_usr, get_missing_exams, get_answering_keys, share_sub_usr
+from keyboards.inline import lets_start, ans_enter_method_usr, goto_bot, submit_ans_user, all_continue_usr, get_missing_exams, get_answering_keys, share_sub_usr
 from datetime import datetime, timezone, timedelta
 from states import missing_hw_states
 from utils.yau import get_user_text, get_user_ans_text, get_correct_text, gen_code
@@ -23,6 +23,11 @@ async def show_archive(message: types.Message, state: FSMContext):
         await msg.edit_text(f"Sizda {len(mexams)} ta qoldirilgan vazifa mavjud. Quyida ro'yxat keltirilgan. Ulardan birini tanlang va bajarishni boshlang:", reply_markup=get_missing_exams(mexams))
     else:
         await msg.edit_text("🎉 Sizda hech qanday qoldirilgan vazifa yo'q. Albatta, bu yaxshi! 😊")
+
+@usrarch.callback_query(F.data == "get_arch")
+async def get_archive(callback: types.CallbackQuery):
+    await callback.answer("Sizda allaqachon arxiv ruxsati bor.")
+    await callback.bot.edit_message_text(text="🎉 Sizda allaqachon arxiv ruxsati bor.", inline_message_id=callback.inline_message_id, reply_markup=goto_bot(config.bot_info.username))
 
 @usrarch.callback_query(F.data.startswith("mexam_"), missing_hw_states.exams)
 async def start_missing_exam(callback: types.CallbackQuery, state: FSMContext):

@@ -49,7 +49,7 @@ async def show_result(message: types.Message, sub):
     exsub_time = ""
     print(f"Sub: {sub_dt}, Deadline: {deadline_dt}")
     if deadline_dt and sub_dt > deadline_dt:
-        exsub_time = html.underline("\n⚠️ Vaqtidan keyin topshirilgan")
+        exsub_time = html.italic("\n⚠️ Vaqtidan keyin topshirilgan")
     ccode = sub[5]
 
     correct, answers = [], []

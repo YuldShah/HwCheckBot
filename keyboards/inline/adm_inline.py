@@ -257,3 +257,10 @@ def rm_folders_menu(folders):
         btns.append([InlineKeyboardButton(text=j, callback_data=f"rmf_{i}")])
     btns.append([InlineKeyboardButton(text=dict.back, callback_data="back")])
     return InlineKeyboardMarkup(inline_keyboard=btns)
+
+btns8 = [
+    [
+        InlineKeyboardButton(text="Ruxsat olish", callback_data="get_arch"),
+    ]
+]
+arch_inl = InlineKeyboardMarkup(inline_keyboard=btns8)

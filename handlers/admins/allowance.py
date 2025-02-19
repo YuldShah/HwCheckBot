@@ -1,6 +1,6 @@
 from aiogram import types, Router, F, html
 from data import config
-from keyboards.inline import perm_inl
+from keyboards.inline import perm_inl, arch_inl
 # import hashlib
 from time import sleep
 from loader import db
@@ -28,6 +28,21 @@ async def allow_inline(inline: types.InlineQuery):
         reply_markup=perm_inl
     )
     await inline.answer([res], cache_time=1, is_personal=True)
+
+@allow.inline_query(InlineData("arch"))
+async def arch_inline(inline: types.InlineQuery):
+    print("arch")
+    res = types.InlineQueryResultArticle(
+        id="wtf",
+        title="Archive",
+        description="Grant access to the archive",
+        input_message_content=types.InputTextMessageContent(
+            message_text="Qoldirilgan vazifalarni bajarish uchun ruxsat olish uchun quyidagi tugmani bosing."
+        ),
+        reply_markup=arch_inl
+    )
+    await inline.answer([res], cache_time=1, is_personal=True)
+
 
 @allow.inline_query(InlineData("link"))
 async def link_inline(inline: types.InlineQuery):
@@ -67,6 +82,12 @@ async def default_inline(inline: types.InlineQuery):
         ),
         types.InlineQueryResultArticle(
             id = "2",
+            title = "arch",
+            description = "Used to give access to the archive",
+            input_message_content = types.InputTextMessageContent(message_text=f"Wrong query! You should have entered {html.code(f"@{config.bot_info.username} arch")} and press the resultant button.")
+        ),
+        types.InlineQueryResultArticle(
+            id = "3",
             title = "link",
             description = "Used to create one time link for the anyone",
             input_message_content = types.InputTextMessageContent(message_text=f"Wrong query! You should have entered {html.code(f"@{config.bot_info.username} link")} and press the resultant button.")

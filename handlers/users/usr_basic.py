@@ -41,6 +41,13 @@ async def get_perm(callback: types.CallbackQuery):
     await callback.bot.edit_message_text(text="🎉 Sizga allaqachon ruxsat berilgan! Botdan bemalol foydalanishingiz mumkin!", inline_message_id=callback.inline_message_id, reply_markup=goto_bot(config.bot_info.username))
     await callback.answer("🎉 Sizga ruxsat berilgan.")
 
+@user.callback_query(CbData("get_arch"), IsNotArchiveAllowed())
+async def get_arch(callback: types.CallbackQuery):
+    db.query("UPDATE users SET arch=1 WHERE userid=%s::text", (callback.from_user.id,))
+    await callback.bot.edit_message_text(text="🎉 Sizga qoldirilgan vazifalarni bajarish ruxsati berildi! Arxivdan vazifalarni bajarishingiz mumkin!", inline_message_id=callback.inline_message_id, reply_markup=goto_bot(config.bot_info.username))
+    await callback.answer("🎉 Ruxsat berildi")
+
+
 @user.callback_query(CbData("main_menu"))
 async def main_menu(callback: types.CallbackQuery, state: FSMContext):
     await state.clear()
