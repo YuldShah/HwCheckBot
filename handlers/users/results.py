@@ -41,8 +41,8 @@ async def show_result(message: types.Message, sub):
         logging.error(f"Deadline parsing error: {e}", exc_info=True)
         deadline_dt = None
 
-    # Ensure sub[3] is offset-aware
-    sub_dt = sub[3] if sub[3].tzinfo else sub[3].replace(tzinfo=UTC_OFFSET)
+    # Ensure sub[3] is offset-aware by treating naive datetime as UTC
+    sub_dt = sub[3] if sub[3].tzinfo else sub[3].replace(tzinfo=timezone.utc)
     # Compute dates in the same timezone
     sub_date = sub_dt.astimezone(UTC_OFFSET).date()
     deadline_date = deadline_dt.astimezone(UTC_OFFSET).date() if deadline_dt else None

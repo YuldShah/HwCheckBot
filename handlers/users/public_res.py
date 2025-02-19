@@ -31,8 +31,8 @@ async def search_results(query: types.InlineQuery):
         deadline_dt = parsed_deadline.replace(hour=23, minute=59, second=59, tzinfo=UTC_OFFSET)
     except Exception as e:
         deadline_dt = None
-    # Ensure sub[3] is offset-aware
-    sub_dt = sub[3] if sub[3].tzinfo else sub[3].replace(tzinfo=UTC_OFFSET)
+    # Ensure sub[3] is offset-aware by treating naive datetime as UTC
+    sub_dt = sub[3] if sub[3].tzinfo else sub[3].replace(tzinfo=timezone.utc)
     sub_date = sub_dt.astimezone(UTC_OFFSET).date()
     deadline_date = deadline_dt.astimezone(UTC_OFFSET).date() if deadline_dt else None
     sub_time = sub_dt.astimezone(UTC_OFFSET).strftime('%H:%M:%S — %Y-%m-%d')
