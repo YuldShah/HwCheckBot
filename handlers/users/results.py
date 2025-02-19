@@ -56,6 +56,7 @@ async def show_result(message: types.Message, sub):
     # Format submission time and add warning if submitted after deadline
     date_str = sub_dt.astimezone(UTC_OFFSET).strftime('%H:%M:%S — %Y-%m-%d')
     exsub_time = ""
+    print(sub_dt, deadline_dt)
     if deadline_dt and sub_dt > deadline_dt:
         exsub_time = html.underline("\n⚠️ Vaqtidan keyin topshirilgan")
 
