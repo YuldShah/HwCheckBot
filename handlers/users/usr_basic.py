@@ -25,7 +25,7 @@ async def start(message: types.Message, state: FSMContext):
 
 @user.message(F.text == dict.archive, IsNotArchiveAllowed())
 async def archive(message: types.Message):
-    cnt = db.fetchone("SELECT COUNT(*) FROM exams LEFT JOIN submissions ON exams.idx = submissions.exid AND submissions.userid = ? WHERE submissions.exid IS NULL AND exams.hide = 0", (message.from_user.id,))
+    cnt = db.fetchone("SELECT COUNT(*) FROM exams LEFT JOIN submissions ON exams.idx = submissions.exid AND submissions.userid = %s::text WHERE submissions.exid IS NULL AND exams.hide = 0", (message.from_user.id,))
     if cnt[0]:
         await message.answer(f"❗️ Sizda {html.bold(cnt)} ta qoldirilgan vazifalar mavjud.\n\nAmmo, sizda hozircha qoldirilgan vazifalarni bajarish ruxsati yo'q. Ruxsat olish uchun admin bilan bog'laning.", reply_markup=elbek)
     else:
