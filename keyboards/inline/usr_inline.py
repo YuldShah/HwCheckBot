@@ -106,5 +106,4 @@ def get_missing_exams(exams):
     btns = []
     for title, idx in exams:
         btns.append([InlineKeyboardButton(text=title, callback_data=f"mexam_{idx}")])
-    btns.append([InlineKeyboardButton(text=dict.back_uz, callback_data="back")])
     return InlineKeyboardMarkup(inline_keyboard=btns)

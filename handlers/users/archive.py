@@ -20,13 +20,14 @@ async def show_archive(message: types.Message, state: FSMContext):
     mexams = db.fetchall("SELECT exams.title, exams.idx FROM exams LEFT JOIN submissions ON exams.idx = submissions.exid AND submissions.userid = %s::text WHERE submissions.exid IS NULL AND exams.hide = 0;", (message.from_user.id,))
     if mexams:
         await state.set_state(missing_hw_states.exams)
-        await msg.edit_text(f"❗️ Sizda {len(mexams)} ta qoldirilgan vazifa mavjud. Quyida ro'yxat keltirilgan. Ulardan birini tanlang va bajarishni boshlang:", reply_markup=get_missing_exams(mexams))
+        await msg.edit_text(f"Sizda {len(mexams)} ta qoldirilgan vazifa mavjud. Quyida ro'yxat keltirilgan. Ulardan birini tanlang va bajarishni boshlang:", reply_markup=get_missing_exams(mexams))
     else:
         await msg.edit_text("🎉 Sizda hech qanday qoldirilgan vazifa yo'q. Albatta, bu yaxshi! 😊")
 
 @usrarch.callback_query(F.data.startswith("mexam_"), missing_hw_states.exams)
 async def start_missing_exam(callback: types.CallbackQuery, state: FSMContext):
     # Get exam id from callback data
+    await callback.message.edit_text("Yuklanmoqda...")
     exam_id = int(callback.data.split("_")[1])
     # Fetch exam using exam_id (deadline check removed)
     test = db.fetchone("SELECT * FROM exams WHERE idx = %s", (exam_id,))
@@ -68,6 +69,7 @@ async def start_missing_exam(callback: types.CallbackQuery, state: FSMContext):
     res = f"{get_user_text(test[1], test[2], test[3], test[4])}"
     await callback.message.answer(res, reply_markup=lets_start)
     # Transition state identical to regular HW
+    await callback.message.delete()
     await state.set_state(missing_hw_states.details)
 
 @usrarch.callback_query(F.data == "start_test", missing_hw_states.details)
