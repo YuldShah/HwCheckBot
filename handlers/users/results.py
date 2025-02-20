@@ -44,6 +44,7 @@ async def show_result(message: types.Message, sub):
             if await show_result(message, sub):
                 await message.answer("Xatolik yuz berdi.")
         # await message.answer()
+        return 0
     deadline_str = exam_det[2]
     try:
         parsed_deadline = datetime.strptime(deadline_str, "%d %m %Y")
