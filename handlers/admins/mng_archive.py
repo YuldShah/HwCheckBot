@@ -98,6 +98,9 @@ async def change_folder_chosen(callback: types.CallbackQuery, state: FSMContext)
     #     await callback.message.answer(f"No folders were created yet, you can create a new folder for tests, or see the tests from {html.bold(f"{dict.null_folder}")}", reply_markup=get_create_folders())
     # await state.set_state(arch_states.folders)
 
+@arch.callback_query(F.data == "back", arch_states.folder_change)
+async def back_to_test(callback: types.CallbackQuery, state: FSMContext):
+    await manage_test(callback, state)
 
 @arch.callback_query(F.data.startswith("edit_"), arch_states.emenu)
 async def edit_test(callback: types.CallbackQuery, state: FSMContext):
