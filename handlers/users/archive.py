@@ -263,10 +263,10 @@ async def confirm_submit(callback: types.CallbackQuery, state: FSMContext):
         await callback.message.answer("Javobingizni saqlashni iloji yo'q! Iltimos, admin bilan bog'laning.", reply_markup=usr_main_key)
         await state.clear()
         return
-    submission = db.fetchone("SELECT * FROM submissions WHERE userid = %s AND exid = %s", (str(callback.from_user.id), exam_id))
-    if submission:
-        await callback.message.answer("Siz allaqachon vazifaga javoblaringizni topshirib bo'lgansiz.")
-        return
+    # submission = db.fetchone("SELECT * FROM submissions WHERE userid = %s AND exid = %s", (str(callback.from_user.id), exam_id))
+    # if submission:
+    #     await callback.message.answer("Siz allaqachon vazifaga javoblaringizni topshirib bo'lgansiz.")
+    #     return
     correct = data.get("correct")
     answers = data.get("donel")
     code = gen_code(10)
