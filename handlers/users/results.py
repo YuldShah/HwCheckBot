@@ -32,7 +32,18 @@ async def show_result(message: types.Message, sub):
     # await message.edit_text("Yuklanmoqda...")
     # Modified query to select deadline as third field
     exam_det = db.fetchone("SELECT title, correct, sdate FROM exams WHERE idx = %s", (sub[2],))
-    
+    if not exam_det:
+        await message.answer("Ushbu natija topshirilgan imtihon o'chirib tashlangan. Boshqa natijalar qidirilmoqda...")
+        
+        query = "SELECT * FROM submissions WHERE idx < %s AND userid = %s ORDER BY idx DESC LIMIT 1"
+        
+        sub = db.fetchone(query, (sub[0], str(message.from_user.id),))
+        if not sub:
+            await message.answer("Boshqa natijalar topilmadi.")
+        else:
+            if await show_result(message, sub):
+                await message.answer("Xatolik yuz berdi.")
+        # await message.answer()
     deadline_str = exam_det[2]
     try:
         parsed_deadline = datetime.strptime(deadline_str, "%d %m %Y")
