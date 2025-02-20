@@ -2,6 +2,7 @@ from aiogram import Router, F, html, types
 from filters import IsUser, IsSubscriber, IsUserCallback, IsSubscriberCallback, IsArchiveAllowed, IsArchiveAllowedCallback
 from data import dict, config
 from loader import db
+from time import sleep
 from aiogram.fsm.context import FSMContext
 from keyboards.regular import usr_main_key
 from keyboards.inline import lets_start, ans_enter_method_usr, goto_bot, submit_ans_user, all_continue_usr, get_missing_exams, get_answering_keys, share_sub_usr
@@ -209,12 +210,27 @@ async def handle_open_ended(message: types.Message, state: FSMContext):
     donel = data.get("donel")
     total = data.get("total")
     msg = data.get("msg")
-
+    if entering=="all":
+        if msg:
+            await message.bot.edit_message_reply_markup(chat_id=message.chat.id, message_id=msg)
+        raw = message.text
+        cnt = raw.count("\n")
+        if cnt != total-1:
+            await message.reply(f"Iltimos, savollar soniga teng bo'lgan javob taqdim qiling. Sizning xabaringizda {cnt+1}/{total} ta javob bor.\n\nJavoblaringizni quyidagi ko'rinishda jo'nating:\n{html.code('Javob1\nJavob2\nJavob3\n...')}")
+            return
+        donel = list(filter(None, raw.split("\n")))
+        print(donel)
+        msg = await message.answer(f"{get_user_ans_text(donel, typesl)}\nBarcha savollarga javob taqdim etdingiz, javobingizni topshirishni davom ettirsangiz bo'ladi.\n\nAgar javoblaringizni o'zgartirmoqchi bo'lsangiz, yangi xabarda javoblaringizni quyidagi ko'rinishda jo'nating:\n{html.code('Javob1\nJavob2\nJavob3\n...')}",
+            reply_markup=all_continue_usr)
+        await state.update_data(donel=donel, msg=msg.message_id)
+        return
     # ... existing all answers handling code ...
 
     if typesl[curq-1] > 0:
         await message.delete()
-        tmp = await message.answer("Bu ochiq savol emas. Iltimos, berilgan variantlardan birini tanlang.")
+        msg = await message.answer("Bu ochiq savol emas. Iltimos, berilgan variantlardan birini tanlang.")
+        sleep(2)
+        await msg.delete()
         return
 
     donel[curq-1] = message.text
