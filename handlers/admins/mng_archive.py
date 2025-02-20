@@ -148,7 +148,7 @@ async def toggle_visibility(query: types.CallbackQuery, state: FSMContext):
     await query.message.edit_reply_markup(reply_markup=edit_test_menu(vis=="on", data.get("resub")))
         # await query.answer("Visibility now off.")
         # vis = "off"
-    await state.update_data(vis=vis=="on")
+    await state.update_data(hide=vis!="on")
 
     # await query.message.edit_text(f"{await get_text(state)}\n{get_ans_text(donel, typesl)}\nPlease, change the settings as you wish. (Pressing toggles on/off)", reply_markup=ans_set_fin(vis=="on", resub, folder))
 
@@ -166,7 +166,7 @@ async def toggle_resubmission(query: types.CallbackQuery, state: FSMContext):
         # await query.answer("Visibility now off.")
         # vis = "off"
     await state.update_data(resub=resub=="on")
-    await query.message.edit_reply_markup(reply_markup=edit_test_menu(data.get("vis"), resub=="on"))
+    await query.message.edit_reply_markup(reply_markup=edit_test_menu(not data.get("hide"), resub=="on"))
 
     # await query.message.edit_text(f"{await get_text(state)}\n{get_ans_text(donel, typesl)}\nPlease, change the settings as you wish. (Pressing toggles on/off)", reply_markup=ans_set_fin(vis, resub=="on", folder))
 
