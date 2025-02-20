@@ -10,24 +10,24 @@ from states import missing_hw_states
 from utils.yau import get_user_text, get_user_ans_text, get_correct_text, gen_code
 
 usrarch = Router()
-usrarch.message.filter(IsUser(), IsSubscriber(), IsArchiveAllowed())
-usrarch.callback_query.filter(IsUserCallback(), IsSubscriberCallback(), IsArchiveAllowedCallback())
+usrarch.message.filter(IsUser(), IsSubscriber())
+usrarch.callback_query.filter(IsUserCallback(), IsSubscriberCallback())
 
 @usrarch.message(F.text == dict.archive)
 async def show_archive(message: types.Message, state: FSMContext):
     await message.answer(f"{html.bold(dict.archive)} menyusi", reply_markup=usr_main_key)
     msg = await message.answer("Yuklanmoqda...")
-    mexams = db.fetchall("SELECT exams.title, exams.idx FROM exams LEFT JOIN submissions ON exams.idx = submissions.exid AND submissions.userid = %s::text WHERE submissions.exid IS NULL AND exams.hide = 0;", (message.from_user.id,))
+    mexams = db.fetchall("SELECT title, idx FROM exams WHERE hide = 0;")
     if mexams:
         await state.set_state(missing_hw_states.exams)
-        await msg.edit_text(f"Sizda {len(mexams)} ta qoldirilgan vazifa mavjud. Quyida ro'yxat keltirilgan. Ulardan birini tanlang va bajarishni boshlang:", reply_markup=get_missing_exams(mexams))
+        await msg.edit_text(f"Hozirda arxivda {len(mexams)} ta vazifalar mavjud. Quyida ro'yxat keltirilgan. Ulardan birini tanlang va bajarishni boshlang:", reply_markup=get_missing_exams(mexams))
     else:
-        await msg.edit_text("🎉 Sizda hech qanday qoldirilgan vazifa yo'q. Albatta, bu yaxshi! 😊")
+        await msg.edit_text("Afsuski, hozirda arxivga ulashilgan testlar yo'q.")
 
-@usrarch.callback_query(F.data == "get_arch")
-async def get_archive(callback: types.CallbackQuery):
-    await callback.answer("Sizda allaqachon arxiv ruxsati bor.")
-    await callback.bot.edit_message_text(text="🎉 Sizda allaqachon arxiv ruxsati bor.", inline_message_id=callback.inline_message_id, reply_markup=goto_bot(config.bot_info.username))
+# @usrarch.callback_query(F.data == "get_arch")
+# async def get_archive(callback: types.CallbackQuery):
+#     await callback.answer("Sizda allaqachon arxiv ruxsati bor.")
+#    await callback.bot.edit_message_text(text="🎉 Sizda allaqachon arxiv ruxsati bor.", inline_message_id=callback.inline_message_id, reply_markup=goto_bot(config.bot_info.username))
 
 @usrarch.callback_query(F.data.startswith("mexam_"), missing_hw_states.exams)
 async def start_missing_exam(callback: types.CallbackQuery, state: FSMContext):
