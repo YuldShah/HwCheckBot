@@ -39,11 +39,14 @@ async def start_missing_exam(callback: types.CallbackQuery, state: FSMContext):
     if not test:
         await callback.message.answer("Vazifa topilmadi. Iltimos, admin bilan bog'laning.")
         return
-    # Check if user already submitted (simple check without deadline logic)
-    submission = db.fetchone("SELECT * FROM submissions WHERE userid = %s AND exid = %s", (str(callback.from_user.id), exam_id))
-    if submission:
-        await callback.message.answer("Siz bu vazifaga javoblaringizni allaqachon topshirgansiz.")
+    if not test[7]:
+        await callback.message.answer("Bu vazifaga bir martadan ortiq javoblaringizni topshira olmaysiz!")
         return
+    # Check if user already submitted (simple check without deadline logic)
+    # submission = db.fetchone("SELECT  FROM submissions WHERE userid = %s AND exid = %s", (str(callback.from_user.id), exam_id))
+    # if submission:
+    #     await callback.message.answer("Siz bu vazifaga javoblaringizni allaqachon topshirgansiz.")
+    #     return
     try:
         import json
         test_info = json.loads(test[5])
