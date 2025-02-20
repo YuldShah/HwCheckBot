@@ -137,13 +137,18 @@ async def delete_test(callback: types.CallbackQuery, state: FSMContext):
 async def toggle_visibility(query: types.CallbackQuery, state: FSMContext):
     data = await state.get_data()
     vis = query.data.split("_")[1]
+    exid = data.get("exam_id")
     await query.answer(f"👁 Visibility now - {vis.capitalize()}.")
     if vis == "on":
-        await query.answer("Visibility now on.")
+        db.query("UPDATE exams SET hide = 0 WHERE idx = %s", (exid,))
+        # await query.answer("Visibility now on.")
     else:
-        await query.answer("Visibility now off.")
-        vis = "off"
-    # await state.update_data(vis=vis=="on")
+        db.query("UPDATE exams SET hide = 1 WHERE idx = %s", (exid,))
+    # await state.update_data(vis)
+    await query.message.edit_reply_markup(edit_test_menu(vis=="on", data.get("resub")))
+        # await query.answer("Visibility now off.")
+        # vis = "off"
+    await state.update_data(vis=vis=="on")
 
     # await query.message.edit_text(f"{await get_text(state)}\n{get_ans_text(donel, typesl)}\nPlease, change the settings as you wish. (Pressing toggles on/off)", reply_markup=ans_set_fin(vis=="on", resub, folder))
 
@@ -151,13 +156,17 @@ async def toggle_visibility(query: types.CallbackQuery, state: FSMContext):
 async def toggle_resubmission(query: types.CallbackQuery, state: FSMContext):
     data = await state.get_data()
     resub = query.data.split("_")[1]
+    exid = data.get("exam_id")
     await query.answer(f"Resubmission now - {resub.capitalize()}.")
-    if vis == "on":
-        await query.answer("Visibility now on.")
+    if resub == "on":
+        db.query("UPDATE exams SET resub = 1 WHERE idx = %s", (exid,))
+        # await query.answer("Visibility now on.")
     else:
-        await query.answer("Visibility now off.")
-        vis = "off"
-    # await state.update_data(resub=resub=="on")
+        db.query("UPDATE exams SET resub = 0 WHERE idx = %s", (exid,))
+        # await query.answer("Visibility now off.")
+        # vis = "off"
+    await state.update_data(resub=resub=="on")
+    await query.message.edit_reply_markup(edit_test_menu(data.get("vis"), resub=="on"))
 
     # await query.message.edit_text(f"{await get_text(state)}\n{get_ans_text(donel, typesl)}\nPlease, change the settings as you wish. (Pressing toggles on/off)", reply_markup=ans_set_fin(vis, resub=="on", folder))
 
