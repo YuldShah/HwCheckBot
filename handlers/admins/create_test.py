@@ -10,6 +10,7 @@ from aiogram.fsm.context import FSMContext
 from utils.yau import get_text, get_ans_text
 from time import sleep
 import json
+import re
 
 test = Router()
 
@@ -155,31 +156,62 @@ async def back_to_number(message: types.Message, state: FSMContext):
     await message.answer(f"{await get_text(state)}\nPlease, send the number of questions.", reply_markup=back_key)
     await state.set_state(creates.number)
 
+def parse_datetime(input_str: str) -> datetime:
+    # Get current time with UTC+5
+    now = datetime.now(timezone(timedelta(hours=5)))
+    parts = input_str.strip().split()
+    try:
+        if len(parts) == 1:
+            # Only time provided – can be either "HH", "HH MM" or "HH:MM"
+            if ':' in parts[0]:
+                h_str, m_str = parts[0].split(':')
+            else:
+                h_str, m_str = parts[0], "00"
+            dt = now.replace(hour=int(h_str), minute=int(m_str), second=0, microsecond=0)
+        elif len(parts) >= 3:
+            # full input: first part time, second day, third month, (fourth year optional)
+            if ':' in parts[0]:
+                h_str, m_str = parts[0].split(':')
+            else:
+                h_str, m_str = parts[0], "00"
+            day = int(parts[1])
+            month = int(parts[2])
+            year = int(parts[3]) if len(parts) >= 4 else now.year
+            dt = now.replace(year=year, month=month, day=day, hour=int(h_str), minute=int(m_str), second=0, microsecond=0)
+        else:
+            raise ValueError
+    except Exception as e:
+        raise ValueError("Invalid date/time format") from e
+    return dt
+
 @test.message(creates.sdate)
 async def get_sdate(message: types.Message, state: FSMContext):
+    # Instead of strict "%d %m %Y", allow flexible time/date input
     try:
-        sdate = datetime.strptime(message.text, "%d %m %Y").replace(tzinfo=timezone(timedelta(hours=5)))
-        if sdate < datetime.now(timezone(timedelta(hours=5))) - timedelta(days=1):
-            await message.answer(f"{await get_text(state)}\n❗️ Please, send a date that is today or later.")
-            return
+        dt = parse_datetime(message.text)
     except ValueError:
-        await message.answer(f"{await get_text(state)}\n❗️ Please, send the date in the correct format: {html.code('DD MM YYYY')}")
+        await message.answer(f"{await get_text(state)}\n❗️ Please, send the deadline using one of the following formats:\n"
+                             f"- Only time: \"HH\", \"HH MM\" or \"HH:MM\" (sets deadline for today)\n"
+                             f"- Full: \"HH:MM DD MM\" or \"HH:MM DD MM YYYY\" (year is optional)")
         return
-
-    await state.update_data(sdate=message.text)
+    # Disallow deadlines in the past
+    now = datetime.now(timezone(timedelta(hours=5)))
+    if dt < now:
+        await message.answer(f"{await get_text(state)}\n❗️ The deadline must be in the future.")
+        return
+    # Save in ISO format for later comparisons
+    await state.update_data(sdate=dt.isoformat())
     await message.answer(f"{await get_text(state)}\nPlease, choose the way you want to enter the answers (multiple answers only possible with all at once option):", reply_markup=ans_enter_meth)
     await state.set_state(creates.way)
 
 @test.callback_query(CbData("today"), creates.sdate)
 async def set_date_today(query: types.CallbackQuery, state: FSMContext):
-    await state.update_data(sdate=datetime.now(timezone(timedelta(hours=5))).strftime("%d %m %Y"))
-    await query.message.edit_text(f"{await get_text(state)}\nPlease, choose the way you want to enter the answers (multiple answers only possible with all at once option):", reply_markup=ans_enter_meth)
+    now = datetime.now(timezone(timedelta(hours=5)))
+    # Set default time (for instance current time with seconds zeroed)
+    dt = now.replace(second=0, microsecond=0)
+    await state.update_data(sdate=dt.isoformat())
+    await query.message.edit_text(f"{await get_text(state)}\nDeadline set to: {dt.strftime('%H:%M %d %m %Y')}\nPlease, choose the way you want to enter the answers (multiple answers only possible with all at once option):", reply_markup=ans_enter_meth)
     await state.set_state(creates.way)
-
-@test.message(creates.way, F.text == dict.back)
-async def back_to_date(message: types.Message, state: FSMContext):
-    await message.answer(f"{await get_text(state)}\nPlease, send the date in the following format or press the following to set it for today:\n{html.code(f'DD MM YYYY')}", reply_markup=today)
-    await state.set_state(creates.sdate)
 
 @test.callback_query(CbData("all"), creates.way)
 async def set_way_all(query: types.CallbackQuery, state: FSMContext):

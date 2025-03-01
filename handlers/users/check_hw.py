@@ -18,11 +18,11 @@ chhw.callback_query.filter(IsUserCallback(), IsSubscriber())
 
 @chhw.message(F.text == dict.do_todays_hw)
 async def do_today_hw(message: types.Message, state: FSMContext):
-    # Get today's date in UTC+5
     await message.answer(f"{html.bold(dict.do_todays_hw)} menyusi", reply_markup=usr_main_key)
-    today = datetime.now(timezone(timedelta(hours=5))).strftime("%d %m %Y")
-    # Fetch homework test scheduled for today from storage
-    test = db.fetchone("SELECT * FROM exams WHERE sdate = %s", (today,))
+    now = datetime.now(timezone(timedelta(hours=5)))
+    today_date = now.date()
+    # Fetch homework scheduled for today by comparing the date part of sdate
+    test = db.fetchone("SELECT * FROM exams WHERE DATE(sdate) = %s", (today_date,))
     if not test:
         await message.answer("Bugungi vazifa hali yuklanmagan yoki mavjud emas. Agar bu xato deb o'ylasangiz, iltimos admin bilan bog'laning.")
         return
@@ -293,16 +293,20 @@ async def request_submit_hw(query: types.CallbackQuery, state: FSMContext):
 async def confirm_submit(query: types.CallbackQuery, state: FSMContext):
     await query.message.edit_text("Kutib turing...")
     data = await state.get_data()
-    from datetime import datetime, timezone, timedelta
     submission_time = datetime.now(timezone(timedelta(hours=5)))
-    today = submission_time.strftime("%d %m %Y")
     exam_id = data.get("exam_id")
-    test = db.fetchone("SELECT * FROM exams WHERE sdate = %s AND idx = %s", (today, exam_id))
+    # Fetch exam using exam id
+    test = db.fetchone("SELECT * FROM exams WHERE idx = %s", (exam_id,))
     if not test:
         await query.message.answer("Javobingizni saqlashni iloji yo'q!\n\nSiz topshirmoqchi bo'lgan vazifa vaqti o'tib ketganga yoki o'chirib tashlangan o'xshaydi.", reply_markup=usr_main_key)
         await state.clear()
         return
-    exam_id = test[0]
+    # Check deadline: compare test deadline (sdate) with current time
+    exam_deadline = datetime.fromisoformat(test[6])
+    if submission_time > exam_deadline and not test[7]:
+        await query.message.answer("Vaqt tugagan. Javoblaringiz qabul qilinmaydi.", reply_markup=usr_main_key)
+        await state.clear()
+        return
     submission = db.fetchone("SELECT * FROM submissions WHERE userid = %s AND exid = %s", (str(query.from_user.id), exam_id))
     if submission and not test[7]:
         await query.message.answer("Siz allaqachon vazifaga javoblaringizni topshirib bo'lgansiz va qayta topshirish mumkin emas.")
