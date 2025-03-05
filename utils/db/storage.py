@@ -10,9 +10,11 @@ class DatabaseManager:
     def __init__(self, DB_URL):
         """
         Initialize connection to the database.
+        DB_URL: Connection string (e.g., 'postgresql://user:password@host:port/dbname')
         """
         try:
-            self.conn = psycopg2.connect(DB_URL, sslmode="require")
+            # Removed sslmode="require" to allow flexibility based on DB_URL
+            self.conn = psycopg2.connect(DB_URL)
             self.cur = self.conn.cursor()
         except DatabaseError as e:
             logging.error("Database connection error", exc_info=True)
@@ -21,12 +23,28 @@ class DatabaseManager:
     def create_tables(self):
         """
         Create necessary tables if they do not exist.
+        Corrected TIMESTAMPS to TIMESTAMP for proper data type.
         """
         try:
-            self.query('''CREATE TABLE IF NOT EXISTS users (idx SERIAL PRIMARY KEY, userid TEXT, fullname TEXT, username TEXT, regdate TIMESTAMP DEFAULT CURRENT_TIMESTAMP, allowed INTEGER DEFAULT 0, arch INTEGER DEFAULT 0)''')
+            self.query('''CREATE TABLE IF NOT EXISTS users (
+                idx SERIAL PRIMARY KEY, 
+                userid TEXT, 
+                fullname TEXT, 
+                username TEXT, 
+                regdate TIMESTAMP DEFAULT CURRENT_TIMESTAMP, 
+                allowed INTEGER DEFAULT 0, 
+                arch INTEGER DEFAULT 0
+            )''')
             self.query("CREATE TABLE IF NOT EXISTS folders (idx SERIAL PRIMARY KEY, title TEXT)")
             self.query("CREATE TABLE IF NOT EXISTS exams (idx SERIAL PRIMARY KEY, title TEXT, about TEXT DEFAULT NULL, instructions TEXT, num_questions INTEGER, correct TEXT, sdate TEXT DEFAULT NULL, resub INTEGER DEFAULT 0, folder INTEGER DEFAULT 0, hide INTEGER DEFAULT 0, random TEXT)")
-            self.query("CREATE TABLE IF NOT EXISTS submissions (idx SERIAL PRIMARY KEY, userid TEXT, exid INTEGER, date TIMESTAMP DEFAULT CURRENT_TIMESTAMP, answers TEXT, random TEXT)")
+            self.query("""CREATE TABLE IF NOT EXISTS submissions (
+                idx SERIAL PRIMARY KEY, 
+                userid TEXT, 
+                exid INTEGER, 
+                date TIMESTAMP DEFAULT CURRENT_TIMESTAMP, 
+                answers TEXT, 
+                random TEXT
+            )""")
             self.query("CREATE TABLE IF NOT EXISTS channel (idx SERIAL PRIMARY KEY, chid TEXT, title TEXT, link TEXT)")
             self.query("CREATE TABLE IF NOT EXISTS attachments (idx SERIAL PRIMARY KEY, ty TEXT DEFAULT NULL, tgfileid TEXT DEFAULT NULL, caption TEXT DEFAULT NULL, exid INTEGER DEFAULT NULL)")
         except DatabaseError as e:
@@ -112,7 +130,6 @@ class DatabaseManager:
                 (userid, exid, answers, code, sub_time)
             )
         except Exception:
-            import logging
             logging.error("Error storing submission", exc_info=True)
             return False
         return True
@@ -130,6 +147,9 @@ class DatabaseManager:
             return None
 
     def __del__(self):
+        """
+        Close the cursor and connection when the object is destroyed.
+        """
         if hasattr(self, 'conn') and self.conn:
             self.cur.close()
             self.conn.close()

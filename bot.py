@@ -1,5 +1,7 @@
 import logging
 import sys
+from dotenv import load_dotenv
+load_dotenv()
 from loader import dp, db, bot, get_info
 import asyncio
 from data import config

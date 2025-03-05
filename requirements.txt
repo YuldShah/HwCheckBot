@@ -1,3 +1,2 @@
 aiogram
-apscheduler
 psycopg2-binary
