@@ -36,7 +36,7 @@ class DatabaseManager:
                 arch INTEGER DEFAULT 0
             )''')
             self.query("CREATE TABLE IF NOT EXISTS folders (idx SERIAL PRIMARY KEY, title TEXT)")
-            self.query("CREATE TABLE IF NOT EXISTS exams (idx SERIAL PRIMARY KEY, title TEXT, about TEXT DEFAULT NULL, instructions TEXT, num_questions INTEGER, correct TEXT, sdate TEXT DEFAULT NULL, resub INTEGER DEFAULT 0, folder INTEGER DEFAULT 0, hide INTEGER DEFAULT 0, random TEXT)")
+            self.query("CREATE TABLE IF NOT EXISTS exams (idx SERIAL PRIMARY KEY, title TEXT, about TEXT DEFAULT NULL, instructions TEXT, num_questions INTEGER, correct TEXT, sdate TIMESTAMP, resub INTEGER DEFAULT 0, folder INTEGER DEFAULT 0, hide INTEGER DEFAULT 0, random TEXT)")
             self.query("""CREATE TABLE IF NOT EXISTS submissions (
                 idx SERIAL PRIMARY KEY, 
                 userid TEXT, 

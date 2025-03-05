@@ -1,17 +1,22 @@
-from aiogram import Router, F, types, html
-from data import dict
-from aiogram.fsm.context import FSMContext
-from loader import db
+from aiogram import Router, types, F, html
 from filters import IsAdmin, IsAdminCallback, CbData, CbDataStartsWith
+from loader import db
+from keyboards.inline import get_folder_tests, details_test, edit_test_menu, inl_folders, remove_att, get_create_folders, confirm_inl_key, rm_folders_menu, back_inl_key
+from keyboards.regular import main_key, back_key, skip_desc, adm_default, attach_done
+from time import sleep
+from data import dict
+from datetime import datetime, timezone, timedelta
 from states import arch_states
-from keyboards.inline import get_create_folders, get_folder_tests, details_test, edit_test_menu, rm_folders_menu, confirm_inl_key, inl_folders
-from keyboards.regular import main_key
-import json
+from aiogram.fsm.context import FSMContext
 from utils.yau import get_text, get_ans_text
+from .create_test import parse_datetime  # Reuse from create_test.py
+import json
 
 arch = Router()
 arch.message.filter(IsAdmin())
 arch.callback_query.filter(IsAdminCallback())
+
+UTC_OFFSET = timezone(timedelta(hours=5))
 
 
 @arch.message(F.text == dict.exams)
@@ -102,6 +107,39 @@ async def change_folder_chosen(callback: types.CallbackQuery, state: FSMContext)
 async def back_to_test(callback: types.CallbackQuery, state: FSMContext):
     await manage_test(callback, state)
 
+async def refresh_edit_menu(message: types.Message, state: FSMContext, oddiy: bool = False):
+    data = await state.get_data()
+    exam_id = data["exam_id"]
+    exam = db.fetchone("SELECT * FROM exams WHERE idx = %s", (exam_id,))
+    correct = json.loads(exam[5])
+    donel = correct.get("answers", [])
+    typesl = correct.get("types", [])
+    folder = db.fetchone("SELECT title FROM folders WHERE idx = %s", (exam[8],))
+    if folder:
+        folder = folder[0]
+    attaches = db.fetchall("SELECT ty, tgfileid, caption FROM attachments WHERE exid = %s", (exam_id,))
+    await state.update_data(
+        exam_id=exam_id,
+        title=exam[1],
+        about=exam[2],
+        instructions=exam[3],
+        numquest=exam[4],
+        sdate=exam[6],
+        resub=exam[7],
+        folder=exam[8],
+        hide=exam[9],
+        random=exam[10],
+        correct=donel,
+        types=typesl,
+        attaches=attaches
+    )
+    res = f"{await get_text(state)}\n\n{get_ans_text(donel, typesl)}\n\nYou may edit the test, change its folder or share it:"
+    if oddiy:
+        await message.answer(res, reply_markup=edit_test_menu(not exam[9], exam[7]))
+    else:
+        await message.edit_text(res, reply_markup=edit_test_menu(not exam[9], exam[7]))
+    await state.set_state(arch_states.edit)
+
 @arch.callback_query(F.data.startswith("edit_"), arch_states.emenu)
 async def edit_test(callback: types.CallbackQuery, state: FSMContext):
     data = await state.get_data()
@@ -123,6 +161,7 @@ async def edit_test(callback: types.CallbackQuery, state: FSMContext):
     res = f"{await get_text(state)}\n\n{get_ans_text(correct, typesl)}\n\nYou may edit the test, change its folder or share it:"
     await callback.message.edit_text(res, reply_markup=edit_test_menu(not hide, resub))
     await state.set_state(arch_states.edit)
+
 
 
 @arch.callback_query(F.data == "back", arch_states.edit)
@@ -262,3 +301,235 @@ async def save_folder(message: types.Message, state: FSMContext):
     await show_folders(message, state)
 
 
+@arch.callback_query(F.data == "edit_title", arch_states.edit)
+async def start_edit_title(callback: types.CallbackQuery, state: FSMContext):
+    data = await state.get_data()
+    res = f"{await get_text(state)}\n\n{get_ans_text(data.get('correct', []), data.get('types', []))}"
+    await callback.message.edit_text(f"{res}\n\nPlease send the new title:", reply_markup=back_inl_key)
+    await state.set_state(arch_states.title)
+
+@arch.callback_query(CbData("back"), arch_states.title)
+async def back_from_title_cb(callback: types.CallbackQuery, state: FSMContext):
+    # await callback.message.delete()
+    await refresh_edit_menu(callback.message, state)
+    await callback.answer()
+
+@arch.message(arch_states.title)
+async def save_new_title(message: types.Message, state: FSMContext):
+    new_title = message.text
+    data = await state.get_data()
+    exam_id = data["exam_id"]
+    db.query("UPDATE exams SET title = %s WHERE idx = %s", (new_title, exam_id))
+    await state.update_data(title=new_title)
+    await message.delete()
+    await refresh_edit_menu(message, state, oddiy=True)
+
+
+@arch.callback_query(F.data == "edit_about", arch_states.edit)
+async def start_edit_description(callback: types.CallbackQuery, state: FSMContext):
+    data = await state.get_data()
+    res = f"{await get_text(state)}\n\n{get_ans_text(data.get('correct', []), data.get('types', []))}"
+    await callback.message.edit_text(f"{res}\n\nPlease send the new description (or 'skip' to clear):", reply_markup=back_inl_key)
+    await state.set_state(arch_states.about)
+
+@arch.callback_query(CbData("back"), arch_states.about)
+async def back_from_about_cb(callback: types.CallbackQuery, state: FSMContext):
+    # await callback.message.delete()
+    await refresh_edit_menu(callback.message, state)
+    await callback.answer()
+
+@arch.message(arch_states.about)
+async def save_new_description(message: types.Message, state: FSMContext):
+    new_description = None if message.text.lower() == "skip" else message.text
+    data = await state.get_data()
+    exam_id = data["exam_id"]
+    db.query("UPDATE exams SET about = %s WHERE idx = %s", (new_description, exam_id))
+    await state.update_data(about=new_description)
+    await message.delete()
+    await refresh_edit_menu(message, state, oddiy=True)
+
+
+@arch.callback_query(F.data == "edit_instr", arch_states.edit)
+async def start_edit_instructions(callback: types.CallbackQuery, state: FSMContext):
+    data = await state.get_data()
+    res = f"{await get_text(state)}\n\n{get_ans_text(data.get('correct', []), data.get('types', []))}"
+    await callback.message.edit_text(f"{res}\n\nPlease send the new instructions:", reply_markup=back_inl_key)
+    await state.set_state(arch_states.instruc)
+
+@arch.callback_query(CbData("back"), arch_states.instruc)
+async def back_from_instructions_cb(callback: types.CallbackQuery, state: FSMContext):
+    # await callback.message.delete()
+    await refresh_edit_menu(callback.message, state)
+    await callback.answer()
+
+@arch.message(arch_states.instruc)
+async def save_new_instructions(message: types.Message, state: FSMContext):
+    new_instructions = message.text
+    data = await state.get_data()
+    exam_id = data["exam_id"]
+    db.query("UPDATE exams SET instructions = %s WHERE idx = %s", (new_instructions, exam_id))
+    await state.update_data(instructions=new_instructions)
+    await message.delete()
+    await refresh_edit_menu(message, state, oddiy=True)
+
+@arch.callback_query(F.data == "edit_ans", arch_states.edit)
+async def start_edit_answers(callback: types.CallbackQuery, state: FSMContext):
+    data = await state.get_data()
+    res = f"{await get_text(state)}\n\n{get_ans_text(data.get('correct', []), data.get('types', []))}"
+    # Fixed HTML parsing error by not using angle brackets
+    await callback.message.edit_text(
+        f"{res}\n\nSend the question number, answer, and number of options in format: {html.code('question answer options')}.\n"
+        f"Example: {html.code('5 A 4')} for question 5, answer A, 4 options.", 
+        reply_markup=back_inl_key
+    )
+    await state.set_state(arch_states.edans)
+
+@arch.callback_query(CbData("back"), arch_states.edans)
+async def back_from_answers_cb(callback: types.CallbackQuery, state: FSMContext):
+    # await callback.message.delete()
+    await refresh_edit_menu(callback.message, state)
+    await callback.answer()
+
+@arch.message(arch_states.edans)
+async def save_new_answer(message: types.Message, state: FSMContext):
+    try:
+        parts = message.text.split()
+        if len(parts) != 3:
+            raise ValueError(f"Invalid format. Use: {html.code('&lt;question&gt; &lt;answer&gt; &lt;options&gt;')}")
+        q_num = int(parts[0]) - 1  # Convert to 0-based index
+        answer = parts[1]
+        options = int(parts[2])
+        if options == 1:
+            raise ValueError(f"Can't have {html.bold("\"multiple\"")} choice question with 1 choice")
+        if options < 0 or options > 6:
+            raise ValueError("Options must be 0 (open-ended) or 2-6.")
+        
+        data = await state.get_data()
+        exam_id = data["exam_id"]
+        correct_json = json.loads(db.fetchone("SELECT correct FROM exams WHERE idx = %s", (exam_id,))[0])
+        
+        if q_num < 0 or q_num >= len(correct_json["answers"]):
+            raise ValueError("Question number out of range.")
+        
+        correct_json["answers"][q_num] = answer
+        correct_json["types"][q_num] = options
+        db.query("UPDATE exams SET correct = %s WHERE idx = %s", (json.dumps(correct_json), exam_id))
+        
+        # Update state data
+        data["correct"] = correct_json["answers"]
+        data["types"] = correct_json["types"]
+        await state.update_data(correct=correct_json["answers"], types=correct_json["types"])
+        
+        await message.delete()
+        await refresh_edit_menu(message, state, oddiy=True)
+    except ValueError as e:
+        msg = await message.answer(f"Error: {str(e)} Please try again.")
+        await message.delete()
+        sleep(2)
+        await msg.delete()
+
+async def display_attachments(message: types.Message, state: FSMContext):
+    data = await state.get_data()
+    attaches = data.get("attaches", [])
+    for idx, (att_type, file_id, caption) in enumerate(attaches):
+        if att_type == "document":
+            await message.answer_document(document=file_id, caption=caption, reply_markup=remove_att(idx))
+        elif att_type == "photo":
+            await message.answer_photo(photo=file_id, caption=caption, reply_markup=remove_att(idx))
+
+@arch.callback_query(F.data == "edit_attaches", arch_states.edit)
+async def start_edit_attachments(callback: types.CallbackQuery, state: FSMContext):
+    data = await state.get_data()
+    res = f"{await get_text(state)}\n\n{get_ans_text(data.get('correct', []), data.get('types', []))}"
+    await callback.message.edit_text(f"{res}\n\nSend new attachments or remove existing ones. Press Done when finished.")
+    await display_attachments(callback.message, state)
+    await callback.message.answer("Attachment management:", reply_markup=attach_done)
+    await state.set_state(arch_states.attaches)
+
+# THIS HANDLER MUST BE REGISTERED FIRST - order matters
+@arch.message(F.text == dict.done, arch_states.attaches)
+async def done_attachments(message: types.Message, state: FSMContext):
+    await message.answer("Successfully saved the attachments", reply_markup=main_key)
+    await message.delete()
+    await refresh_edit_menu(message, state, oddiy=True)
+
+# This handler must come AFTER the dict.done handler
+@arch.message(arch_states.attaches)
+async def add_attachment(message: types.Message, state: FSMContext):
+    data = await state.get_data()
+    exam_id = data.get("exam_id")
+    attaches = data.get("attaches", [])
+    
+    if message.photo:
+        file_id = message.photo[-1].file_id
+        caption = message.caption or ""
+        ty = "photo"
+    elif message.document:
+        file_id = message.document.file_id
+        caption = message.caption or ""
+        ty = "document"
+    else:
+        await message.answer("Please send a photo or document.", reply_markup=attach_done)
+        return
+    
+    # Add to database
+    db.query("INSERT INTO attachments (exid, ty, tgfileid, caption) VALUES (%s, %s, %s, %s)", 
+             (exam_id, ty, file_id, caption))
+    
+    # Update state data
+    attaches.append((ty, file_id, caption))
+    await state.update_data(attaches=attaches)
+    
+    await message.reply(f"Attachment added successfully.", reply_markup=attach_done)
+
+@arch.callback_query(CbDataStartsWith("rma_"), arch_states.attaches)
+async def remove_attachment(query: types.CallbackQuery, state: FSMContext):
+    idx = int(query.data.split("_")[1])
+    data = await state.get_data()
+    exam_id = data.get("exam_id")
+    attaches = data.get("attaches", [])
+    
+    if 0 <= idx < len(attaches):
+        # Remove from database - need to get the actual attachment ID
+        attachment = db.fetchone("SELECT idx FROM attachments WHERE exid = %s AND tgfileid = %s", 
+                                (exam_id, attaches[idx][1]))
+        if attachment:
+            db.query("DELETE FROM attachments WHERE idx = %s", (attachment[0],))
+        
+        # Remove from state
+        attaches.pop(idx)
+        await state.update_data(attaches=attaches)
+        
+        await query.answer("Attachment removed.")
+        await query.message.delete()
+    else:
+        await query.answer("Attachment not found.")
+
+@arch.callback_query(F.data == "edit_sdate", arch_states.edit)
+async def start_edit_deadline(callback: types.CallbackQuery, state: FSMContext):
+    data = await state.get_data()
+    res = f"{await get_text(state)}\n\n{get_ans_text(data.get('correct', []), data.get('types', []))}"
+    await callback.message.edit_text(f"{res}\n\nPlease send the new deadline (e.g., HH:MM DD MM YYYY):", reply_markup=back_inl_key)
+    await state.set_state(arch_states.sdate)
+
+@arch.callback_query(CbData("back"), arch_states.sdate)
+async def back_from_deadline_cb(callback: types.CallbackQuery, state: FSMContext):
+    # await callback.message.delete()
+    await refresh_edit_menu(callback.message, state)
+    await callback.answer()
+
+@arch.message(arch_states.sdate)
+async def save_new_deadline(message: types.Message, state: FSMContext):
+    try:
+        new_deadline = parse_datetime(message.text)
+        data = await state.get_data()
+        exam_id = data["exam_id"]
+        db.query("UPDATE exams SET sdate = %s WHERE idx = %s", (new_deadline, exam_id))
+        await state.update_data(sdate=new_deadline)
+        await message.delete()
+        await refresh_edit_menu(message, state, oddiy=True)
+    except ValueError:
+        msg = await message.answer("Invalid format. Please use HH:MM DD MM YYYY.")
+        await message.delete()
+        sleep(2)
+        await msg.delete()

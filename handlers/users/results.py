@@ -29,41 +29,24 @@ async def results(message: types.Message, state: FSMContext):
 
 
 async def show_result(message: types.Message, sub):
-    # await message.edit_text("Yuklanmoqda...")
-    # Modified query to select deadline as third field
     exam_det = db.fetchone("SELECT title, correct, sdate FROM exams WHERE idx = %s", (sub[2],))
     if not exam_det:
         await message.answer("Ushbu natija topshirilgan imtihon o'chirib tashlangan. Boshqa natijalar qidirilmoqda...")
-        
         query = "SELECT * FROM submissions WHERE idx < %s AND userid = %s ORDER BY idx DESC LIMIT 1"
-        
         sub = db.fetchone(query, (sub[0], str(message.from_user.id),))
         if not sub:
             await message.answer("Boshqa natijalar topilmadi.")
         else:
             if await show_result(message, sub):
                 await message.answer("Xatolik yuz berdi.")
-        # await message.answer()
         return 0
-    deadline_str = exam_det[2]
-    try:
-        parsed_deadline = datetime.strptime(deadline_str, "%d %m %Y")
-        deadline_dt = parsed_deadline.replace(hour=23, minute=59, second=59, tzinfo=UTC_OFFSET)
-    except Exception as e:
-        logging.error(f"Deadline parsing error: {e}", exc_info=True)
-        deadline_dt = None
-
-    # Ensure sub[3] is offset-aware by treating naive datetime as UTC
-    sub_dt = sub[3] if sub[3].tzinfo else sub[3].replace(tzinfo=timezone.utc)
-    sub_dt = sub_dt.astimezone(UTC_OFFSET)  # Convert to UTC+5
-    
+    deadline_dt = exam_det[2].replace(tzinfo=UTC_OFFSET) if exam_det[2] else None  # sdate is a datetime
+    sub_dt = sub[3].replace(tzinfo=UTC_OFFSET)  # date is a datetime
     date_str = sub_dt.strftime('%H:%M:%S — %Y-%m-%d')
     exsub_time = ""
-    print(f"Sub: {sub_dt}, Deadline: {deadline_dt}")
     if deadline_dt and sub_dt > deadline_dt:
         exsub_time = html.italic("\n⚠️ Vaqtidan keyin topshirilgan")
     ccode = sub[5]
-
     correct, answers = [], []
     try:
         correct = json.loads(exam_det[1])['answers']
@@ -72,7 +55,6 @@ async def show_result(message: types.Message, sub):
         logging.error(f"Error parsing answers: {e}", exc_info=True)
         return 1
     cnt = sum(a == b for a, b in zip(answers, correct))
-
     result_text = (
         f"📝 {html.bold(exam_det[0])} uchun natija #{sub[0]}\n"
         f"⏰ Topshirilgan vaqti: {html.code(date_str)}{exsub_time}\n"
@@ -80,12 +62,10 @@ async def show_result(message: types.Message, sub):
         f"📑 SAT taxminiy ball: {html.bold(int(round((cnt/len(correct)*600+200)/10))*10)}"
     )
     res = ""
-    print(correct, answers)
     cnt = 0
     for i in range((len(correct)+1)//2):
         i1 = i
         i2 = (len(correct)+1)//2+i
-        # print(i1, i2)
         tex1 = f"{html.bold(i1+1)}. {html.code(answers[i1])} "
         tex2 = ""
         if correct[i1] == answers[i1]:
@@ -102,8 +82,6 @@ async def show_result(message: types.Message, sub):
                 tex2 += "❌"
         res += tex1 + tex2 + "\n"
     result_text += "\n\n" + html.expandable_blockquote("#Raq. Natija\n" + res)
-    # print(message.text)
-    # await message.reply("this one")
     await message.edit_text(result_text, reply_markup=results_time(sub[0], ccode, 0))
     return 0
 

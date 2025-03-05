@@ -11,6 +11,7 @@ from datetime import datetime, timezone, timedelta
 from loader import db
 from utils.yau import get_correct_text, get_user_ans_text, get_user_text, gen_code
 from keyboards.inline import usr_inline, adm_inline, lets_start, get_answering_keys, ans_enter_method_usr, submit_ans_user, all_continue_usr
+from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup
 
 chhw = Router()
 chhw.message.filter(IsUser(), IsSubscriber())
@@ -20,42 +21,73 @@ chhw.callback_query.filter(IsUserCallback(), IsSubscriber())
 async def do_today_hw(message: types.Message, state: FSMContext):
     await message.answer(f"{html.bold(dict.do_todays_hw)} menyusi", reply_markup=usr_main_key)
     now = datetime.now(timezone(timedelta(hours=5)))
-    today_date = now.date()
-    # Fetch homework scheduled for today by comparing the date part of sdate
-    test = db.fetchone("SELECT * FROM exams WHERE DATE(sdate) = %s", (today_date,))
-    if not test:
-        await message.answer("Bugungi vazifa hali yuklanmagan yoki mavjud emas. Agar bu xato deb o'ylasangiz, iltimos admin bilan bog'laning.")
+    # Fetch exams that are scheduled in the future (not today)
+    exams = db.fetchall("SELECT * FROM exams WHERE sdate > %s", (now,))
+    available = []
+    for exam in exams:
+        # exam[6]: deadline; exam[7]: resubmission flag
+        exam_deadline = exam[6].replace(tzinfo=timezone(timedelta(hours=5))) if exam[6] else None
+        # Skip exam if the deadline exists and has passed
+        if exam_deadline and now > exam_deadline:
+            continue
+        submission = db.fetchone("SELECT * FROM submissions WHERE userid = %s AND exid = %s", (str(message.from_user.id), exam[0]))
+        if submission and not exam[7]:
+            continue
+        available.append(exam)
+    if not available:
+        await message.answer("Bugungi yoki kelajakda javob berish mumkin bo'lgan vazifa topilmadi. Agar bu xato deb o'ylasangiz, iltimos, admin bilan bog'laning.")
         return
-    exam_id = test[0]
-    # Check if user already submitted
-    submission = db.fetchone("SELECT * FROM submissions WHERE userid = %s AND exid = %s", (str(message.from_user.id), exam_id))
-    if submission and not test[7]:
-        await message.answer("Siz allaqachon vazifaga javoblaringizni topshirib bo'lgansiz va qayta topshirish mumkin emas.")
-        return
-    # Parse test info stored in JSON
+    if len(available) == 1:
+        exam = available[0]
+        await process_exam(message, exam, state)
+    else:
+        kb = InlineKeyboardMarkup(inline_keyboard=[
+            [InlineKeyboardButton(text=ex[1], callback_data=f"exam_{ex[0]}")] for ex in available
+        ])
+        await message.answer("Quyidagi testlardan birini tanlang:", reply_markup=kb)
+
+async def process_exam(message_or_query, exam, state: FSMContext):
+    # Save exam data into state and show test details (common for message or callback)
     try:
-        import json
-        test_info = json.loads(test[5])
+        test_info = json.loads(exam[5])
     except Exception:
-        await message.answer("Test tafsilotlarini yuklashda xatolik yuz berdi.", reply_markup=usr_main_key)
+        await message_or_query.answer("Test tafsilotlarini yuklashda xatolik yuz berdi.", reply_markup=usr_main_key)
         return
-    await state.update_data(exam_id=exam_id, ans_confirm=False,
-                            total=test[4], current=1, title=test[1], about=test[2], instructions=test[3],
-                            correct=test_info.get("answers", []),
-                            typesl=test_info.get("types", []),
-                            donel=[None]*test[4], page=1)
-    # Send first question based on type and attachments if any:
-    current = 1
-    attaches = db.fetchall("SELECT ty, tgfileid, caption FROM attachments WHERE exid = %s", (exam_id,))
+    await state.update_data(
+        exam_id=exam[0],
+        ans_confirm=False,
+        total=exam[4],
+        current=1,
+        title=exam[1],
+        about=exam[2],
+        instructions=exam[3],
+        correct=test_info.get("answers", []),
+        typesl=test_info.get("types", []),
+        donel=[None]*exam[4],
+        page=1
+    )
+    attaches = db.fetchall("SELECT ty, tgfileid, caption FROM attachments WHERE exid = %s", (exam[0],))
     if attaches:
         for ty, tgfileid, caption in attaches:
             if ty == "photo":
-                await message.answer_photo(photo=tgfileid, caption=caption)
+                await message_or_query.answer_photo(photo=tgfileid, caption=caption)
             elif ty == "document":
-                await message.answer_document(document=tgfileid, caption=caption)
-    res = f"{get_user_text(test[1], test[2], test[3], test[4])}"
-    await message.answer(res, reply_markup=lets_start)
+                await message_or_query.answer_document(document=tgfileid, caption=caption)
+    res = f"{get_user_text(exam[1], exam[2], exam[3], exam[4])}"
+    await message_or_query.answer(res, reply_markup=lets_start)
     await state.set_state(check_hw_states.details)
+
+@chhw.callback_query(F.data.startswith("exam_"))
+async def choose_exam(callback: types.CallbackQuery, state: FSMContext):
+    # Set the new "choose" state for exam selection if desired
+    await state.set_state(check_hw_states.choose)
+    exam_id = int(callback.data.split("_")[1])
+    exam = db.fetchone("SELECT * FROM exams WHERE idx = %s", (exam_id,))
+    if not exam:
+        await callback.message.answer("Vazifa topilmadi. Iltimos, admin bilan bog'laning.")
+        return
+    await callback.message.delete_reply_markup()
+    await process_exam(callback.message, exam, state)
 
 @chhw.callback_query(CbData("start_test"), check_hw_states.details)
 async def start_test(query: types.CallbackQuery, state: FSMContext):
@@ -295,23 +327,21 @@ async def confirm_submit(query: types.CallbackQuery, state: FSMContext):
     data = await state.get_data()
     submission_time = datetime.now(timezone(timedelta(hours=5)))
     exam_id = data.get("exam_id")
-    # Fetch exam using exam id
     test = db.fetchone("SELECT * FROM exams WHERE idx = %s", (exam_id,))
     if not test:
-        await query.message.answer("Javobingizni saqlashni iloji yo'q!\n\nSiz topshirmoqchi bo'lgan vazifa vaqti o'tib ketganga yoki o'chirib tashlangan o'xshaydi.", reply_markup=usr_main_key)
+        await query.message.answer("Vazifa topilmadi. Iltimos, admin bilan bog'laning.", reply_markup=usr_main_key)
         await state.clear()
         return
-    # Check deadline: compare test deadline (sdate) with current time
-    exam_deadline = datetime.fromisoformat(test[6])
-    if submission_time > exam_deadline and not test[7]:
-        await query.message.answer("Vaqt tugagan. Javoblaringiz qabul qilinmaydi.", reply_markup=usr_main_key)
+    exam_deadline = test[6].replace(tzinfo=timezone(timedelta(hours=5))) if test[6] else None
+    # Check exam availability again (deadline check)
+    if exam_deadline and submission_time > exam_deadline and not test[7]:
+        await query.message.answer("Vaqt tugagan yoki vazifa yopilgan. Javoblaringiz qabul qilinmaydi.", reply_markup=usr_main_key)
         await state.clear()
         return
     submission = db.fetchone("SELECT * FROM submissions WHERE userid = %s AND exid = %s", (str(query.from_user.id), exam_id))
     if submission and not test[7]:
         await query.message.answer("Siz allaqachon vazifaga javoblaringizni topshirib bo'lgansiz va qayta topshirish mumkin emas.")
         return
-
     correct = data.get("correct")
     answers = data.get("donel")
     userid = query.from_user.id

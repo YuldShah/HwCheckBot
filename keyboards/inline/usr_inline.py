@@ -9,16 +9,15 @@ def mand_chans(channels) -> InlineKeyboardMarkup:
     btns.append([InlineKeyboardButton(text=check_subs, callback_data="check_subs")])
     return InlineKeyboardMarkup(inline_keyboard=btns)
 
-
-
 def get_answering_keys(current, total, answers, typesl, page=1, confirm=False) -> InlineKeyboardMarkup:
-    btns = [[InlineKeyboardButton(text=dict.continue_uz, callback_data="continue")]]
-    if not confirm:
-        btns = []
-    if typesl[current-1] > 0: # MCQ
+    btns = [[InlineKeyboardButton(text=dict.continue_uz, callback_data="continue")]] if confirm else []
+    if typesl[current-1] > 0:  # MCQ style
         arow = []
         for i in range(typesl[current-1]):
-            arow.append(InlineKeyboardButton(text="🟢" if chr(65+i)==answers[current-1] else chr(65+i), callback_data=f"mcq_{chr(65+i)}"))
+            arow.append(InlineKeyboardButton(
+                text="🟢" if chr(65+i)==answers[current-1] else chr(65+i),
+                callback_data=f"mcq_{chr(65+i)}"
+            ))
         btns.append(arow)
     qforthis = min(config.MAX_QUESTION_IN_A_PAGE, total - (page-1)*config.MAX_QUESTION_IN_A_PAGE)
     for i in range((qforthis+4)//5):
@@ -32,15 +31,13 @@ def get_answering_keys(current, total, answers, typesl, page=1, confirm=False) -
             else:
                 row.append(InlineKeyboardButton(text=f"🔴{now}", callback_data=f"jump_{now}"))
         btns.append(row)
-    allp = (total+config.MAX_QUESTION_IN_A_PAGE-1)//config.MAX_QUESTION_IN_A_PAGE
-    if allp==1:
-        return InlineKeyboardMarkup(inline_keyboard=btns)
-    row = [
-        InlineKeyboardButton(text="⇐", callback_data="page_prev"),
-        InlineKeyboardButton(text=f"Bet: {page}/{allp}", callback_data="page_now"),
-        InlineKeyboardButton(text="⇒", callback_data="page_next")
-    ]
-    btns.append(row)
+    allp = (total + config.MAX_QUESTION_IN_A_PAGE - 1) // config.MAX_QUESTION_IN_A_PAGE
+    if allp > 1:
+        btns.append([
+            InlineKeyboardButton(text="⇐", callback_data="page_prev"),
+            InlineKeyboardButton(text=f"Bet: {page}/{allp}", callback_data="page_now"),
+            InlineKeyboardButton(text="⇒", callback_data="page_next")
+        ])
     return InlineKeyboardMarkup(inline_keyboard=btns)
 
 btns1 = [
@@ -51,28 +48,23 @@ btns1 = [
 
 elbek = InlineKeyboardMarkup(inline_keyboard=btns1)
 
-btns2 = [
-    [
-        InlineKeyboardButton(text=dict.start_test, callback_data="start_test")
-    ]
-]
-lets_start = InlineKeyboardMarkup(inline_keyboard=btns2)
+lets_start = InlineKeyboardMarkup(inline_keyboard=[
+    [InlineKeyboardButton(text=dict.start_test, callback_data="start_test")]
+])
 
-btns3 = [
-    [
-        InlineKeyboardButton(text=dict.all_at_once_uz, callback_data="all"),
-        InlineKeyboardButton(text=dict.one_by_one_uz, callback_data="one")
-    ]
-]
-ans_enter_method_usr = InlineKeyboardMarkup(inline_keyboard=btns3)
+ans_enter_method_usr = InlineKeyboardMarkup(inline_keyboard=[
+    [InlineKeyboardButton(text=dict.all_at_once_uz, callback_data="all"),
+     InlineKeyboardButton(text=dict.one_by_one_uz, callback_data="one")]
+])
 
-btns4 = [
-    [
-        InlineKeyboardButton(text=dict.back_uz, callback_data="back"),
-        InlineKeyboardButton(text=dict.send_uz, callback_data="submit")    
-    ]
-]
-submit_ans_user = InlineKeyboardMarkup(inline_keyboard=btns4)
+submit_ans_user = InlineKeyboardMarkup(inline_keyboard=[
+    [InlineKeyboardButton(text=dict.back_uz, callback_data="back"),
+     InlineKeyboardButton(text=dict.send_uz, callback_data="submit")]
+])
+
+all_continue_usr = InlineKeyboardMarkup(inline_keyboard=[
+    [InlineKeyboardButton(text=dict.continue_uz, callback_data="continue")]
+])
 
 def share_sub_usr(code):
     btns = [
@@ -94,13 +86,6 @@ def results_time(subid, ccode, vis):
         ]
     ]
     return InlineKeyboardMarkup(inline_keyboard=btns)
-
-btns5 = [
-    [
-        InlineKeyboardButton(text=dict.continue_uz, callback_data="continue")
-    ]
-]
-all_continue_usr = InlineKeyboardMarkup(inline_keyboard=btns5)
 
 def get_missing_exams(exams):
     btns = []

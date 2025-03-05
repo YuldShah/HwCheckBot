@@ -2,7 +2,8 @@ from aiogram import Router, types, F, html
 from filters import IsAdmin, IsAdminCallback, CbData, CbDataStartsWith
 from loader import db
 from keyboards.inline import today, ans_enter_meth, obom, ans_set_fin, inl_folders, remove_att
-from keyboards.regular import main_key, back_key, skip_desc, adm_default, attach_done
+from keyboards.regular import main_key, back_key, skip_desc, adm_default
+from keyboards.regular import attach_done_for_create
 from data import dict, config
 from datetime import datetime, timedelta, timezone
 from states import creates
@@ -62,7 +63,7 @@ async def get_about(message: types.Message, state: FSMContext):
 async def get_instructions(message: types.Message, state: FSMContext):
     await state.update_data(instructions=None, attaches=[])
     await state.set_state(creates.attachments)
-    await message.answer(f"{await get_text(state)}\nPlease, send the attachments if any and press done if you're.", reply_markup=attach_done)
+    await message.answer(f"{await get_text(state)}\nPlease, send the attachments if any and press done if you're.", reply_markup=attach_done_for_create)
 
 @test.message(creates.instructions, F.text == dict.back)
 async def back_to_about(message: types.Message, state: FSMContext):
@@ -73,7 +74,7 @@ async def back_to_about(message: types.Message, state: FSMContext):
 async def get_instructions(message: types.Message, state: FSMContext):
     await state.update_data(instructions=message.text, attaches=[])
     await state.set_state(creates.attachments)
-    await message.answer(f"{await get_text(state)}\nPlease, send the attachments if any and press done if you're.", reply_markup=attach_done)
+    await message.answer(f"{await get_text(state)}\nPlease, send the attachments if any and press done if you're.", reply_markup=attach_done_for_create)
 
 @test.message(creates.attachments, F.text == dict.done)
 async def done_attachments(message: types.Message, state: FSMContext):
@@ -102,7 +103,7 @@ async def get_attachments(message: types.Message, state: FSMContext):
         await message.answer(f"{await get_text(state)}\n❗️ Please, send only photos or documents.")
         return
     await state.update_data(attaches=attaches)
-    await message.reply(f"🗃 Attachment {html.bold(f"#{len(attaches)}")} added.\n\nSend more attachments if needed or press done.", reply_markup=attach_done)
+    await message.reply(f"🗃 Attachment {html.bold(f"#{len(attaches)}")} added.\n\nSend more attachments if needed or press done.", reply_markup=attach_done_for_create)
     
 
 @test.message(creates.number, F.text == dict.back)
@@ -119,7 +120,7 @@ async def back_to_instructions(message: types.Message, state: FSMContext):
                 await message.answer_photo(photo=fileid, caption=caption, reply_markup=remove_att(idx))
             else:
                 await message.answer(f"Attachment {html.bold(f"#{idx}")} type not recognized.")
-    await message.answer(f"Delete the unwanted attachments by clicking on them.\n\nAnd send new attachments for the test with captions if needed.", reply_markup=attach_done)
+    await message.answer(f"Delete the unwanted attachments by clicking on them.\n\nAnd send new attachments for the test with captions if needed.", reply_markup=attach_done_for_create)
 
 @test.callback_query(CbDataStartsWith("rma_"), creates.attachments)
 async def remove_attach(query: types.CallbackQuery, state: FSMContext):
@@ -148,7 +149,10 @@ async def get_number(message: types.Message, state: FSMContext):
     await state.update_data(numquest=numq, vis=1, resub=0, folder=None)
     await state.update_data(donel=[None for i in range(numq)])
     await state.update_data(typesl=[config.MULTIPLE_CHOICE_DEF for i in range(numq)])
-    await message.answer(f"{await get_text(state)}\nPlease, send the date in the following format:\n{html.code(f"DD MM YYYY")}", reply_markup=today)
+    await message.answer(f"{await get_text(state)}\nPlease, send the deadline in one of the following formats:\n"
+                         f"- Time only: \"HH\", \"HH MM\", \"HH:MM\" (sets for today)\n"
+                         f"- Date only: \"DD MM YYYY\" (sets time to 23:59)\n"
+                         f"- Full: \"HH:MM DD MM YYYY\"", reply_markup=today)
     await state.set_state(creates.sdate)
 
 @test.message(creates.sdate, F.text == dict.back)
@@ -157,61 +161,68 @@ async def back_to_number(message: types.Message, state: FSMContext):
     await state.set_state(creates.number)
 
 def parse_datetime(input_str: str) -> datetime:
-    # Get current time with UTC+5
     now = datetime.now(timezone(timedelta(hours=5)))
     parts = input_str.strip().split()
-    try:
-        if len(parts) == 1:
-            # Only time provided – can be either "HH", "HH MM" or "HH:MM"
-            if ':' in parts[0]:
-                h_str, m_str = parts[0].split(':')
-            else:
-                h_str, m_str = parts[0], "00"
-            dt = now.replace(hour=int(h_str), minute=int(m_str), second=0, microsecond=0)
-        elif len(parts) >= 3:
-            # full input: first part time, second day, third month, (fourth year optional)
-            if ':' in parts[0]:
-                h_str, m_str = parts[0].split(':')
-            else:
-                h_str, m_str = parts[0], "00"
+    if len(parts) == 1:
+        # Only time provided
+        if ':' in parts[0]:
+            h_str, m_str = parts[0].split(':')
+        else:
+            h_str, m_str = parts[0], "00"
+        dt = now.replace(hour=int(h_str), minute=int(m_str), second=0, microsecond=0)
+    elif len(parts) == 3:
+        # Only date provided: DD MM YYYY
+        day = int(parts[0])
+        month = int(parts[1])
+        year = int(parts[2])
+        dt = now.replace(year=year, month=month, day=day, hour=23, minute=59, second=0, microsecond=0)
+    elif len(parts) >= 4:
+        # Time and date provided: HH:MM DD MM YYYY
+        if ':' in parts[0]:
+            h_str, m_str = parts[0].split(':')
             day = int(parts[1])
             month = int(parts[2])
             year = int(parts[3]) if len(parts) >= 4 else now.year
             dt = now.replace(year=year, month=month, day=day, hour=int(h_str), minute=int(m_str), second=0, microsecond=0)
         else:
-            raise ValueError
-    except Exception as e:
-        raise ValueError("Invalid date/time format") from e
+            raise ValueError("Invalid date/time format")
+    else:
+        raise ValueError("Invalid date/time format")
     return dt
 
 @test.message(creates.sdate)
 async def get_sdate(message: types.Message, state: FSMContext):
-    # Instead of strict "%d %m %Y", allow flexible time/date input
     try:
         dt = parse_datetime(message.text)
     except ValueError:
         await message.answer(f"{await get_text(state)}\n❗️ Please, send the deadline using one of the following formats:\n"
-                             f"- Only time: \"HH\", \"HH MM\" or \"HH:MM\" (sets deadline for today)\n"
-                             f"- Full: \"HH:MM DD MM\" or \"HH:MM DD MM YYYY\" (year is optional)")
+                             f"- Time only: \"HH\", \"HH MM\", \"HH:MM\" (sets for today)\n"
+                             f"- Date only: \"DD MM YYYY\" (sets time to 23:59)\n"
+                             f"- Full: \"HH:MM DD MM YYYY\"")
         return
-    # Disallow deadlines in the past
     now = datetime.now(timezone(timedelta(hours=5)))
     if dt < now:
         await message.answer(f"{await get_text(state)}\n❗️ The deadline must be in the future.")
         return
-    # Save in ISO format for later comparisons
-    await state.update_data(sdate=dt.isoformat())
+    await state.update_data(sdate=dt)  # Store as datetime object
     await message.answer(f"{await get_text(state)}\nPlease, choose the way you want to enter the answers (multiple answers only possible with all at once option):", reply_markup=ans_enter_meth)
     await state.set_state(creates.way)
 
 @test.callback_query(CbData("today"), creates.sdate)
 async def set_date_today(query: types.CallbackQuery, state: FSMContext):
     now = datetime.now(timezone(timedelta(hours=5)))
-    # Set default time (for instance current time with seconds zeroed)
-    dt = now.replace(second=0, microsecond=0)
-    await state.update_data(sdate=dt.isoformat())
-    await query.message.edit_text(f"{await get_text(state)}\nDeadline set to: {dt.strftime('%H:%M %d %m %Y')}\nPlease, choose the way you want to enter the answers (multiple answers only possible with all at once option):", reply_markup=ans_enter_meth)
+    dt = (now + timedelta(days=1)).replace(hour=0, minute=0, second=0, microsecond=0)
+    await state.update_data(sdate=dt)
+    await query.message.edit_text(
+        f"{await get_text(state)}\nDeadline set to: {dt.strftime('%H:%M %d %m %Y')}\nPlease, choose the way you want to enter the answers (multiple answers only possible with all at once option):",
+        reply_markup=ans_enter_meth
+    )
     await state.set_state(creates.way)
+
+@test.message(creates.way, F.text == dict.back)
+async def back_to_date(message: types.Message, state: FSMContext):
+    await message.answer(f"{await get_text(state)}\nPlease, send the date in the following format or press the following to set it for today:\n{html.code(f'DD MM YYYY')}", reply_markup=today)
+    await state.set_state(creates.sdate)
 
 @test.callback_query(CbData("all"), creates.way)
 async def set_way_all(query: types.CallbackQuery, state: FSMContext):
@@ -224,11 +235,10 @@ async def set_way_all(query: types.CallbackQuery, state: FSMContext):
 @test.callback_query(CbData("one"), creates.way)
 async def set_way_one(query: types.CallbackQuery, state: FSMContext):
     await state.update_data(page=1, curq=1)
-    # Remove any "type" updates
     data = await state.get_data()
     donel = data.get("donel")
     typesl = data.get("typesl")
-    numq = int(data.get("numquest"))
+    numq = data.get("numquest")
     page = data.get("page")
     ans_confirm = data.get("ans_confirm")
     await state.update_data(entering="one")
@@ -270,7 +280,7 @@ async def set_mcq(query: types.CallbackQuery, state: FSMContext):
         await query.message.edit_text(f"{html.blockquote('ps. 🟢 - done, 🟡 - current, 🔴 - not done (yes, traffic lights, you dumb*ss)')}"
             f"\n\n{get_ans_text(donel, typesl)}"
             f"\n\nPlease, {html.underline('choose' if typesl[curq-1] > 0 else 'send')} the right answer for question {html.bold(f'#{curq}/{numq}')}:"
-            f"\n\n{html.bold("Note: you have entered all the answers. You can change the answers for each question by clicking on the question number, navigating through pages.")}",
+            f"\n\n{html.bold('Note: you have entered all the answers. You can change the answers for each question by clicking on the question number, navigating through pages.')}",
             reply_markup=obom(curq, numq, donel, typesl, page, confirm=True)
         )
         await state.update_data(ans_confirm=True)
@@ -542,7 +552,7 @@ async def back_to_ans(message: types.Message, state: FSMContext):
             f"{html.blockquote('ps. 🟢 - done, 🟡 - current, 🔴 - not done (yes, traffic lights, you dumb*ss)')}"
             f"\n\n{get_ans_text(donel, typesl)}"
             f"\n\nPlease, {html.underline('choose' if typesl[curq-1] > 0 else 'send')} the right answer for question {html.bold(f'#{curq}/{numq}')}:"
-            f"\n\n{html.bold("Note: you have entered all the answers. You can change the answers for each question by clicking on the question number, navigating through pages.")}",
+            f"\n\n{html.bold('Note: you have entered all the answers. You can change the answers for each question by clicking on the question number, navigating through pages.')}",
             
             reply_markup=obom(curq, numq, donel, typesl, page, confirm=True))
         await state.update_data(ans_confirm=True)
@@ -578,20 +588,15 @@ async def back_to_ans(callback: types.CallbackQuery, state: FSMContext):
     numq = data.get("numquest")
     page = data.get("page")
     donel = data.get("donel")
-    entering = data.get("entering")
     await state.set_state(creates.ans)
-    if entering == "all":
-        await callback.message.edit_text(f"{await get_text(state)}\nPlease, send the answers in the following format:\n{html.code('Answer1\nAnswer2\nAnswer3,AgainAnswer3')}")
-        return
-    else:
-        await callback.message.edit_text(
-            f"{html.blockquote('ps. 🟢 - done, 🟡 - current, 🔴 - not done (yes, traffic lights, you dumb*ss)')}"
-            f"\n\n{get_ans_text(donel, typesl)}"
-            f"\n\nPlease, {html.underline('choose' if typesl[curq-1] > 0 else 'send')} the right answer for question {html.bold(f'#{curq}/{numq}')}:"
-            f"\n\n{html.bold("Note: you have entered all the answers. You can change the answers for each question by clicking on the question number, navigating through pages.")}",
-            
-            reply_markup=obom(curq, numq, donel, typesl, page, confirm=True))
-        await state.update_data(ans_confirm=True)
+    await callback.message.edit_text(
+        f"{html.blockquote('ps. 🟢 - done, 🟡 - current, 🔴 - not done (yes, traffic lights, you dumb*ss)')}"
+        f"\n\n{get_ans_text(donel, typesl)}"
+        f"\n\nPlease, {html.underline('choose' if typesl[curq-1] > 0 else 'send')} the right answer for question {html.bold(f'#{curq}/{numq}')}:"
+        f"\n\n{html.bold('Note: you have entered all the answers. You can change the answers for each question by clicking on the question number, navigating through pages.')}",
+        reply_markup=obom(curq, numq, donel, typesl, page, confirm=True)
+    )
+    await state.update_data(ans_confirm=True)
         # await state.set_state(creates.ans)
 
 
@@ -703,16 +708,13 @@ async def finalize_test(query: types.CallbackQuery, state: FSMContext):
     about = data.get("about")
     instructions = data.get("instructions")
     numquest = data.get("numquest")
-    sdate = data.get("sdate")
-    # Assume that the correct answers and types are stored in state under keys 'donel' and 'typesl'
+    sdate = data.get("sdate")  # Now a datetime object
     donel = data.get("donel")
     typesl = data.get("typesl")
     vis = not data.get("vis")
     resub = data.get("resub")
     folder_id = data.get("folder_id") or 0
-    # Pack correct answers and types in JSON for later homework processing
     test_info = {"answers": donel, "types": typesl}
-    # Insert new exam/test record. Field order: idx, title, about, instructions, num_questions, correct, sdate, resub, folder, hide
     query_str = """INSERT INTO exams (title, about, instructions, num_questions, correct, sdate, hide, resub, folder, random) 
                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)"""
     random_text = datetime.now().strftime("%Y%m%d%H%M%S")

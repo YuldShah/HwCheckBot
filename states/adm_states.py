@@ -51,12 +51,15 @@ class arch_states(StatesGroup):
     rmfconfirm = State()
     emenu = State()
     edit = State()
-    title = State()
-    about = State()
-    edans = State()
-    share = State()
-    post = State()
+    title = State() #for title 
+    about = State() #for description
+    instruc = State() #for instructions
+    edans = State() #to change answers 
+    attaches = State() # to change attachments
+    share = State() 
+    post = State() 
     rmtconfirm = State()
+    sdate = State() #for deadline  
 
 class statsstates(StatesGroup):
     stmenu = State()

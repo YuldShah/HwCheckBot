@@ -1,6 +1,7 @@
 from aiogram.fsm.state import StatesGroup, State
 
 class check_hw_states(StatesGroup):
+    choose = State()   # New state added for exam selection if needed
     details = State()
     way = State()
     answer = State()

@@ -242,8 +242,8 @@ def details_test(code, folder, exid):
             InlineKeyboardButton(text=dict.folder+folder if folder else dict.folder_not, callback_data="folder")
         ],
         [
-            InlineKeyboardButton(text=dict.edit, callback_data=f"edit_{exid}"),
-            InlineKeyboardButton(text=dict.share, switch_inline_query=f"ex_{code}")
+            InlineKeyboardButton(text=dict.edit, callback_data=f"edit_{exid}")
+            # InlineKeyboardButton(text=dict.share, switch_inline_query=f"ex_{code}")
         ],
         [
             InlineKeyboardButton(text=dict.back, callback_data="back")

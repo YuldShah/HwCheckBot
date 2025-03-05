@@ -27,8 +27,15 @@ skip_desc = ReplyKeyboardMarkup(keyboard=btns2, resize_keyboard=True)
 
 btns3 = [
     [
-        KeyboardButton(text=dict.back),
         KeyboardButton(text=dict.done)
     ]
 ]
 attach_done = ReplyKeyboardMarkup(keyboard=btns3, resize_keyboard=True)
+
+btns4 = [
+    [
+        KeyboardButton(text=dict.back),
+        KeyboardButton(text=dict.done)
+    ]
+]
+attach_done_for_create = ReplyKeyboardMarkup(keyboard=btns4, resize_keyboard=True)

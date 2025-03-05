@@ -13,7 +13,6 @@ UTC_OFFSET = timezone(timedelta(hours=5))  # UTC+5 timezone
 @pub.inline_query(F.query.startswith("sub_"))
 async def search_results(query: types.InlineQuery):
     sub_code = query.query.split("_")[1]
-    print(sub_code)
     sub = db.fetchone("SELECT * FROM submissions WHERE random = %s", (sub_code,))
     if not sub:
         res = types.InlineQueryResultArticle(
@@ -25,24 +24,13 @@ async def search_results(query: types.InlineQuery):
         )
         return await query.answer([res], cache_time=1, is_personal=True, switch_pm_parameter="myres", switch_pm_text="📊 Natijalarimni botda ko'rish")
     exam_det = db.fetchone("SELECT title, correct, sdate FROM exams WHERE idx = %s", (sub[2],))
-    deadline_str = exam_det[2]
-    try:
-        parsed_deadline = datetime.strptime(deadline_str, "%d %m %Y")
-        deadline_dt = parsed_deadline.replace(hour=23, minute=59, second=59, tzinfo=UTC_OFFSET)
-    except Exception as e:
-        deadline_dt = None
-    # Ensure sub[3] is offset-aware by treating naive datetime as UTC
-    sub_dt = sub[3] if sub[3].tzinfo else sub[3].replace(tzinfo=timezone.utc)
-    sub_dt = sub_dt.astimezone(UTC_OFFSET)  # Convert to UTC+5
-    
+    deadline_dt = exam_det[2].replace(tzinfo=UTC_OFFSET) if exam_det[2] else None
+    sub_dt = sub[3].replace(tzinfo=UTC_OFFSET)
     sub_time = sub_dt.strftime('%H:%M:%S — %Y-%m-%d')
     exsub_time = ""
-    print(f"Sub: {sub_dt}, Deadline: {deadline_dt}")
     if deadline_dt and sub_dt > deadline_dt:
         exsub_time = html.italic("\n⚠️ Vaqtidan keyin topshirilgan")
-    
     title_of_exam = exam_det[0] if exam_det else "O'chirilgan test"
-
     user_name = db.fetchone("SELECT fullname FROM users WHERE userid = %s", (sub[1],))
     if not user_name:
         user_name = "Noma'lum"
@@ -51,7 +39,6 @@ async def search_results(query: types.InlineQuery):
     cnt = 0
     correct = json.loads(exam_det[1]).get("answers", [])
     answers = json.loads(sub[4])
-
     for i in range(len(correct)):
         if answers[i] == correct[i]:
             cnt += 1

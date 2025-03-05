@@ -1,0 +1,3262 @@
+##bot.py
+
+import logging
+import sys
+from dotenv import load_dotenv
+load_dotenv()
+from loader import dp, db, bot, get_info
+import asyncio
+from data import config
+from handlers import register_handlers
+
+async def on_startup():
+    logging.basicConfig(level=logging.INFO, stream=sys.stdout)
+    await get_info(bot)
+    
+    register_handlers(dp)
+    db.create_tables()
+    logging.warning("Database started...")
+
+async def on_shutdown():
+    logging.warning("Shutting down..")
+    await dp.storage.close()
+    logging.warning("Bot down")
+
+async def main():
+    await on_startup()
+    await bot.delete_webhook(drop_pending_updates=True)
+    await dp.start_polling(bot)
+    await on_shutdown()
+
+
+
+if __name__ == '__main__':
+    asyncio.run(main())
+
+
+##config.py
+
+import os
+
+BOT_TOKEN = os.getenv("BOT_TOKEN")
+ADMINS = [6520664733, 1428991138, 6888608063] # [int(x) for x in os.getenv("ADMINS").split()]
+DB_URL =  os.getenv("DATABASE_URL") #"postgres://ud3vktgsm7c0kl:p2405e5f984cc0764f322f5f0fb190f6dee84f5a74e50c09d8579ebfba20143ec@cd27da2sn4hj7h.cluster-czrs8kj4isg7.us-east-1.rds.amazonaws.com:5432/d44dmdcte5vehd"
+ADMIN_URL = "https://t.me/satelbekadmin"
+# DB_URI =  "mongodb+srv://notyuldshah:<Description_56>@prproj.xbst3.mongodb.net/?retryWrites=true&w=majority&appName=prproj" #os.getenv("URI")
+MAX_EXAMS_AT_A_TIME = 5
+MULTIPLE_CHOICE_DEF = 4
+MAX_QUESTION_IN_A_PAGE = 15
+bot_info = None
+
+
+##adm_basic.py
+
+import time
+from aiogram import Router, types, F, html
+from aiogram.filters import Command, CommandStart
+from filters import IsAdmin, IsAdminCallback, CbData, IsStickerMessage
+from aiogram.fsm.context import FSMContext
+from data import dict
+from loader import db, bot
+from keyboards.inline import mandchans
+from keyboards.regular import adm_default, main_key
+# from states import mands
+
+admin = Router()
+
+admin.message.filter(IsAdmin())
+admin.callback_query.filter(IsAdminCallback())
+
+@admin.message(F.text == dict.main_menu)
+@admin.message(CommandStart())
+async def adminstart(message: types.Message, state: FSMContext) -> None:
+    await state.clear()
+    # await bot.get_chat(message.from_user.id)
+    await message.answer_sticker("CAACAgIAAxkBAAMsZ7RQOl346-zTcJXpWdn8XgJr-64AAtMAA1advQr1Mo-X1RL5PTYE")
+    await message.answer(f"👋 Hello, {html.bold(message.from_user.mention_html())}\n\n👀 You're an admin, do whatever you want!", reply_markup=adm_default)
+
+
+@admin.callback_query(CbData("main_menu"))
+async def adminmenu(callback: types.CallbackQuery, state: FSMContext) -> None:
+    await state.clear()
+    await callback.message.answer_sticker("CAACAgIAAxkBAAMsZ7RQOl346-zTcJXpWdn8XgJr-64AAtMAA1advQr1Mo-X1RL5PTYE")
+    await callback.message.answer(f"Back to {html.bold(f"{dict.main_menu}")}", reply_markup=adm_default)
+    await callback.message.delete()
+
+@admin.message(IsStickerMessage())
+async def ret_sticker_id(message: types.Message, state: FSMContext) -> None:
+    await message.reply(f"Sticker id {html.code(message.sticker.file_id)}")
+
+# @admin.message(F.text == dict.mands)
+# async def pmands(message: types.Message, state: FSMContext) -> None:
+#     await state.set_state(mands.mmenu)
+#     await message.answer(f"Menyu: <b>{dict.mands}</b>", reply_markup=main_key)
+#     response = "Hozircha majburiy chatlar mavjud emas. Ularni shu yerdan qo'sha olasiz:"
+#     channels = db.fetchall("SELECT title, link, idx FROM channel WHERE NOT post = 1")
+#     if channels:
+#         response = "Following are the mandatory chats to join. You can add new or delete existing ones."
+#     await message.answer(response, reply_markup=mandchans(channels))
+
+
+##allowance.py
+
+from aiogram import types, Router, F, html
+from data import config
+from keyboards.inline import perm_inl, arch_inl
+# import hashlib
+from time import sleep
+from loader import db
+from filters import InlineData, InlineDataStartsWith, IsAdmin, IsAdminCallback, IsAdminInline, CbData, CbDataStartsWith
+
+allow = Router()
+
+allow.message.filter(IsAdmin())
+allow.callback_query.filter(IsAdminCallback())
+allow.inline_query.filter(IsAdminInline())
+
+
+
+@allow.inline_query(InlineData("allow"))
+async def allow_inline(inline: types.InlineQuery):
+    print("allow")
+    # unique_id = hashlib.md5(str(inline.from_user.id).encode()).hexdigest()
+    res = types.InlineQueryResultArticle(
+        id="wtf",
+        title="Permit",
+        description="Grant permission to user",
+        input_message_content=types.InputTextMessageContent(
+            message_text="Botga ruxsat olish uchun quyidagi tugmani bosing."
+        ),
+        reply_markup=perm_inl
+    )
+    await inline.answer([res], cache_time=1, is_personal=True)
+
+# @allow.inline_query(InlineData("arch"))
+# async def arch_inline(inline: types.InlineQuery):
+#     print("arch")
+#     res = types.InlineQueryResultArticle(
+#         id="wtf",
+#         title="Archive",
+#         description="Grant access to the archive",
+#         input_message_content=types.InputTextMessageContent(
+#             message_text="Qoldirilgan vazifalarni bajarish uchun ruxsat olish uchun quyidagi tugmani bosing."
+#         ),
+#         reply_markup=arch_inl
+#     )
+#     await inline.answer([res], cache_time=1, is_personal=True)
+
+
+@allow.inline_query(InlineData("link"))
+async def link_inline(inline: types.InlineQuery):
+    chid = db.fetchone("SELECT chid FROM channel")
+    if chid:
+        chid = int(chid[0])
+        lk = await inline.bot.create_chat_invite_link(chat_id=chid, member_limit=1)
+        res = types.InlineQueryResultArticle(
+            id="wtf",
+            title="Link",
+            description="Create one time link for the channel",
+            input_message_content=types.InputTextMessageContent(
+                message_text=f"Quyida kanalga ulanishingiz uchun bir martalik link:"
+            ),
+            reply_markup=types.InlineKeyboardMarkup(
+                inline_keyboard=[
+                    [
+                        types.InlineKeyboardButton(
+                            text="📲 Kanalga ulanish",
+                            url=lk.invite_link
+                        )
+                    ]
+                ]
+            )
+        )
+        await inline.answer([res], cache_time=1, is_personal=True)
+
+@allow.inline_query()
+async def default_inline(inline: types.InlineQuery):
+    print("inline")
+    res = [
+        types.InlineQueryResultArticle(
+            id = "1",
+            title = "allow",
+            description = "Used to permission to user",
+            input_message_content = types.InputTextMessageContent(message_text=f"Wrong query! You should have entered {html.code(f"@{config.bot_info.username} allow")} and press the resultant button.")
+        ),
+        # types.InlineQueryResultArticle(
+        #     id = "2",
+        #     title = "arch",
+        #     description = "Used to give access to the archive",
+        #     input_message_content = types.InputTextMessageContent(message_text=f"Wrong query! You should have entered {html.code(f"@{config.bot_info.username} arch")} and press the resultant button.")
+        # ),
+        types.InlineQueryResultArticle(
+            id = "2",
+            title = "link",
+            description = "Used to create one time link for the anyone",
+            input_message_content = types.InputTextMessageContent(message_text=f"Wrong query! You should have entered {html.code(f"@{config.bot_info.username} link")} and press the resultant button.")
+        )
+    ]
+    await inline.answer(res, cache_time=1, is_personal=True)
+
+
+# @allow.callback_query(CbData("fetch_data"))
+# async def fetch_data(callback: types.CallbackQuery):
+#     msg = await callback.bot.edit_message_text(text="Fetching data", inline_message_id=callback.inline_message_id)
+#     if not msg.reply_to_message:
+#         await callback.answer("No message found from inline message")
+#         return
+#     else:
+#         await msg.edit_text(f"Data fetched\n\nUser: {html.bold(f"{msg.reply_to_message.from_user.mention_html()}\nUser ID: {msg.reply_to_message.from_user.id}")}")
+#         return
+#     await callback.inline_message_id
+#     if not callback.message:
+#         await callback.answer("No message found")
+#         return
+#     if callback.message.reply_to_message:
+#         userid = callback.message.reply_to_message.from_user.id
+#         mention = callback.message.reply_to_message.from_user.mention_html()
+#         res = f"User: {html.bold(f"{mention}")}\nUser ID: {html.code(f"{userid}")}\n\nPress following button to grant permission"
+#         await callback.message.edit_text(res, reply_markup=grant_perm_to(userid, mention))
+#     else:
+#         await callback.message.edit_text("Message is not replied to any user's message", reply_markup=types.ReplyKeyboardRemove())
+#         sleep(3)
+#         await callback.message.delete()
+
+# @allow.callback_query(CbDataStartsWith("grant_"))
+# async def grant_perm(callback: types.CallbackQuery):
+#     userid = int(callback.data.split("_")[1])
+#     mention = callback.data.split("_")[2]
+#     # db.execute("INSERT INTO user (userid, perm) VALUES (?, 1)", (userid,))
+#     await callback.message.edit_text(f"Congratulations, {mention}! You have been given permission to use the bot.", reply_markup=goto_bot(config.bot_info.username))
+#     # sleep(3)
+#     # await callback.message.delete()
+
+# @allow.callback_query(CbData("cancel_perm"))
+# async def cancel_fetch(callback: types.CallbackQuery):
+#     await callback.message.edit_text("Operation cancelled", reply_markup=types.ReplyKeyboardRemove())
+#     sleep(3)
+#     await callback.message.delete()
+
+create_test.py
+
+from aiogram import Router, types, F, html
+from filters import IsAdmin, IsAdminCallback, CbData, CbDataStartsWith
+from loader import db
+from keyboards.inline import today, ans_enter_meth, obom, ans_set_fin, inl_folders, remove_att
+from keyboards.regular import main_key, back_key, skip_desc, adm_default, attach_done
+from data import dict, config
+from datetime import datetime, timedelta, timezone
+from states import creates
+from aiogram.fsm.context import FSMContext
+from utils.yau import get_text, get_ans_text
+from time import sleep
+import json
+import re
+
+test = Router()
+
+test.message.filter(IsAdmin())
+test.callback_query.filter(IsAdminCallback())
+
+
+@test.message(F.text == dict.cr_test)
+async def create_test(message: types.Message, state: FSMContext):
+    await message.answer(f"Please, send the title.", reply_markup=main_key)
+    await state.set_state(creates.title)
+    await state.update_data(title=None)
+    await state.update_data(about=None)
+    await state.update_data(instructions=None)
+    await state.update_data(numquest=None)
+    await state.update_data(sdate=None)
+    # await state.update_data(duration=None)
+    # title=data.get("title")
+    # about=data.get("about")
+    # instructions=data.get("instructions")
+    # numquest=data.get("numquest")
+    # sdate=data.get("sdate")
+    # duration=data.get("duration")
+
+@test.message(creates.title)
+async def get_title(message: types.Message, state: FSMContext):
+    await state.update_data(title=message.text)
+    await message.answer(f"{await get_text(state)}\nPlease, send the description.", reply_markup=skip_desc)
+    await state.set_state(creates.about)
+
+@test.message(creates.about, F.text == dict.skip)
+async def get_about(message: types.Message, state: FSMContext):
+    await state.update_data(about=None)
+    await message.answer(f"{await get_text(state)}\nPlease, send the instructions.", reply_markup=skip_desc)
+    await state.set_state(creates.instructions)
+
+@test.message(creates.about, F.text==dict.back)
+async def back_to_title(message: types.Message, state: FSMContext):
+    await message.answer(f"{await get_text(state)}\nPlease, send the title.", reply_markup=main_key)
+    await state.set_state(creates.title)
+
+@test.message(creates.about)
+async def get_about(message: types.Message, state: FSMContext):
+    await state.update_data(about=message.text)
+    await message.answer(f"{await get_text(state)}\nPlease, send the instructions.", reply_markup=skip_desc)
+    await state.set_state(creates.instructions)
+
+@test.message(creates.instructions, F.text == dict.skip)
+async def get_instructions(message: types.Message, state: FSMContext):
+    await state.update_data(instructions=None, attaches=[])
+    await state.set_state(creates.attachments)
+    await message.answer(f"{await get_text(state)}\nPlease, send the attachments if any and press done if you're.", reply_markup=attach_done)
+
+@test.message(creates.instructions, F.text == dict.back)
+async def back_to_about(message: types.Message, state: FSMContext):
+    await message.answer(f"{await get_text(state)}\nPlease, send the new description.", reply_markup=skip_desc)
+    await state.set_state(creates.about)
+
+@test.message(creates.instructions)
+async def get_instructions(message: types.Message, state: FSMContext):
+    await state.update_data(instructions=message.text, attaches=[])
+    await state.set_state(creates.attachments)
+    await message.answer(f"{await get_text(state)}\nPlease, send the attachments if any and press done if you're.", reply_markup=attach_done)
+
+@test.message(creates.attachments, F.text == dict.done)
+async def done_attachments(message: types.Message, state: FSMContext):
+    await message.answer(f"{await get_text(state)}\nPlease, send the number of questions.", reply_markup=back_key)
+    await state.set_state(creates.number)
+
+@test.message(creates.attachments, F.text == dict.back)
+async def back_to_instructions(message: types.Message, state: FSMContext):
+    await message.answer(f"{await get_text(state)}\nPlease, send the new instructions.", reply_markup=skip_desc)
+    await state.set_state(creates.instructions)
+
+@test.message(creates.attachments)
+async def get_attachments(message: types.Message, state: FSMContext):
+    data = await state.get_data()
+    attaches = data.get("attaches")
+    num = 1
+    if not attaches:
+        attaches = []
+    else:
+        num = attaches[-1][0] + 1
+    if message.photo:
+        attaches.append((num, message.photo[-1].file_id, message.caption, "photo"))
+    elif message.document:
+        attaches.append((num, message.document.file_id, message.caption, "document"))
+    else:
+        await message.answer(f"{await get_text(state)}\n❗️ Please, send only photos or documents.")
+        return
+    await state.update_data(attaches=attaches)
+    await message.reply(f"🗃 Attachment {html.bold(f"#{len(attaches)}")} added.\n\nSend more attachments if needed or press done.", reply_markup=attach_done)
+    
+
+@test.message(creates.number, F.text == dict.back)
+async def back_to_instructions(message: types.Message, state: FSMContext):
+    data = await state.get_data()
+    await state.set_state(creates.attachments)
+    attaches = data.get("attaches")
+    if attaches:
+        for idx, fileid, caption, ty in attaches:
+            # attach_from_db = db.fetchone("SELECT idx, tgfileid, caption FROM attachments WHERE id = %s", (i,))
+            if ty == "document":
+                await message.answer_document(document=fileid, caption=caption, reply_markup=remove_att(idx)) 
+            elif ty == "photo":
+                await message.answer_photo(photo=fileid, caption=caption, reply_markup=remove_att(idx))
+            else:
+                await message.answer(f"Attachment {html.bold(f"#{idx}")} type not recognized.")
+    await message.answer(f"Delete the unwanted attachments by clicking on them.\n\nAnd send new attachments for the test with captions if needed.", reply_markup=attach_done)
+
+@test.callback_query(CbDataStartsWith("rma_"), creates.attachments)
+async def remove_attach(query: types.CallbackQuery, state: FSMContext):
+    idx = int(query.data.split("_")[1])
+    data = await state.get_data()
+    attaches = data.get("attaches")
+    for i in range(len(attaches)):
+        if attaches[i][0] == idx:
+            attaches.pop(i)
+            break
+    await state.update_data(attaches=attaches)
+    await query.answer("Attachment removed.")
+    await query.message.delete()
+
+@test.message(creates.number)
+async def get_number(message: types.Message, state: FSMContext):
+    numq = None
+    try: 
+        numq = int(message.text)
+    except:
+        await message.answer(f"{await get_text(state)}\n❗️ Please, send the number of questions using digits.")
+        return
+    if numq < 1 or numq > 100:
+        await message.answer(f"{await get_text(state)}\n❗️ Please, send the number of questions from 1 to 100.")
+        return
+    await state.update_data(numquest=numq, vis=1, resub=0, folder=None)
+    await state.update_data(donel=[None for i in range(numq)])
+    await state.update_data(typesl=[config.MULTIPLE_CHOICE_DEF for i in range(numq)])
+    await message.answer(f"{await get_text(state)}\nPlease, send the date in the following format:\n{html.code(f"DD MM YYYY")}", reply_markup=today)
+    await state.set_state(creates.sdate)
+
+@test.message(creates.sdate, F.text == dict.back)
+async def back_to_number(message: types.Message, state: FSMContext):
+    await message.answer(f"{await get_text(state)}\nPlease, send the number of questions.", reply_markup=back_key)
+    await state.set_state(creates.number)
+
+def parse_datetime(input_str: str) -> datetime:
+    # Get current time with UTC+5
+    now = datetime.now(timezone(timedelta(hours=5)))
+    parts = input_str.strip().split()
+    try:
+        if len(parts) == 1:
+            # Only time provided – can be either "HH", "HH MM" or "HH:MM"
+            if ':' in parts[0]:
+                h_str, m_str = parts[0].split(':')
+            else:
+                h_str, m_str = parts[0], "00"
+            dt = now.replace(hour=int(h_str), minute=int(m_str), second=0, microsecond=0)
+        elif len(parts) >= 3:
+            # full input: first part time, second day, third month, (fourth year optional)
+            if ':' in parts[0]:
+                h_str, m_str = parts[0].split(':')
+            else:
+                h_str, m_str = parts[0], "00"
+            day = int(parts[1])
+            month = int(parts[2])
+            year = int(parts[3]) if len(parts) >= 4 else now.year
+            dt = now.replace(year=year, month=month, day=day, hour=int(h_str), minute=int(m_str), second=0, microsecond=0)
+        else:
+            raise ValueError
+    except Exception as e:
+        raise ValueError("Invalid date/time format") from e
+    return dt
+
+@test.message(creates.sdate)
+async def get_sdate(message: types.Message, state: FSMContext):
+    # Instead of strict "%d %m %Y", allow flexible time/date input
+    try:
+        dt = parse_datetime(message.text)
+    except ValueError:
+        await message.answer(f"{await get_text(state)}\n❗️ Please, send the deadline using one of the following formats:\n"
+                             f"- Only time: \"HH\", \"HH MM\" or \"HH:MM\" (sets deadline for today)\n"
+                             f"- Full: \"HH:MM DD MM\" or \"HH:MM DD MM YYYY\" (year is optional)")
+        return
+    # Disallow deadlines in the past
+    now = datetime.now(timezone(timedelta(hours=5)))
+    if dt < now:
+        await message.answer(f"{await get_text(state)}\n❗️ The deadline must be in the future.")
+        return
+    # Save in ISO format for later comparisons
+    await state.update_data(sdate=dt.isoformat())
+    await message.answer(f"{await get_text(state)}\nPlease, choose the way you want to enter the answers (multiple answers only possible with all at once option):", reply_markup=ans_enter_meth)
+    await state.set_state(creates.way)
+
+@test.callback_query(CbData("today"), creates.sdate)
+async def set_date_today(query: types.CallbackQuery, state: FSMContext):
+    now = datetime.now(timezone(timedelta(hours=5)))
+    # Set default time (for instance current time with seconds zeroed)
+    dt = now.replace(second=0, microsecond=0)
+    await state.update_data(sdate=dt.isoformat())
+    await query.message.edit_text(f"{await get_text(state)}\nDeadline set to: {dt.strftime('%H:%M %d %m %Y')}\nPlease, choose the way you want to enter the answers (multiple answers only possible with all at once option):", reply_markup=ans_enter_meth)
+    await state.set_state(creates.way)
+
+@test.callback_query(CbData("all"), creates.way)
+async def set_way_all(query: types.CallbackQuery, state: FSMContext):
+    # await state.update_data(duration=None)
+    # await state.update_data(ans=None)
+    await state.update_data(entering="all")
+    await query.message.edit_text(f"{await get_text(state)}\nPlease, send the answers in the following format:\n{html.code('Answer1\nAnswer2\nAnswer3,AgainAnswer3')}")
+    await state.set_state(creates.ans)
+
+@test.callback_query(CbData("one"), creates.way)
+async def set_way_one(query: types.CallbackQuery, state: FSMContext):
+    await state.update_data(page=1, curq=1)
+    # Remove any "type" updates
+    data = await state.get_data()
+    donel = data.get("donel")
+    typesl = data.get("typesl")
+    numq = int(data.get("numquest"))
+    page = data.get("page")
+    ans_confirm = data.get("ans_confirm")
+    await state.update_data(entering="one")
+    await query.message.edit_text(
+        f"{html.blockquote('ps. 🟢 - done, 🟡 - current, 🔴 - not done (yes, traffic lights, you dumb*ss)')}"
+        f"\n\n{get_ans_text(donel, typesl)}"
+        f"\n\nPlease, {html.underline('choose')} the right answer for question {html.bold(f'#1/{numq}')}:",
+        reply_markup=obom(1, numq, donel, typesl, page, ans_confirm)
+    )
+    await state.set_state(creates.ans)
+
+@test.callback_query(F.data.startswith("mcq_"), creates.ans)
+async def set_mcq(query: types.CallbackQuery, state: FSMContext):
+    data = await state.get_data()
+    curq = data.get("curq")
+    typesl = data.get("typesl")
+    # Switch to MCQ by setting the current question's typesl to default (nonzero)
+    from data import config
+    # typesl[curq-1] = config.MULTIPLE_CHOICE_DEF
+    # await state.update_data(typesl=typesl)
+    donel = data.get("donel")
+    numq = data.get("numquest")
+    page = data.get("page")
+    cur_ans = query.data.split("_")[1]
+    donel[curq-1] = cur_ans
+    ans_confirm = bool(data.get("ans_confirm"))
+    await query.answer(f"🟢 #{curq} is {cur_ans}")
+    new_cur = -1
+    for i in range(len(donel)):
+        if not donel[i]:
+            new_cur = i+1
+            break
+    if new_cur == -1:
+        # await state.set_state(creates.setts)
+        vis = data.get("vis")
+        resub = data.get("resub")
+        folder = data.get("folder")
+        # await state.update_data(vis=0, resub=0, folder=None)
+        await query.message.edit_text(f"{html.blockquote('ps. 🟢 - done, 🟡 - current, 🔴 - not done (yes, traffic lights, you dumb*ss)')}"
+            f"\n\n{get_ans_text(donel, typesl)}"
+            f"\n\nPlease, {html.underline('choose' if typesl[curq-1] > 0 else 'send')} the right answer for question {html.bold(f'#{curq}/{numq}')}:"
+            f"\n\n{html.bold("Note: you have entered all the answers. You can change the answers for each question by clicking on the question number, navigating through pages.")}",
+            reply_markup=obom(curq, numq, donel, typesl, page, confirm=True)
+        )
+        await state.update_data(ans_confirm=True)
+        # await state.set_state(creates.ans_confirm)
+        # await query.message.edit_text(f"{await get_text(state)}\n{get_ans_text(donel, typesl)}\nPlease, change the settings as you wish. (Pressing toggles on/off)", reply_markup=ans_set_fin(1, 1))
+        return
+    new_page = (new_cur-1)//config.MAX_QUESTION_IN_A_PAGE + 1
+    page = new_page
+    await state.update_data(curq=new_cur, donel=donel, page=page)
+    await query.message.edit_text(f"{html.blockquote('ps. 🟢 - done, 🟡 - current, 🔴 - not done (yes, traffic lights, you dumb*ss)')}"
+        f"\n\n{get_ans_text(donel, typesl)}"
+        f"\n\nPlease, {html.underline('choose')} the right answer for question {html.bold(f'#{new_cur}/{numq}')}:",
+        reply_markup=obom(new_cur, numq, donel, typesl, page, ans_confirm)
+    )
+    # await state.set_state(creates.ans)
+
+@test.callback_query(creates.ans, CbDataStartsWith("test_"))
+async def test_plus(query: types.CallbackQuery, state: FSMContext):
+    data = await state.get_data()
+    print(data)
+    curq = data.get("curq")
+    typesl = data.get("typesl")
+    numq = data.get("numquest")
+    page = data.get("page")
+    donel = data.get("donel")
+    ans_confirm = bool(data.get("ans_confirm"))
+    sign = query.data.split("_")[1]
+    if sign == "plus":
+        if typesl[curq-1] == 6:
+            await query.answer("Can't have more than 6 choices.")
+            return    
+        typesl[curq-1] += 1
+    elif sign == "minus":
+        if typesl[curq-1] == 2:
+            await query.answer("Can't have less than 2 choices.")
+            return
+        if donel[curq-1] is not None:
+            diff = ord(donel[curq-1])-ord("A")
+            if diff+1 == typesl[curq-1]:
+                await query.answer("Can't have less choices than the answer.")
+                return
+        typesl[curq-1] -= 1
+    await query.answer(f"Now {typesl[curq-1]} choices.")
+    await state.update_data(typesl=typesl)
+    await query.message.edit_text(f"{html.blockquote("ps. 🟢 - done, 🟡 - current, 🔴 - not done (yes, traffic lights, you dumb*ss)")}\n\n{get_ans_text(donel, typesl)}\n\nPlease, {html.underline("choose")} the right answer for question {html.bold(f'#{curq}/{numq}')}:", reply_markup=obom(curq, numq, donel, typesl, page, ans_confirm))
+
+@test.callback_query(creates.ans, CbDataStartsWith("page_"))
+async def browse_page(query: types.CallbackQuery, state: FSMContext):
+    data = await state.get_data()
+    print(data)
+    curq = data.get("curq")
+    typesl = data.get("typesl")
+    numq = data.get("numquest")
+    page = int(data.get("page"))
+    donel = data.get("donel")
+    ans_confirm = bool(data.get("ans_confirm"))
+    sign = query.data.split("_")[1]
+    if sign == "next":
+        if page == (numq+config.MAX_QUESTION_IN_A_PAGE-1)//config.MAX_QUESTION_IN_A_PAGE:
+            await query.answer("You are already on the last page.")
+            return
+        page += 1
+    elif sign == "prev":
+        if page == 1:
+            await query.answer("You are already on the first page.")
+            return
+        page -= 1
+    else:
+        await query.answer("There just for decoration ;)")
+        return
+    await state.update_data(page=page)
+    await query.message.edit_text(f"Please, {html.underline("choose")} the right answer for question {html.bold(f'#{curq}/{numq}')}:\n\n{get_ans_text(donel, typesl)}\n\n{html.blockquote("ps. 🟢 - done, 🟡 - current, 🔴 - not done (yes, traffic lights, you dumb*ss)")}", reply_markup=obom(curq, numq, donel, typesl, page, ans_confirm))
+
+@test.callback_query(creates.ans, CbData("switch_open"))
+async def switch_to_open(query: types.CallbackQuery, state: FSMContext):
+    data = await state.get_data()
+    curq = data.get("curq")
+    typesl = data.get("typesl")
+    ans_confirm = bool(data.get("ans_confirm"))
+    # Switch to open ended mode by setting current typesl to 0
+    typesl[curq-1] = 0
+    await state.update_data(typesl=typesl)
+    donel = data.get("donel")
+    numq = data.get("numquest")
+    page = data.get("page")
+    await state.update_data(msg=query.message.message_id)
+    await query.message.edit_text(
+        f"{html.blockquote('ps. 🟢 - done, 🟡 - current, 🔴 - not done (yes, traffic lights, you dumb*ss)')}"
+        f"\n\n{get_ans_text(donel, typesl)}"
+        f"\n\nPlease, {html.underline('send')} the right answer for question {html.bold(f'#{curq}/{numq}')}:",
+        reply_markup=obom(curq, numq, donel, typesl, page, ans_confirm)
+    )
+
+@test.callback_query(creates.ans, CbData("switch_mcq"))
+async def switch_to_mcq(query: types.CallbackQuery, state: FSMContext):
+    data = await state.get_data()
+    curq = data.get("curq")
+    typesl = data.get("typesl")
+    from data import config
+    # Switch to MCQ mode by setting current typesl to a default value
+    typesl[curq-1] = config.MULTIPLE_CHOICE_DEF
+    await state.update_data(typesl=typesl)
+    donel = data.get("donel")
+    numq = data.get("numquest")
+    page = data.get("page")
+    ans_confirm = bool(data.get("ans_confirm"))
+    await query.message.edit_text(
+        f"{html.blockquote('ps. 🟢 - done, 🟡 - current, 🔴 - not done (yes, traffic lights, you dumb*ss)')}"
+        f"\n\n{get_ans_text(donel, typesl)}"
+        f"\n\nPlease, {html.underline('choose')} the right answer for question {html.bold(f'#{curq}/{numq}')}:",
+        reply_markup=obom(curq, numq, donel, typesl, page, ans_confirm)
+    )
+
+@test.callback_query(creates.ans, CbDataStartsWith("jump_"))
+async def jump_to(query: types.CallbackQuery, state: FSMContext):
+    data = await state.get_data()
+    new_cur = int(query.data.split("_")[1])
+    curq = data.get("curq")
+    if new_cur == curq:
+        await query.answer(f"Already at #{new_cur}")
+        return
+    donel = data.get("donel")
+    typesl = data.get("typesl")
+    numq = data.get("numquest")
+    page = data.get("page")
+    ans_confirm = bool(data.get("ans_confirm"))
+    await state.update_data(curq=new_cur)
+    if typesl[new_cur-1] == 0:
+        await query.message.edit_text(
+            f"{html.blockquote('ps. 🟢 - done, 🟡 - current, 🔴 - not done (yes, traffic lights, you dumb*ss)')}"
+            f"\n\n{get_ans_text(donel, typesl)}"
+            f"\n\nPlease, {html.underline('send')} the right answer for question {html.bold(f'#{new_cur}/{numq}')}:",
+            reply_markup=obom(new_cur, numq, donel, typesl, page, ans_confirm)
+        )
+    else:
+        await query.message.edit_text(
+            
+            f"{html.blockquote('ps. 🟢 - done, 🟡 - current, 🔴 - not done (yes, traffic lights, you dumb*ss)')}"
+            f"\n\n{get_ans_text(donel, typesl)}"
+            f"\n\nPlease, {html.underline('choose')} the right answer for question {html.bold(f'#{new_cur}/{numq}')}:",
+            reply_markup=obom(new_cur, numq, donel, typesl, page, ans_confirm)
+        )
+
+@test.message(creates.ans, F.text == dict.back)
+async def back_to_way(message: types.Message, state: FSMContext):
+    # data = await sta/te.get_data()
+    # curq = data.get("curq")
+    # typesl = data.get("typesl")
+    # numq = data.get("numquest")
+    # page = data.get("page")
+    # donel = data.get("donel")
+    # entering = data.get("entering")
+    # if entering != "all":
+
+    # await state.update_data(entering=None)
+    await message.answer(f"{await get_text(state)}\nPlease, choose the way you want to enter the answers (multiple answers only possible with all at once option):", reply_markup=ans_enter_meth)
+    await state.set_state(creates.way)
+
+@test.message(creates.ans)
+async def get_open_ans(message: types.Message, state: FSMContext):
+    data = await state.get_data()
+    numq = data.get("numquest")
+    typesl = data.get("typesl")
+    if data.get("entering") == "all":
+        ans = []
+        lines = message.text.split("\n")
+        cnt = 0
+        for line in lines:
+            if not line:
+                continue
+            if "," in line:
+                line = list(line.split(","))
+            ans.append(line)
+            cnt += 1
+        if cnt == numq:
+            donel = ans
+            # await state.update_data(donel=donel)
+            for i in range(len(donel)):
+                qtype = typesl[i]
+                if type(donel[i]) == list:
+                    for j in donel[i]:
+                        if len(j) > 1 or j not in ["A", "B", "C", "D", "E", "F"]:
+                            typesl[i] = 0
+                        else:
+                            typesl[i] = max(typesl[i], ord(j) - ord("A") + 1)
+                else:
+                    if len(donel[i]) > 1 or donel[i] not in ["A", "B", "C", "D", "E", "F"]:
+                        typesl[i] = 0
+                    else:
+                        typesl[i] = max(typesl[i], ord(donel[i]) - ord("A") + 1)
+            await state.update_data(typesl=typesl, donel=donel)
+            await state.update_data(donel=donel)
+            vis = data.get("vis")
+            resub = data.get("resub")
+            folder = data.get("folder")
+            msg = await message.answer(f"{await get_text(state)}\n{get_ans_text(donel, typesl)}\nPlease, change the settings as you wish. (Pressing toggles on/off)", reply_markup=ans_set_fin(vis, resub, folder)
+            )
+            await state.update_data(msg=msg.message_id)
+            await state.set_state(creates.setts)
+            return
+        else:
+            await message.answer(f"Please, send all the answers.\nLooks like you have only {cnt}/{numq} answers.")
+            return
+
+    curq = data.get("curq")
+    donel = data.get("donel")
+    page = data.get("page")
+    msg = data.get("msg")
+    ans_confirm = bool(data.get("ans_confirm"))
+    if typesl[curq-1] == 0:
+        donel[curq-1] = message.text
+        # bruh = await message.answer(f"🟢 #{curq} is {message.text}")
+        new_cur = -1
+        for i in range(len(donel)):
+            if not donel[i]:
+                new_cur = i+1
+                break
+        if new_cur == -1:
+            await state.set_state(creates.setts)
+            await state.update_data(curq=new_cur, donel=donel, page=page)
+            vis = data.get("vis")
+            resub = data.get("resub")
+            folder = data.get("folder")
+            await message.answer(f"{await get_text(state)}\n{get_ans_text(donel, typesl)}\nPlease, change the settings as you wish.", reply_markup=ans_set_fin(vis, resub, folder))
+            return
+        new_page = (new_cur-1)//config.MAX_QUESTION_IN_A_PAGE + 1
+        page = new_page
+        await state.update_data(curq=new_cur, donel=donel, page=page)
+        # Optionally, if you want to switch back to MCQ after an open answer, uncomment below:
+        # from data import config
+        # if typesl[new_cur-1] == 0:
+        #     typesl[new_cur-1] = config.MULTIPLE_CHOICE_DEF
+        #     await state.update_data(typesl=typesl)
+        print(msg)
+        
+        await message.bot.edit_message_text(f"Please, {html.underline('send')} the right answer for question {html.bold(f'#{curq}/{numq}')}:", chat_id=message.chat.id, message_id=msg)
+        await message.answer(
+            f"{html.blockquote('ps. 🟢 - done, 🟡 - current, 🔴 - not done (yes, traffic lights, you dumb*ss)')}"
+            f"\n\n{get_ans_text(donel, typesl)}"
+            f"\n\nPlease, {html.underline('choose')} the right answer for question {html.bold(f'#{new_cur}/{numq}')}:",
+            # chat_id=message.chat.id,
+            # message_id=msg.message_id,
+            reply_markup=obom(new_cur, numq, donel, typesl, page, ans_confirm)
+        )
+        # await state.set_state(creates.setts)
+        # await message.delete()
+        # await msg.delete()
+    else:
+        msg = await message.answer("Not in open ended mode.")
+        await message.delete()
+        sleep(2)
+        await msg.delete()
+
+@test.message(creates.setts, F.text == dict.back)
+async def back_to_ans(message: types.Message, state: FSMContext):
+    data = await state.get_data()
+    curq = data.get("curq")
+    typesl = data.get("typesl")
+    numq = data.get("numquest")
+    page = data.get("page")
+    donel = data.get("donel")
+    entering = data.get("entering")
+    await state.set_state(creates.ans)
+    if entering == "all":
+        await message.answer(f"{await get_text(state)}\nPlease, send the answers in the following format:\n{html.code('Answer1\nAnswer2\nAnswer3,AgainAnswer3')}")
+        return
+    else:
+        await message.answer(
+            f"{html.blockquote('ps. 🟢 - done, 🟡 - current, 🔴 - not done (yes, traffic lights, you dumb*ss)')}"
+            f"\n\n{get_ans_text(donel, typesl)}"
+            f"\n\nPlease, {html.underline('choose' if typesl[curq-1] > 0 else 'send')} the right answer for question {html.bold(f'#{curq}/{numq}')}:"
+            f"\n\n{html.bold("Note: you have entered all the answers. You can change the answers for each question by clicking on the question number, navigating through pages.")}",
+            
+            reply_markup=obom(curq, numq, donel, typesl, page, confirm=True))
+        await state.update_data(ans_confirm=True)
+
+@test.callback_query(CbData("continue"), creates.ans)
+async def confirm_ans(query: types.CallbackQuery, state: FSMContext):
+    data = await state.get_data()
+    curq = data.get("curq")
+    typesl = data.get("typesl")
+    numq = data.get("numquest")
+    page = data.get("page")
+    donel = data.get("donel")
+    vis = data.get("vis")
+    resub = data.get("resub")
+    folder = data.get("folder")
+    await state.set_state(creates.setts)
+    # await state.update_data()
+    await query.message.edit_text(f"{await get_text(state)}\n{get_ans_text(donel, typesl)}\nPlease, change the settings as you wish. (Pressing toggles on/off)", reply_markup=ans_set_fin(vis, resub, folder))
+
+# @test.callback_query(creates.setts, CbData("folder"))
+# async def set_folder(query: types.CallbackQuery, state: FSMContext):
+#     folders = db.fetchall("SELECT * FROM folders")
+#     if not folders:
+#         await query.answer("No folders found, create one first")
+#         return
+#     await query.message.edit_text("Please, choose the folder:", reply_markup=inl_folders(folders))
+
+@test.callback_query(creates.setts, CbData("back"))
+async def back_to_ans(callback: types.CallbackQuery, state: FSMContext):
+    data = await state.get_data()
+    curq = data.get("curq")
+    typesl = data.get("typesl")
+    numq = data.get("numquest")
+    page = data.get("page")
+    donel = data.get("donel")
+    entering = data.get("entering")
+    await state.set_state(creates.ans)
+    if entering == "all":
+        await callback.message.edit_text(f"{await get_text(state)}\nPlease, send the answers in the following format:\n{html.code('Answer1\nAnswer2\nAnswer3,AgainAnswer3')}")
+        return
+    else:
+        await callback.message.edit_text(
+            f"{html.blockquote('ps. 🟢 - done, 🟡 - current, 🔴 - not done (yes, traffic lights, you dumb*ss)')}"
+            f"\n\n{get_ans_text(donel, typesl)}"
+            f"\n\nPlease, {html.underline('choose' if typesl[curq-1] > 0 else 'send')} the right answer for question {html.bold(f'#{curq}/{numq}')}:"
+            f"\n\n{html.bold("Note: you have entered all the answers. You can change the answers for each question by clicking on the question number, navigating through pages.")}",
+            
+            reply_markup=obom(curq, numq, donel, typesl, page, confirm=True))
+        await state.update_data(ans_confirm=True)
+        # await state.set_state(creates.ans)
+
+
+@test.callback_query(creates.setts, CbDataStartsWith("vis_"))
+async def toggle_visibility(query: types.CallbackQuery, state: FSMContext):
+    data = await state.get_data()
+    numq = data.get("numquest")
+    typesl = data.get("typesl")
+    donel = data.get("donel")
+    curq = data.get("curq")
+    resub = data.get("resub")
+    folder = data.get("folder")
+    vis = query.data.split("_")[1]
+    await query.answer(f"👁 Visibility now - {vis.capitalize()}.")
+    # if vis == "on":
+    #     await query.answer("Visibility now on.")
+    # else:
+    #     await query.answer("Visibility now off.")
+        # vis = "off"
+    await state.update_data(vis=vis=="on")
+
+    await query.message.edit_text(f"{await get_text(state)}\n{get_ans_text(donel, typesl)}\nPlease, change the settings as you wish. (Pressing toggles on/off)", reply_markup=ans_set_fin(vis=="on", resub, folder))
+
+@test.callback_query(creates.setts, CbDataStartsWith("resub_"))
+async def toggle_resubmission(query: types.CallbackQuery, state: FSMContext):
+    data = await state.get_data()
+    numq = data.get("numquest")
+    typesl = data.get("typesl")
+    donel = data.get("donel")
+    curq = data.get("curq")
+    resub = data.get("resub")
+    folder = data.get("folder")
+    vis = data.get("vis")
+    resub = query.data.split("_")[1]
+    await query.answer(f"Resubmission now - {resub.capitalize()}.")
+    # if vis == "on":
+    #     await query.answer("Visibility now on.")
+    # else:
+    #     await query.answer("Visibility now off.")
+        # vis = "off"
+    await state.update_data(resub=resub=="on")
+
+    await query.message.edit_text(f"{await get_text(state)}\n{get_ans_text(donel, typesl)}\nPlease, change the settings as you wish. (Pressing toggles on/off)", reply_markup=ans_set_fin(vis, resub=="on", folder))
+
+@test.callback_query(creates.setts, CbData("folder"))
+async def set_folder(query: types.CallbackQuery, state: FSMContext):
+    data = await state.get_data()
+    typesl = data.get("typesl")
+    donel = data.get("donel")
+    fd = data.get("folder")
+    folders = db.fetchall("SELECT * FROM folders")
+    if not folders:
+        await query.answer("No folders found, create one first")
+        return
+    await state.set_state(creates.folder_change)
+    await query.message.edit_text(f"{await get_text(state)}\n{get_ans_text(donel, typesl)}\nPlease, choose the folder:", reply_markup=inl_folders(folders, fd))
+
+@test.callback_query(F.data.startswith("folder_"), creates.folder_change)
+async def change_folder_chosen(callback: types.CallbackQuery, state: FSMContext):
+    data = await state.get_data()
+    fid = callback.data.split("_")[1]
+    exid = data.get("exam_id")
+    # folder_id = fid
+    # db.query("UPDATE exams SET folder=%s WHERE idx=%s", (fid, exid,))
+    folder = None
+    if fid!="0":
+        folder = db.fetchone("SELECT title FROM folders WHERE idx = %s", (fid,))[0]
+    await state.update_data(folder_id=fid, folder=folder)
+    await callback.answer("Folder changed successfully")
+    # await callback.message.edit_text("🗂 Folder changed successfully")
+    # data = await state.get_data()
+    numq = data.get("numquest")
+    typesl = data.get("typesl")
+    donel = data.get("donel")
+    curq = data.get("curq")
+    resub = data.get("resub")
+    # folder = fid
+    vis = data.get("vis")
+    # await callback.answer(f"👁 Visibility now - {vis.capitalize()}.")
+    # if vis == "on":
+    #     await query.answer("Visibility now on.")
+    # else:
+    #     await query.answer("Visibility now off.")
+        # vis = "off"
+    # await state.update_data(vis=vis=="on")
+    await state.set_state(creates.setts)
+    await callback.message.edit_text(f"{await get_text(state)}\n{get_ans_text(donel, typesl)}\nPlease, change the settings as you wish. (Pressing toggles on/off)", reply_markup=ans_set_fin(vis, resub, folder))
+
+@test.callback_query(F.data == "back", creates.folder_change)
+async def back_to_idk(callback: types.CallbackQuery, state: FSMContext):
+    data = await state.get_data()
+    numq = data.get("numquest")
+    typesl = data.get("typesl")
+    donel = data.get("donel")
+    curq = data.get("curq")
+    resub = data.get("resub")
+    folder = data.get("folder")
+    vis = data.get("vis")
+    # await state.update_data(vis=vis=="on")
+    await state.set_state(creates.setts)
+    await callback.message.edit_text(f"{await get_text(state)}\n{get_ans_text(donel, typesl)}\nPlease, change the settings as you wish. (Pressing toggles on/off)", reply_markup=ans_set_fin(vis, resub, folder))
+
+
+@test.callback_query(creates.setts, CbData("continue"))
+async def finalize_test(query: types.CallbackQuery, state: FSMContext):
+    await query.message.edit_text("Saving the test, please wait...")
+    data = await state.get_data()
+    title = data.get("title")
+    about = data.get("about")
+    instructions = data.get("instructions")
+    numquest = data.get("numquest")
+    sdate = data.get("sdate")
+    # Assume that the correct answers and types are stored in state under keys 'donel' and 'typesl'
+    donel = data.get("donel")
+    typesl = data.get("typesl")
+    vis = not data.get("vis")
+    resub = data.get("resub")
+    folder_id = data.get("folder_id") or 0
+    # Pack correct answers and types in JSON for later homework processing
+    test_info = {"answers": donel, "types": typesl}
+    # Insert new exam/test record. Field order: idx, title, about, instructions, num_questions, correct, sdate, resub, folder, hide
+    query_str = """INSERT INTO exams (title, about, instructions, num_questions, correct, sdate, hide, resub, folder, random) 
+                   VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)"""
+    random_text = datetime.now().strftime("%Y%m%d%H%M%S")
+    db.query(query_str, (title, about, instructions, numquest, json.dumps(test_info), sdate, int(vis), int(resub), folder_id, random_text))
+    attaches = data.get("attaches")
+    exid = db.fetchone("SELECT idx FROM exams WHERE random = %s", (random_text,))[0]
+    if attaches:
+        for idx, fileid, caption, ty in attaches:
+            db.query("INSERT INTO attachments (ty, tgfileid, caption, exid) VALUES (%s, %s, %s, %s)", (ty, fileid, caption, exid))
+    await query.message.edit_text(f"📕 Test {html.bold(f"{title}")} created and stored successfully with its attachments.")
+    await query.message.answer(f"Back to {html.bold(f"{dict.main_menu}")}", reply_markup=adm_default)
+    await state.clear()
+
+
+
+mng_access.py
+
+from aiogram import types, Router, F, html
+from data import config, dict
+from keyboards.inline import access_menu, post_chan, mandconfirm, man_access
+from keyboards.regular import main_key, back_key
+from time import sleep
+from states import accstates
+from aiogram.fsm.context import FSMContext
+from filters import IsAdmin, IsAdminCallback, CbData, CbDataStartsWith
+from loader import bot, db
+
+access = Router()
+
+access.message.filter(IsAdmin())
+access.callback_query.filter(IsAdminCallback())
+
+
+@access.message(F.text == dict.man_access)
+async def manage_access(message: types.Message, state: FSMContext):
+    await state.set_state(accstates.acmenu)
+    await message.answer(f"Menu: <b>{dict.man_access}</b>", reply_markup=main_key)
+    response = "Here you can manage the access of users to the bot"
+    await message.answer(response, reply_markup=access_menu)
+
+@access.callback_query(CbData("post"), accstates.acmenu)
+async def post_c(callback: types.CallbackQuery, state: FSMContext):
+    await state.set_state(accstates.post)
+    response = "Here you can change or reset the permission giving chat.\n\nThe bot will automatically give permissions to members of the following chat."
+    channel = db.fetchone("SELECT title, link FROM channel")
+    print(channel)
+    if not channel:
+        response = "The chat that users will be checked to give permission to the bot was not set, you can set a new one\n\nOnce you set a chat, the bot will automatically give permissions to members of that chat"
+    await callback.message.edit_text(response, reply_markup=post_chan(channel))
+
+@access.callback_query(CbData("back"), accstates.post)
+async def back_to_s(callback: types.CallbackQuery, state: FSMContext):
+    await state.set_state(accstates.acmenu)
+    # await callback.message.answer(f"Menu: <b>{dict.settings}</b>", reply_markup=main_key)
+    response = "Here you can manage the access of users to the bot"
+    await callback.message.edit_text(response, reply_markup=access_menu)
+    await callback.answer(f"Back to {dict.man_access} menu")
+
+@access.callback_query(CbData("set_new"), accstates.post)
+async def setnew(callback: types.CallbackQuery, state: FSMContext):
+    await state.set_state(accstates.link)
+    await callback.message.answer("Forward a message from the private chat to here (Make sure the message was sent by the group as anonymous)\n\nOr send the chat id", reply_markup=back_key)
+    await callback.message.delete()
+
+@access.message(F.text == dict.back, accstates.link)
+async def back_to_c(message: types.Message, state: FSMContext):
+    await state.set_state(accstates.post)
+    await message.answer("Back to posting channel menu", reply_markup=main_key)
+    response = "Here you can change or reset the permission giving chat.\n\nThe bot will automatically give permissions to members of the following chat."
+    channel = db.fetchone("SELECT title, link FROM channel")
+    print(channel)
+    if not channel:
+        response = "The chat that users will be checked to give permission to the bot was not set, you can set a new one\n\nOnce you set a chat, the bot will automatically give permissions to members of that chat"
+    await message.answer(response, reply_markup=post_chan(channel))
+
+@access.message(accstates.link)
+async def get_link(message: types.Message, state: FSMContext):
+    # USERNAME_PATTERN = r"^[a-zA-Z][\w\d_]{4,31}$"  # Username (e.g., channelname)
+    # AT_USERNAME_PATTERN = r"^@[a-zA-Z][\w\d_]{4,31}$"  # Username starting with @
+    # PRIVATE_LINK_PATTERN = r"^https://t\.me/\+\w+$"  # Private links (e.g., https://t.me/+W3UbzATqipEzYTVi)
+    # PUBLIC_LINK_PATTERN = r"^https://t\.me/[a-zA-Z][\w\d_]{4,31}$"  # Public links (e.g., https://t.me/channelname)
+    # text = None
+    lk = None
+    chanid = None
+    # print(message.forward_from_chat)
+    if message.forward_from_chat:
+        chanid = message.forward_from_chat.id
+        if message.forward_from_chat.username == None:
+            try:
+                lk = (await bot.create_chat_invite_link(chat_id=chanid, name=f"Join link by {config.bot_info.username}")).invite_link
+            except Exception as e:
+                print(e)
+                await message.answer("Please, make sure to add the bot to the chat as an admin and try again")
+                return
+        else:
+            lk = f"https://t.me/{message.forward_from_chat.username}"
+    else:
+        # chatid = None
+        print(message.text)
+        if message.text[1:].isnumeric() and message.text.startswith("-100"):
+            chanid = message.text
+        else:
+            await message.answer("This message neither forwarded from private chat nor includes a valid chat id. Forward a message from the private chat to here (Make sure the message was sent by the group as anonymous)\n\nOr send the chat id")
+            return
+        # data = await state.get_data()
+    try:
+        channel_info = await bot.get_chat(chanid)
+        mb_cnt = await bot.get_chat_member_count(chanid)
+        lk = (await bot.create_chat_invite_link(chat_id=chanid, name=f"Join link by {config.bot_info.username}")).invite_link
+            # except Exception as e:
+            #     print(e)
+            #     await message.answer("Please, make sure to add the bot to the chat as an admin and try again")
+            #     return
+        # mebot = await bot.get_chat_member(chat_id=chanid, user_id=config.bot_info.id)
+    except Exception as e:
+        print(e)
+        print(lk)
+        await message.answer("Please, make sure to add the bot to the chat as an admin, chat exists and try again")
+        return
+    title = channel_info.title
+    print(title, lk)
+    print(channel_info)
+
+
+    
+    await state.set_state(accstates.confirm)
+    await state.update_data(title=title)
+    await state.update_data(link=lk)
+    await state.update_data(chid=chanid)
+    # print(title, lk)
+    await message.answer(f"Check and confirm everything is correct\n\nChat Information:"
+            f"\n\t\tTitle: {html.bold(channel_info.title)}"
+            f"\n\t\tMembers count: {html.bold(mb_cnt)}"
+            f"\n\t\tDescription: {html.blockquote(channel_info.description or 'No description')}", reply_markup=mandconfirm((title, lk)), disable_web_page_preview=True)
+
+@access.message(F.text == dict.back, accstates.confirm)
+async def back_to_link(message: types.Message, state: FSMContext) -> None:
+    await state.set_state(accstates.link)
+    await message.answer("This time do it correctly.\n\nForward a message from the private chat to here (Make sure the message was sent by the group as anonymous)\n\nOr send the chat id", reply_markup=back_key)
+
+@access.callback_query(CbData("reset"), accstates.post)
+async def reset(callback: types.CallbackQuery, state: FSMContext) -> None:
+    # old = db.fetchone("SELECT title, link, chid FROM channel")
+    db.query("DELETE FROM channel")
+    # db.query("INSERT INTO channel (chid, title, link) VALUES (%s, %s, %s)", (config.bot_info.id, config.bot_info.username, f"https://t.me/{config.bot_info.username}"))
+    await callback.answer("Reset successfull")
+    await post_c(callback, state)
+
+@access.callback_query(accstates.confirm)
+async def confirm(callback: types.CallbackQuery, state: FSMContext) -> None:
+    if callback.data == "cancel":
+        await callback.answer("Cancelled")
+        await callback.message.answer("Back to auto-permit menu", reply_markup=main_key)
+        await post_c(callback, state)
+        # await callback.message.delete()
+        return
+    data = await state.get_data()
+    chid = data.get("chid")
+    title = data.get("title")
+    link = data.get("link")
+    chck = db.fetchone("SELECT title FROM channel WHERE chid = %s", (chid,))
+    if chck:
+        msg = await callback.message.answer(f"This channel already has been set as the permission giving chat")
+        await callback.answer("Already this one")
+        await callback.message.answer("Back to auto-permit menu", reply_markup=main_key)
+        await post_c(callback, state)
+        sleep(2)
+        await msg.delete()
+        # await callback.message.delete()
+        return
+    chck = db.fetchone("SELECT title FROM channel")
+    if chck:
+        db.query("DELETE FROM channel")
+    # db.query("DELETE FROM channel")
+    db.query("INSERT INTO channel (chid, title, link) VALUES (%s, %s, %s)", (chid, title, link))
+    await callback.answer(f"Successfully set")
+    await callback.message.answer("Back to posting channel menu", reply_markup=main_key)
+    await post_c(callback, state)
+    # await callback.message.delete()
+
+
+@access.callback_query(CbData("manually"))
+async def manually(callback: types.CallbackQuery, state: FSMContext) -> None:
+    await state.set_state(accstates.manl)
+    await callback.message.edit_text("You can give or remove access to users manually here", reply_markup=man_access)
+    # await callback.message.delete()
+
+@access.callback_query(CbData("back"), accstates.manl)
+async def back_to_m(callback: types.CallbackQuery, state: FSMContext) -> None:
+    await callback.message.answer(f"Back to {html.bold(f"{dict.man_access}")} menu", reply_markup=main_key)
+    await state.set_state(accstates.acmenu)
+    await callback.message.answer(f"Here you can manage the access of users to the bot", reply_markup=access_menu)
+    # sleep(1)
+    await callback.message.delete()
+    # await callback.message.delete()
+
+@access.callback_query(CbData("add_access"))
+async def add_access(callback: types.CallbackQuery, state: FSMContext) -> None:
+    await state.set_state(accstates.adda)
+    await callback.message.answer("Forward the message of the user you want to give access to the bot, or give the id of the user.", reply_markup=back_key)
+    await callback.message.delete()
+
+@access.message(F.text == dict.back, accstates.adda)
+async def back_to_a(message: types.Message, state: FSMContext) -> None:
+    await message.answer("Back to the access menu.", reply_markup=main_key)
+    await state.set_state(accstates.manl)
+    await message.answer("You can give or remove access to users manually here", reply_markup=man_access)
+
+@access.message(accstates.adda)
+async def add_access(message: types.Message, state: FSMContext) -> None:
+    if message.forward_from:
+        userid = message.forward_from.id
+        username = message.forward_from.username
+        mention = message.forward_from.mention_html()
+    elif message.text.isnumeric():
+        userid = int(message.text)
+        mention = f"<a href='tg://user?id={userid}'>{userid}</a>"
+    else:
+        await message.answer("This message neither forwarded from private chat nor includes a valid user id. Forward a message from the private chat to here (Make sure the message was sent by a user)\n\nOr send the user id")
+        return
+    exist = db.fetchone("SELECT idx, allowed FROM users WHERE userid=%s::text", (userid,))
+    if exist:
+        if exist[1]:
+            await message.answer(f"{mention} already has access to the bot.\n\nBack to the access menu.")
+            await state.set_state(accstates.manl)
+            await message.answer("You can give or remove access to users manually here", reply_markup=man_access)
+            return
+        else:
+            db.query("UPDATE users SET allowed = 1 WHERE idx = %s", (exist[0],))
+            await message.answer(f"{mention} has been given access to the bot.\n\nBack to the access menu.")
+            await state.set_state(accstates.manl)
+            await message.answer("You can give or remove access to users manually here", reply_markup=man_access)
+            return
+    db.query("INSERT INTO users (userid, allowed) VALUES (%s, 1)", (userid,))
+
+    await message.answer(f"{mention} has been given access to the bot.\n\nBack to the access menu.")
+    await state.set_state(accstates.manl)
+    await message.answer("You can give or remove access to users manually here", reply_markup=man_access)
+
+@access.callback_query(CbData("remove_access"))
+async def remove_access(callback: types.CallbackQuery, state: FSMContext) -> None:
+    await state.set_state(accstates.rema)
+    await callback.message.answer("Forward the message of the user you want to remove access to the bot, or give the id of the user.", reply_markup=back_key)
+    await callback.message.delete()
+
+@access.message(F.text == dict.back, accstates.rema)
+async def back_to_r(message: types.Message, state: FSMContext) -> None:
+    await message.answer("Back to the access menu.", reply_markup=main_key)
+    await state.set_state(accstates.manl)
+    await message.answer("You can give or remove access to users manually here", reply_markup=man_access)
+
+@access.message(accstates.rema)
+async def remove_access(message: types.Message, state: FSMContext) -> None:
+    if message.forward_from:
+        userid = message.forward_from.id
+        username = message.forward_from.username
+        mention = message.forward_from.mention_html()
+    elif message.text.isnumeric():
+        userid = int(message.text)
+        mention = f"<a href='tg://user?id={userid}'>{userid}</a>"
+    else:
+        await message.answer("This message neither forwarded from private chat nor includes a valid user id. Forward a message from the private chat to here (Make sure the message was sent by a user)\n\nOr send the user id")
+        return
+    exist = db.fetchone("SELECT idx, allowed FROM users WHERE userid=%s::text", (userid,))
+    if exist:
+        if not exist[1]:
+            await message.answer(f"{mention} already doesn't have access to the bot.\n\nBack to the access menu.")
+            await state.set_state(accstates.manl)
+            await message.answer("You can give or remove access to users manually here", reply_markup=man_access)
+            return
+        else:
+            db.query("UPDATE users SET allowed = 0 WHERE idx = %s", (exist[0],))
+            await message.answer(f"{mention} has been removed access to the bot.\n\nBack to the access menu.")
+            await state.set_state(accstates.manl)
+            await message.answer("You can give or remove access to users manually here", reply_markup=man_access)
+            return
+    await message.answer(f"{mention} already doesn't have access to the bot.\n\nBack to the access menu.")
+
+
+
+mng_archive.py
+
+from aiogram import Router, F, types, html
+from data import dict
+from aiogram.fsm.context import FSMContext
+from loader import db
+from filters import IsAdmin, IsAdminCallback, CbData, CbDataStartsWith
+from states import arch_states
+from keyboards.inline import get_create_folders, get_folder_tests, details_test, edit_test_menu, rm_folders_menu, confirm_inl_key, inl_folders
+from keyboards.regular import main_key
+import json
+from utils.yau import get_text, get_ans_text
+
+arch = Router()
+arch.message.filter(IsAdmin())
+arch.callback_query.filter(IsAdminCallback())
+
+
+@arch.message(F.text == dict.exams)
+async def show_folders(message: types.Message, state: FSMContext):
+    await message.answer(f"Menu: {html.bold(dict.exams)}", reply_markup=main_key)
+    folders = db.fetchall("SELECT * FROM folders")
+    print(folders)
+    if folders:
+        await message.answer(f"Here you can manage the archive of tasks, see the details of tests, change the folders and create a new folder for tests:", reply_markup=get_create_folders(folders))
+    else:
+        await message.answer(f"No folders were created yet, you can create a new folder for tests, or see the tests from {html.bold(f"{dict.null_folder}")}", reply_markup=get_create_folders())
+    await state.set_state(arch_states.folders)
+
+@arch.callback_query(CbDataStartsWith("fmng_"), arch_states.folders)
+async def show_tests_of_folder(callback: types.CallbackQuery, state: FSMContext):
+    data = await state.get_data()
+    await callback.message.edit_text("Loading...")
+    folder_id = int(callback.data.split("_")[1]) if callback.data.startswith("fmng_") else data.get("folder_id")
+    await state.update_data(folder_id=folder_id)
+    tests = db.fetchall("SELECT idx, title FROM exams WHERE folder = %s", (folder_id,))
+    if tests:
+        await callback.message.edit_text(f"Here you can manage, see the details of the tests in the folder", reply_markup=get_folder_tests(tests))
+    else:
+        await callback.answer("No tests were moved here yet")
+        await callback.message.edit_text(f"🚫 Folder doesn't contain any tests. Please, move tests here first")
+        await show_folders(callback.message, state)
+        return
+    await state.set_state(arch_states.tests)
+
+@arch.callback_query(CbData("back"), arch_states.tests)
+async def back_to_folders(callback: types.CallbackQuery, state: FSMContext):
+    folders = db.fetchall("SELECT * FROM folders")
+    await callback.message.edit_text(f"Here you can manage the archive of tasks, see the details of tests, change the folders and create a new folder for tests:", reply_markup=get_create_folders(folders))
+    await state.set_state(arch_states.folders)
+
+@arch.callback_query(CbDataStartsWith("exman_"), arch_states.tests)
+async def manage_test(callback: types.CallbackQuery, state: FSMContext):
+    await callback.message.edit_text("Loading...")
+    data = await state.get_data()
+    test_id = int(callback.data.split("_")[1]) if callback.data.startswith("exman_") else data.get("exam_id")
+    test = db.fetchone("SELECT * FROM exams WHERE idx = %s", (test_id,))
+    print(test)
+    
+    correct = json.loads(test[5])
+    donel = correct.get("answers", [])
+    typesl = correct.get("types", [])
+    folder = db.fetchone("SELECT title FROM folders WHERE idx = %s", (test[8],))
+    if folder:
+        folder = folder[0]
+    attaches = db.fetchall("SELECT ty, tgfileid, caption FROM attachments WHERE exid = %s", (test_id,))
+    await state.update_data(exam_id=test_id, title=test[1], about=test[2], instructions=test[3], numquest=test[4], sdate=test[6], resub=test[7], folder=test[8], hide=test[9], random=test[10], correct=donel, types=typesl, attaches=attaches)
+    res = f"{await get_text(state)}\n\n{get_ans_text(donel, typesl)}\n\nYou may edit the test, change its folder or share it:"
+    await callback.message.edit_text(res, reply_markup=details_test(test[10], folder, test_id))
+    await state.set_state(arch_states.emenu)
+
+@arch.callback_query(F.data == "folder", arch_states.emenu)
+async def change_folder(callback: types.CallbackQuery, state: FSMContext):
+    data = await state.get_data()
+    fod = data.get("folder")
+    folders = db.fetchall("SELECT * FROM folders")
+    if not folders:
+        await callback.answer("No folders found, create one first")
+        return
+    await state.set_state(arch_states.folder_change)
+    await callback.message.edit_text("Please, choose the folder:", reply_markup=inl_folders(folders, fod))
+    
+
+@arch.callback_query(F.data.startswith("folder_"), arch_states.folder_change)
+async def change_folder_chosen(callback: types.CallbackQuery, state: FSMContext):
+    data = await state.get_data()
+    fid = callback.data.split("_")[1]
+    exid = data.get("exam_id")
+    db.query("UPDATE exams SET folder=%s WHERE idx=%s", (fid, exid,))
+    await state.update_data(folder_id=fid)
+    await callback.answer("Folder changed successfully")
+    # await callback.message.edit_text("🗂 Folder changed successfully")
+    await manage_test(callback, state)
+    # await callback.message.answer(f"Back to menu: {html.bold(dict.exams)}", reply_markup=main_key)
+    # folders = db.fetchall("SELECT * FROM folders")
+    # print(folders)
+    # if folders:
+    #     await callback.message.answer(f"Here you can manage the archive of tasks, see the details of tests, change the folders and create a new folder for tests:", reply_markup=get_create_folders(folders))
+    # else:
+    #     await callback.message.answer(f"No folders were created yet, you can create a new folder for tests, or see the tests from {html.bold(f"{dict.null_folder}")}", reply_markup=get_create_folders())
+    # await state.set_state(arch_states.folders)
+
+@arch.callback_query(F.data == "back", arch_states.folder_change)
+async def back_to_test(callback: types.CallbackQuery, state: FSMContext):
+    await manage_test(callback, state)
+
+@arch.callback_query(F.data.startswith("edit_"), arch_states.emenu)
+async def edit_test(callback: types.CallbackQuery, state: FSMContext):
+    data = await state.get_data()
+    exid = callback.data.split("_")[1] if callback.data.startswith("edit_") else data.get("exam_id")
+    # exam_id=data.get("exam_id")
+    title=data.get("title")
+    about=data.get("about")
+    instructions=data.get("instructions")
+    numquest=data.get("numquest")
+    sdate=data.get("sdate")
+    resub=data.get("resub")
+    folder=data.get("folder")
+    hide=data.get("hide")
+    correct=data.get("correct")
+    typesl=data.get("types")
+    attaches=data.get("attaches")
+    rand = data.get("random")
+    # await state.update_data(exid=exid)
+    res = f"{await get_text(state)}\n\n{get_ans_text(correct, typesl)}\n\nYou may edit the test, change its folder or share it:"
+    await callback.message.edit_text(res, reply_markup=edit_test_menu(not hide, resub))
+    await state.set_state(arch_states.edit)
+
+
+@arch.callback_query(F.data == "back", arch_states.edit)
+async def back_to_test(callback: types.CallbackQuery, state:FSMContext):
+    await manage_test(callback, state)
+    await callback.answer("Changes saved")
+    
+
+@arch.callback_query(F.data == "delete", arch_states.edit)
+async def delete_test(callback: types.CallbackQuery, state: FSMContext):
+    await state.set_state(arch_states.rmtconfirm)
+    await callback.message.edit_text("Please, confirm you want to delete the test!", reply_markup=confirm_inl_key)
+
+@arch.callback_query(arch_states.edit, CbDataStartsWith("vis_"))
+async def toggle_visibility(query: types.CallbackQuery, state: FSMContext):
+    data = await state.get_data()
+    vis = query.data.split("_")[1]
+    exid = data.get("exam_id")
+    await query.answer(f"👁 Visibility now - {vis.capitalize()}.")
+    if vis == "on":
+        db.query("UPDATE exams SET hide = 0 WHERE idx = %s", (exid,))
+        # await query.answer("Visibility now on.")
+    else:
+        db.query("UPDATE exams SET hide = 1 WHERE idx = %s", (exid,))
+    # await state.update_data(vis)
+    await query.message.edit_reply_markup(reply_markup=edit_test_menu(vis=="on", data.get("resub")))
+        # await query.answer("Visibility now off.")
+        # vis = "off"
+    await state.update_data(hide=vis!="on")
+
+    # await query.message.edit_text(f"{await get_text(state)}\n{get_ans_text(donel, typesl)}\nPlease, change the settings as you wish. (Pressing toggles on/off)", reply_markup=ans_set_fin(vis=="on", resub, folder))
+
+@arch.callback_query(arch_states.edit, CbDataStartsWith("resub_"))
+async def toggle_resubmission(query: types.CallbackQuery, state: FSMContext):
+    data = await state.get_data()
+    resub = query.data.split("_")[1]
+    exid = data.get("exam_id")
+    await query.answer(f"Resubmission now - {resub.capitalize()}.")
+    if resub == "on":
+        db.query("UPDATE exams SET resub = 1 WHERE idx = %s", (exid,))
+        # await query.answer("Visibility now on.")
+    else:
+        db.query("UPDATE exams SET resub = 0 WHERE idx = %s", (exid,))
+        # await query.answer("Visibility now off.")
+        # vis = "off"
+    await state.update_data(resub=resub=="on")
+    await query.message.edit_reply_markup(reply_markup=edit_test_menu(not data.get("hide"), resub=="on"))
+
+    # await query.message.edit_text(f"{await get_text(state)}\n{get_ans_text(donel, typesl)}\nPlease, change the settings as you wish. (Pressing toggles on/off)", reply_markup=ans_set_fin(vis, resub=="on", folder))
+
+
+@arch.callback_query(F.data == "confirm", arch_states.rmtconfirm)
+async def delete_confirm_test(callback: types.CallbackQuery, state: FSMContext):
+    await callback.message.edit_text("Deleting...")
+    data = await state.get_data()
+    exid = data.get("exam_id")
+    db.query("DELETE FROM exams WHERE idx = %s", (exid,))
+    # await callback.message.edit_text(f"🗑 Folder {html.bold(data.get("title"))} deleted successfully")
+    await callback.answer("Deleted successfully")
+    await show_tests_of_folder(callback, state)
+    # await callback.message.answer(f"Back to menu: {html.bold(dict.exams)}", reply_markup=main_key)
+    # folders = db.fetchall("SELECT * FROM folders")
+    # print(folders)
+    # if folders:
+    #     await callback.message.answer(f"Here you can manage the archive of tasks, see the details of tests, change the folders and create a new folder for tests:", reply_markup=get_create_folders(folders))
+    # else:
+    #     await callback.message.answer(f"No folders were created yet, you can create a new folder for tests, or see the tests from {html.bold(f"{dict.null_folder}")}", reply_markup=get_create_folders())
+    # await state.set_state(arch_states.folders)
+    
+@arch.callback_query(F.data == "cancel", arch_states.rmtconfirm)
+async def cancel_deletion(callback: types.CallbackQuery, state: FSMContext):
+    await edit_test(callback, state)
+    await callback.answer("Deletion cancelled")
+
+
+@arch.callback_query(CbData("back"), arch_states.emenu)
+async def back_to_tests(callback: types.CallbackQuery, state: FSMContext):
+    # test_id = (await state.get_data()).get("exam_id")
+    data = await state.get_data()
+    folder_id = data.get("folder_id")
+    tests = db.fetchall("SELECT idx, title FROM exams WHERE folder = %s", (folder_id,))
+    if tests:
+        await callback.message.edit_text(f"Here you can manage, see the details of the tests in the folder", reply_markup=get_folder_tests(tests))
+    else:
+        await callback.answer("Error while fetching tests")
+        await state.clear()
+        return
+    await state.set_state(arch_states.tests)
+
+@arch.callback_query(CbData("add_folder"), arch_states.folders)
+async def add_folder(callback: types.CallbackQuery, state: FSMContext):
+    await callback.message.answer("Enter the name of the folder")
+    await state.set_state(arch_states.fol_title)
+    await callback.message.delete()
+
+@arch.callback_query(CbData("rm_folder"), arch_states.folders)
+async def rm_folder(callback: types.CallbackQuery, state: FSMContext):
+    folders = db.fetchall("SELECT * FROM folders")
+    await callback.message.edit_text(f"Which folder do you want to delete?", reply_markup=rm_folders_menu(folders))
+    await state.set_state(arch_states.rdis)
+
+@arch.callback_query(CbDataStartsWith("rmf_"), arch_states.rdis)
+async def rm_folder_confirm(callback: types.CallbackQuery, state: FSMContext):
+    folder_id = int(callback.data.split("_")[1])
+    await state.update_data(folder_id=folder_id)
+    await state.set_state(arch_states.rmfconfirm)
+    await callback.message.answer("Are you sure you want to delete this folder? It will move all the tests that folder has to null folder", reply_markup=confirm_inl_key)
+    await callback.message.delete()
+    # await show_folders(callback.message, state)
+
+@arch.callback_query(CbData("back"), arch_states.rdis)
+async def back_to_folders(callback: types.CallbackQuery, state: FSMContext):
+    folders = db.fetchall("SELECT * FROM folders")
+    await callback.message.edit_text(f"Here you can manage the archive of tasks, see the details of tests, change the folders and create a new folder for tests:", reply_markup=get_create_folders(folders))
+    await state.set_state(arch_states.folders)
+
+@arch.callback_query(CbData("confirm"), arch_states.rmfconfirm)
+async def rm_folder_done(callback: types.CallbackQuery, state: FSMContext):
+    data = await state.get_data()
+    folder_id = data.get("folder_id")
+    db.query("DELETE FROM folders WHERE idx = %s", (folder_id,))
+    db.query("UPDATE exams SET folder = 0 WHERE folder = %s", (folder_id,))
+    await callback.answer("Deleted the folder")
+    await show_folders(callback.message, state)
+    await callback.message.delete()
+
+arch.callback_query(CbData("cancel"), arch_states.rmfconfirm)
+async def cancel_rm_folder(callback: types.CallbackQuery, state: FSMContext):
+    await show_folders(callback.message, state)
+    await callback.message.delete()
+
+@arch.message(arch_states.fol_title)
+async def save_folder(message: types.Message, state: FSMContext):
+    folder_name = message.text
+    db.query("INSERT INTO folders (title) VALUES (%s)", (folder_name,))
+    await message.answer(f"Folder {html.bold(f"{folder_name}")} created")
+    await show_folders(message, state)
+
+
+##settings.py
+
+
+import re
+from aiogram import Router, types, F
+from data import dict, config
+from filters import IsAdmin, IsAdminCallback, CbData, CbDataStartsWith
+from states import sets
+from keyboards.inline import post_chan, set_menu, mandconfirm, ping_set, back_inl_key
+from keyboards.regular import main_key, back_key
+from aiogram.fsm.context import FSMContext
+from loader import db, bot
+from time import sleep, monotonic
+from aiogram import html
+
+set = Router()
+
+set.message.filter(IsAdmin())
+set.callback_query.filter(IsAdminCallback())
+# bot.send_message(config.ADMINS[0], "Settings handler loaded", reply_parameters=)
+
+@set.message(F.text == dict.settings)
+async def sett(message: types.Message, state: FSMContext):
+    await state.set_state(sets.smenu)
+    await message.answer(f"Menu: <b>{dict.settings}</b>", reply_markup=main_key)
+    response = "Here you can change some configuration settings, check the ping with the Telegram servers"
+    await message.answer(response, reply_markup=set_menu)
+
+@set.callback_query(CbData("ping"), sets.smenu)
+async def ping(callback: types.CallbackQuery, state: FSMContext) -> None:
+    await state.set_state(sets.ping)
+    start_time = monotonic()
+    sent_message = await callback.message.edit_text("Pinging... 🏓", reply_markup=back_inl_key)
+    end_time = monotonic()
+    
+    ping_ms = (end_time - start_time) * 1000  # Convert to milliseconds
+    await sent_message.edit_text(f"Pong! 🏓\n\nPing: {html.code(f"{ping_ms:.2f} ms")}", reply_markup=ping_set)
+    await callback.answer("Pinged!")
+
+@set.callback_query(CbData("refresh_ping"), sets.ping)
+async def refresh_ping(callback: types.CallbackQuery, state: FSMContext) -> None:
+    start_time = monotonic()
+    sent_message = await callback.message.edit_text("Pinging... 🏓", reply_markup=back_inl_key)
+    end_time = monotonic()
+    
+    ping_ms = (end_time - start_time) * 1000  # Convert to milliseconds
+    await sent_message.edit_text(f"Pong! 🏓\n\nPing: {html.code(f"{ping_ms:.2f} ms")}", reply_markup=ping_set)
+    await callback.answer("Pinged!")
+
+@set.callback_query(CbData("back"), sets.ping)
+async def back_to_s(callback: types.CallbackQuery, state: FSMContext) -> None:
+    await state.set_state(sets.smenu)
+    await callback.message.edit_text("Here you can change some configuration settings, check the ping with the Telegram servers", reply_markup=set_menu)
+    await callback.answer("Back to settings menu")
+
+@set.callback_query(CbData("defaults"), sets.smenu)
+async def defaults(callback: types.CallbackQuery, state: FSMContext) -> None:
+    await callback.message.edit_text("Here you will be able to change the defaule number of options for multiple choice questions, and the default number of questions that will be shown in a page and etc.", reply_markup=back_inl_key)
+    await state.set_state(sets.defs)
+
+@set.callback_query(CbData("back"), sets.defs)
+async def back_to_s(callback: types.CallbackQuery, state: FSMContext) -> None:
+    await state.set_state(sets.smenu)
+    await callback.message.edit_text("Here you can change some configuration settings, check the ping with the Telegram servers", reply_markup=set_menu)
+    await callback.answer("Back to settings menu")
+
+
+##stats.py
+
+from aiogram import types, Router, F, html
+from data import dict
+from keyboards.regular import main_key
+# from keyboards.inline import refresh_key
+from states import statsstates
+from aiogram.fsm.context import FSMContext
+from filters import IsAdmin, IsAdminCallback, CbData, CbDataStartsWith
+
+stater = Router()
+stater.message.filter(IsAdmin())
+stater.callback_query.filter(IsAdminCallback())
+
+@stater.message(F.text == dict.stats)
+async def show_stats(message: types.Message, state: FSMContext):
+    await message.answer(f"Menu {html.bold(f"{dict.stats}")}", reply_markup=main_key)
+    response = "Here you can see the statistics of the bot, the number of users, the number of submissions received and etc."
+    await message.answer(response)
+    await state.set_state(statsstates.stmenu)
+
+
+archive.py
+
+from aiogram import Router, F, html, types
+from filters import IsUser, IsSubscriber, IsUserCallback, IsSubscriberCallback, IsArchiveAllowed, IsArchiveAllowedCallback
+from data import dict, config
+from loader import db
+from time import sleep
+from aiogram.fsm.context import FSMContext
+from keyboards.regular import usr_main_key
+from keyboards.inline import lets_start, ans_enter_method_usr, goto_bot, submit_ans_user, all_continue_usr, get_missing_exams, get_answering_keys, share_sub_usr
+from datetime import datetime, timezone, timedelta
+from states import missing_hw_states
+from utils.yau import get_user_text, get_user_ans_text, get_correct_text, gen_code
+
+usrarch = Router()
+usrarch.message.filter(IsUser(), IsSubscriber())
+usrarch.callback_query.filter(IsUserCallback(), IsSubscriberCallback())
+
+@usrarch.message(F.text == dict.archive)
+async def show_archive(message: types.Message, state: FSMContext):
+    await message.answer(f"{html.bold(dict.archive)} menyusi", reply_markup=usr_main_key)
+    msg = await message.answer("Yuklanmoqda...")
+    mexams = db.fetchall("SELECT title, idx FROM exams WHERE hide = 0;")
+    if mexams:
+        await state.set_state(missing_hw_states.exams)
+        await msg.edit_text(f"Hozirda arxivda {len(mexams)} ta vazifalar mavjud. Quyida ro'yxat keltirilgan. Ulardan birini tanlang va bajarishni boshlang:", reply_markup=get_missing_exams(mexams))
+    else:
+        await msg.edit_text("Afsuski, hozirda arxivga ulashilgan testlar yo'q.")
+
+# @usrarch.callback_query(F.data == "get_arch")
+# async def get_archive(callback: types.CallbackQuery):
+#     await callback.answer("Sizda allaqachon arxiv ruxsati bor.")
+#    await callback.bot.edit_message_text(text="🎉 Sizda allaqachon arxiv ruxsati bor.", inline_message_id=callback.inline_message_id, reply_markup=goto_bot(config.bot_info.username))
+
+@usrarch.callback_query(F.data.startswith("mexam_"), missing_hw_states.exams)
+async def start_missing_exam(callback: types.CallbackQuery, state: FSMContext):
+    # Get exam id from callback data
+    await callback.message.edit_text("Yuklanmoqda...")
+    exam_id = int(callback.data.split("_")[1])
+    # Fetch exam using exam_id (deadline check removed)
+    test = db.fetchone("SELECT * FROM exams WHERE idx = %s", (exam_id,))
+    if not test:
+        await callback.message.answer("Vazifa topilmadi. Iltimos, admin bilan bog'laning.")
+        return
+    if not test[7]:
+        await callback.message.answer("Bu vazifaga bir martadan ortiq javoblaringizni topshira olmaysiz!")
+        return
+    # Check if user already submitted (simple check without deadline logic)
+    # submission = db.fetchone("SELECT  FROM submissions WHERE userid = %s AND exid = %s", (str(callback.from_user.id), exam_id))
+    # if submission:
+    #     await callback.message.answer("Siz bu vazifaga javoblaringizni allaqachon topshirgansiz.")
+    #     return
+    try:
+        import json
+        test_info = json.loads(test[5])
+    except Exception:
+        await callback.message.answer("Test tafsilotlarini yuklashda xatolik yuz berdi.", reply_markup=usr_main_key)
+        return
+    await state.update_data(
+        exam_id=exam_id,
+        ans_confirm=False,
+        total=test[4],
+        current=1,
+        title=test[1],
+        about=test[2],
+        instructions=test[3],
+        correct=test_info.get("answers", []),
+        typesl=test_info.get("types", []),
+        donel=[None]*test[4],
+        page=1
+    )
+    current = 1
+    attaches = db.fetchall("SELECT ty, tgfileid, caption FROM attachments WHERE exid = %s", (exam_id,))
+    if attaches:
+        for ty, tgfileid, caption in attaches:
+            if ty == "photo":
+                await callback.message.answer_photo(photo=tgfileid, caption=caption)
+            elif ty == "document":
+                await callback.message.answer_document(document=tgfileid, caption=caption)
+    res = f"{get_user_text(test[1], test[2], test[3], test[4])}"
+    await callback.message.answer(res, reply_markup=lets_start)
+    # Transition state identical to regular HW
+    await callback.message.delete()
+    await state.set_state(missing_hw_states.details)
+
+@usrarch.callback_query(F.data == "start_test", missing_hw_states.details)
+async def start_test(callback: types.CallbackQuery, state: FSMContext):
+    await callback.message.edit_reply_markup()
+    await callback.message.answer("Javoblarni qaysi yo'lda yuborishingizni tanlang.", reply_markup=ans_enter_method_usr)
+    await state.set_state(missing_hw_states.way)
+
+@usrarch.callback_query(F.data == "all", missing_hw_states.way)
+async def all_at_once(callback: types.CallbackQuery, state: FSMContext):
+    data = await state.get_data()
+    total = data.get("total")
+    await state.update_data(entering="all")
+    await callback.message.edit_text(f"Javoblaringizni quyidagi ko'rinishda jo'nating:\n{html.code('Javob1\nJavob2\nJavob3\n...')}")
+    await state.set_state(missing_hw_states.answer)
+
+@usrarch.callback_query(F.data == "one", missing_hw_states.way)
+async def one_by_one(callback: types.CallbackQuery, state: FSMContext):
+    data = await state.get_data()
+    await state.set_state(missing_hw_states.answer)
+    await state.update_data(msg=callback.message.message_id)
+    current = data.get("current")
+    total = data.get("total")
+    typesl = data.get("typesl")
+    donel = data.get("donel")
+    markup = get_answering_keys(current, total, donel, typesl, page=1)
+    await callback.message.edit_text(
+        f"\n{get_user_ans_text(donel, typesl)}\nIltimos, #{current}/{total} savol uchun javobingizni {html.underline('tanlang' if typesl[current-1] > 0 else 'jo\'nating')}:",
+        reply_markup=markup
+    )
+
+@usrarch.callback_query(F.data.startswith("mcq_"), missing_hw_states.answer)
+async def handle_mcq(callback: types.CallbackQuery, state: FSMContext):
+    data = await state.get_data()
+    curq = data.get("curq") or data.get("current")
+    typesl = data.get("typesl")
+    if typesl[curq-1] == 0:
+        await callback.answer("Bu variantli savol emas. Iltimos, javobingizni yuboring.", show_alert=True)
+        return
+    donel = data.get("donel")
+    numq = data.get("total")
+    cur_ans = callback.data.split("_")[1]
+    donel[curq-1] = cur_ans
+    ans_confirm = bool(data.get("ans_confirm"))
+    await callback.answer(f"🟢 #{curq}: {cur_ans}")
+    new_cur = next((i+1 for i, ans in enumerate(donel) if ans is None), -1)
+    if new_cur == -1:
+        ans_confirm = True
+        await state.update_data(ans_confirm=ans_confirm)
+    else:
+        # Calculate new page based on the next question
+        new_page = ((new_cur - 1) // config.MAX_QUESTION_IN_A_PAGE) + 1
+        await state.update_data(curq=new_cur, donel=donel, page=new_page)
+
+    current_page = data.get("page", 1) if new_cur == -1 else new_page
+    prompt_text = html.underline("yuboring") if typesl[new_cur-1 if new_cur != -1 else curq-1] == 0 else html.underline("tanlang")
+    try:
+        await callback.message.edit_text(
+            f"{get_user_ans_text(donel, typesl)}\n" +
+            ("🔔 Barcha savollarga javob berib bo'ldingiz, javobingizni topshirishni davom ettirsangiz bo'ladi.\n\n" if not donel.count(None) else "") +
+            f"Iltimos, #{new_cur if new_cur != -1 else curq}/{numq} savol uchun javobingizni {prompt_text}:",
+            reply_markup=get_answering_keys(new_cur if new_cur != -1 else curq, numq, donel, typesl, current_page, ans_confirm)
+        )
+    except Exception:
+        await callback.answer("Iltimos, tugmalarni bitta-bittadan bosing.", show_alert=True)
+        return
+
+@usrarch.callback_query(F.data.startswith("jump_"), missing_hw_states.answer)
+async def handle_jump(callback: types.CallbackQuery, state: FSMContext):
+    data = await state.get_data()
+    new_cur = int(callback.data.split("_")[1])
+    curq = data.get("curq") or data.get("current")
+    if new_cur == curq:
+        await callback.answer("Siz allaqachon shu savolda turibsiz.")
+        return
+    donel = data.get("donel")
+    typesl = data.get("typesl")
+    numq = data.get("total")
+    page = data.get("page")
+    ans_confirm = bool(data.get("ans_confirm"))
+    await state.update_data(curq=new_cur)
+    prompt_text = html.underline("yuboring") if typesl[new_cur-1] == 0 else html.underline("tanlang")
+    await callback.message.edit_text(
+        f"{get_user_ans_text(donel, typesl)}\n" +
+        ("🔔 Barcha savollarga javob berib bo'ldingiz, javobingizni topshirishni davom ettirsangiz bo'ladi.\n\n" if not donel.count(None) else "") +
+        f"Iltimos, #{new_cur}/{numq} savol uchun javobingizni {prompt_text}:",
+        reply_markup=get_answering_keys(new_cur, numq, donel, typesl, page, ans_confirm)
+    )
+
+@usrarch.callback_query(F.data.startswith("page_"), missing_hw_states.answer)
+async def handle_page(callback: types.CallbackQuery, state: FSMContext):
+    data = await state.get_data()
+    total = data.get("total")
+    donel = data.get("donel")
+    typesl = data.get("typesl")
+    page = data.get("page") or 1
+    ans_confirm = bool(data.get("ans_confirm"))
+    sign = callback.data.split("_")[1]
+    max_page = (total + config.MAX_QUESTION_IN_A_PAGE - 1) // config.MAX_QUESTION_IN_A_PAGE
+    if sign == "next":
+        if page >= max_page:
+            await callback.answer("Siz allaqachon oxirgi sahifadasiz.")
+            return
+        page += 1
+    elif sign == "prev":
+        if page <= 1:
+            await callback.answer("Siz allaqachon birinchi sahifadasiz.")
+            return
+        page -= 1
+    else:
+        await callback.answer("Hozirgi sahifani ko'rsatish uchun.")
+        return
+    await state.update_data(page=page)
+    curq = data.get("curq") or 1
+    prompt_text = html.underline("yuboring") if typesl[curq-1] == 0 else html.underline("tanlang")
+    await callback.message.edit_text(
+        f"{get_user_ans_text(donel, typesl)}\n" +
+        ("🔔 Barcha savollarga javob berib bo'ldingiz, javobingizni topshirishni davom ettirsangiz bo'ladi.\n\n" if not donel.count(None) else "") +
+        f"Iltimos, #{curq}/{total} savol uchun javobingizni {prompt_text}:",
+        reply_markup=get_answering_keys(curq, total, donel, typesl, page, ans_confirm)
+    )
+
+@usrarch.message(missing_hw_states.answer)
+async def handle_open_ended(message: types.Message, state: FSMContext):
+    data = await state.get_data()
+    typesl = data.get("typesl")
+    curq = data.get("curq") or data.get("current")
+    entering = data.get("entering")
+    donel = data.get("donel")
+    total = data.get("total")
+    msg = data.get("msg")
+    if entering=="all":
+        if msg:
+            await message.bot.edit_message_reply_markup(chat_id=message.chat.id, message_id=msg)
+        raw = message.text
+        cnt = raw.count("\n")
+        if cnt != total-1:
+            await message.reply(f"Iltimos, savollar soniga teng bo'lgan javob taqdim qiling. Sizning xabaringizda {cnt+1}/{total} ta javob bor.\n\nJavoblaringizni quyidagi ko'rinishda jo'nating:\n{html.code('Javob1\nJavob2\nJavob3\n...')}")
+            return
+        donel = list(filter(None, raw.split("\n")))
+        print(donel)
+        msg = await message.answer(f"{get_user_ans_text(donel, typesl)}\nBarcha savollarga javob taqdim etdingiz, javobingizni topshirishni davom ettirsangiz bo'ladi.\n\nAgar javoblaringizni o'zgartirmoqchi bo'lsangiz, yangi xabarda javoblaringizni quyidagi ko'rinishda jo'nating:\n{html.code('Javob1\nJavob2\nJavob3\n...')}",
+            reply_markup=all_continue_usr)
+        await state.update_data(donel=donel, msg=msg.message_id)
+        return
+    # ... existing all answers handling code ...
+
+    if typesl[curq-1] > 0:
+        await message.delete()
+        msg = await message.answer("Bu ochiq savol emas. Iltimos, berilgan variantlardan birini tanlang.")
+        sleep(2)
+        await msg.delete()
+        return
+
+    donel[curq-1] = message.text
+    new_cur = next((i+1 for i, ans in enumerate(donel) if ans is None), -1)
+    await state.update_data(donel=donel)
+    await message.bot.edit_message_text(chat_id=message.chat.id, message_id=msg, text=f"Iltimos, #{curq}/{total} savol uchun javobingizni jo'nating:")
+
+    if new_cur == -1:
+        current_page = data.get("page", 1)
+        ans_confirm = True
+        await state.update_data(ans_confirm=ans_confirm)
+    else:
+        # Calculate new page based on the next question
+        current_page = ((new_cur - 1) // config.MAX_QUESTION_IN_A_PAGE) + 1
+        await state.update_data(curq=new_cur, page=current_page)
+
+    prompt_text = html.underline("yuboring") if typesl[new_cur-1 if new_cur != -1 else curq-1] == 0 else html.underline("tanlang")
+    msg_resp = await message.answer(
+        f"{get_user_ans_text(donel, typesl)}\n" +
+        ("🔔 Barcha savollarga javob berib bo'ldingiz, javobingizni topshirishni davom ettirsangiz bo'ladi.\n\n" if not donel.count(None) else "") +
+        f"Iltimos, #{new_cur if new_cur != -1 else curq}/{total} savol uchun javobingizni {prompt_text}:",
+        reply_markup=get_answering_keys(new_cur if new_cur != -1 else curq, total, donel, typesl, current_page, new_cur == -1)
+    )
+    await state.update_data(msg=msg_resp.message_id)
+
+@usrarch.callback_query(F.data == "continue", missing_hw_states.answer)
+async def request_submit_hw(callback: types.CallbackQuery, state: FSMContext):
+    data = await state.get_data()
+    donel = data.get("donel")
+    typesl = data.get("typesl")
+    await callback.message.edit_text(
+        f"{get_user_ans_text(donel, typesl)}\nJavoblaringizni jo'natishni tasdiqlaysizmi?",
+        reply_markup=submit_ans_user
+    )
+    await state.set_state(missing_hw_states.confirm)
+
+@usrarch.callback_query(F.data == "submit", missing_hw_states.confirm)
+async def confirm_submit(callback: types.CallbackQuery, state: FSMContext):
+    await callback.message.edit_text("Kutib turing...")
+    data = await state.get_data()
+    submission_time = datetime.now(timezone(timedelta(hours=5)))
+    exam_id = data.get("exam_id")
+    # Fetch exam without deadline check
+    test = db.fetchone("SELECT * FROM exams WHERE idx = %s", (exam_id,))
+    if not test:
+        await callback.message.answer("Javobingizni saqlashni iloji yo'q! Iltimos, admin bilan bog'laning.", reply_markup=usr_main_key)
+        await state.clear()
+        return
+    # submission = db.fetchone("SELECT * FROM submissions WHERE userid = %s AND exid = %s", (str(callback.from_user.id), exam_id))
+    # if submission:
+    #     await callback.message.answer("Siz allaqachon vazifaga javoblaringizni topshirib bo'lgansiz.")
+    #     return
+    correct = data.get("correct")
+    answers = data.get("donel")
+    code = gen_code(10)
+    db.store_submission(callback.from_user.id, exam_id, answers, code, submission_time)
+    await callback.answer("Muvaffaqiyatli jo'natildi.")
+    await callback.message.edit_text(
+        f"Vazifaga javoblaringiz muvaffaqiyatli topshirildi.\n\nNatijalaringiz:\n{get_correct_text(correct, answers)}",
+        reply_markup=share_sub_usr(code)
+    )
+    await state.clear()
+
+@usrarch.callback_query(F.data == "back", missing_hw_states.confirm)
+async def cancel_submit(callback: types.CallbackQuery, state: FSMContext):
+    await state.set_state(missing_hw_states.answer)
+    data = await state.get_data()
+    curq = data.get("curq") or data.get("current")
+    page = data.get("page")
+    donel = data.get("donel")
+    typesl = data.get("typesl")
+    entering = data.get("entering")
+    total = data.get("total")
+    if entering == "all":
+        await callback.message.edit_text(
+            f"{get_user_ans_text(donel, typesl)}\nBarcha savollarga javob berib bo'lgansiz, javobingizni topshirishni davom ettirsangiz bo'ladi.\n\nAgar o'zgartirish kiritmoqchi bo'lsangiz, quyidagi formatda jo'nating:\n{html.code('Javob1\nJavob2\nJavob3\n...')}",
+            reply_markup=all_continue_usr
+        )
+        return
+    prompt_text = html.underline("yuboring") if typesl[curq-1] == 0 else html.underline("tanlang")
+    await callback.message.edit_text(
+        f"Topshirish bekor qilindi. Javob berishda davom eting.\n\n{get_user_ans_text(donel, typesl)}\n" +
+        ("🔔 Barcha savollarga javob berib bo'ldingiz, javobingizni topshirishni davom ettirsangiz bo'ladi.\n\n" if not donel.count(None) else "") +
+        f"Iltimos, #{curq}/{total} savol uchun javobingizni {prompt_text}:",
+        reply_markup=get_answering_keys(curq, total, donel, typesl, page, True)
+    )
+
+
+##check_hw.py
+
+
+from aiogram import types, Router, F, html
+from data import config, dict
+from keyboards.inline import access_menu, post_chan, confirm_inl_key, share_sub_usr
+from keyboards.regular import main_key, back_key, usr_main_key
+from filters import IsUser, IsUserCallback, IsRegistered, IsSubscriber, CbData
+from aiogram.fsm.context import FSMContext
+from states import check_hw_states
+import json
+from time import sleep
+from datetime import datetime, timezone, timedelta
+from loader import db
+from utils.yau import get_correct_text, get_user_ans_text, get_user_text, gen_code
+from keyboards.inline import usr_inline, adm_inline, lets_start, get_answering_keys, ans_enter_method_usr, submit_ans_user, all_continue_usr
+
+chhw = Router()
+chhw.message.filter(IsUser(), IsSubscriber())
+chhw.callback_query.filter(IsUserCallback(), IsSubscriber())
+
+@chhw.message(F.text == dict.do_todays_hw)
+async def do_today_hw(message: types.Message, state: FSMContext):
+    await message.answer(f"{html.bold(dict.do_todays_hw)} menyusi", reply_markup=usr_main_key)
+    now = datetime.now(timezone(timedelta(hours=5)))
+    today_date = now.date()
+    # Fetch homework scheduled for today by comparing the date part of sdate
+    test = db.fetchone("SELECT * FROM exams WHERE DATE(sdate) = %s", (today_date,))
+    if not test:
+        await message.answer("Bugungi vazifa hali yuklanmagan yoki mavjud emas. Agar bu xato deb o'ylasangiz, iltimos admin bilan bog'laning.")
+        return
+    exam_id = test[0]
+    # Check if user already submitted
+    submission = db.fetchone("SELECT * FROM submissions WHERE userid = %s AND exid = %s", (str(message.from_user.id), exam_id))
+    if submission and not test[7]:
+        await message.answer("Siz allaqachon vazifaga javoblaringizni topshirib bo'lgansiz va qayta topshirish mumkin emas.")
+        return
+    # Parse test info stored in JSON
+    try:
+        import json
+        test_info = json.loads(test[5])
+    except Exception:
+        await message.answer("Test tafsilotlarini yuklashda xatolik yuz berdi.", reply_markup=usr_main_key)
+        return
+    await state.update_data(exam_id=exam_id, ans_confirm=False,
+                            total=test[4], current=1, title=test[1], about=test[2], instructions=test[3],
+                            correct=test_info.get("answers", []),
+                            typesl=test_info.get("types", []),
+                            donel=[None]*test[4], page=1)
+    # Send first question based on type and attachments if any:
+    current = 1
+    attaches = db.fetchall("SELECT ty, tgfileid, caption FROM attachments WHERE exid = %s", (exam_id,))
+    if attaches:
+        for ty, tgfileid, caption in attaches:
+            if ty == "photo":
+                await message.answer_photo(photo=tgfileid, caption=caption)
+            elif ty == "document":
+                await message.answer_document(document=tgfileid, caption=caption)
+    res = f"{get_user_text(test[1], test[2], test[3], test[4])}"
+    await message.answer(res, reply_markup=lets_start)
+    await state.set_state(check_hw_states.details)
+
+@chhw.callback_query(CbData("start_test"), check_hw_states.details)
+async def start_test(query: types.CallbackQuery, state: FSMContext):
+    await query.message.edit_reply_markup()
+    await query.message.answer("Javoblarni qaysi yo'lda yuborishingizni tanlang.", reply_markup=ans_enter_method_usr)
+    await state.set_state(check_hw_states.way)
+
+@chhw.callback_query(F.data == "all", check_hw_states.way)
+async def all_at_once(query: types.CallbackQuery, state: FSMContext):
+    # await query.message.edit_reply_markup()
+    data = await state.get_data()
+    total = data.get("total")
+    await state.update_data(entering="all")
+    await query.message.edit_text(f"Javoblaringizni quyidagi ko'rinishda jo'nating:\n{html.code("Javob1\nJavob2\nJavob3\n...")}")
+    await state.set_state(check_hw_states.answer)
+
+@chhw.callback_query(F.data == "one", check_hw_states.way)
+async def one_by_one(query: types.CallbackQuery, state: FSMContext):
+    data = await state.get_data()
+    await state.set_state(check_hw_states.answer)
+    # await query.message.delete()
+    await state.update_data(msg=query.message.message_id)
+    current = data.get("current")
+    total = data.get("total")
+    typesl = data.get("typesl")
+    donel = data.get("donel")
+    markup = get_answering_keys(current, total, donel, typesl, page=1)
+    # q_type = typesl[current-1]
+    # Send proper prompt based on question type:
+    await query.message.edit_text(f"\n{get_user_ans_text(donel, typesl)}\nIltimos, #{current}/{total} savol uchun javobingizni {html.underline("tanlang" if typesl[current-1] > 0 else "jo'nating")}:", reply_markup=markup)
+    
+@chhw.callback_query(F.data.startswith("mcq_"), check_hw_states.answer)
+async def handle_mcq(query: types.CallbackQuery, state: FSMContext):
+    data = await state.get_data()
+    curq = data.get("curq") or data.get("current")
+    typesl = data.get("typesl")
+    # print(curq, typesl)
+    if typesl[curq-1] == 0:
+        await query.answer("Bu variantli savol emas. Iltimos, javobingizni yuboring.", show_alert=True)
+        return
+    # Optionally, uncomment to force MCQ mode:
+    # typesl[curq-1] = config.MULTIPLE_CHOICE_DEF
+    donel = data.get("donel")
+    numq = data.get("total")  # changed from "numquest"
+    page = data.get("page")
+    cur_ans = query.data.split("_")[1]
+    donel[curq-1] = cur_ans
+    ans_confirm = bool(data.get("ans_confirm"))
+    await query.answer(f"🟢 #{curq}: {cur_ans}")
+    new_cur = -1
+    for i, ans in enumerate(donel):
+        if ans is None:
+            new_cur = i+1
+            break
+    if new_cur == -1:
+        ans_confirm = True
+        await state.update_data(ans_confirm=ans_confirm)
+        try:
+            await query.message.edit_text(
+                f"{get_user_ans_text(donel, typesl)}\n" +
+                (f"🔔 Barcha savollarga javob berib bo'ldingiz, javobingizni topshirishni davom ettirsangiz bo'ladi.\n\n" if not donel.count(None) else "") +
+                f"Iltimos, #{curq}/{numq} savol uchun javobingizni {html.underline('tanlang') if typesl[curq-1] > 0 else html.underline('yuboring')}:",
+                reply_markup=get_answering_keys(curq, numq, donel, typesl, data.get("page"), ans_confirm)
+            )
+        except:
+            await query.answer("Iltimos, tugmalarni bitta-bittadan bosing.", show_alert=True)
+            return
+        await state.update_data(donel=donel)
+        return
+    new_page = (new_cur-1)//config.MAX_QUESTION_IN_A_PAGE + 1
+    await state.update_data(curq=new_cur, donel=donel, page=new_page)
+    if typesl[new_cur-1] == 0:
+        prompt_verb = html.underline("yuboring")
+    else:
+        prompt_verb = html.underline("tanlang")
+    try:
+        await query.message.edit_text(
+            f"{get_user_ans_text(donel, typesl)}\n" +
+            (f"🔔 Barcha savollarga javob berib bo'ldingiz, javobingizni topshirishni davom ettirsangiz bo'ladi.\n\n" if not donel.count(None) else "") +
+            f"Iltimos, #{new_cur}/{numq} savol uchun javobingizni {prompt_verb}:",
+            reply_markup=get_answering_keys(new_cur, numq, donel, typesl, new_page, ans_confirm)
+        )
+    except:
+        await query.answer("Iltimos, tugmalarni bitta-bittadan bosing.", show_alert=True)
+        return
+
+
+@chhw.callback_query(F.data.startswith("jump_"), check_hw_states.answer)
+async def handle_jump(query: types.CallbackQuery, state: FSMContext):
+    data = await state.get_data()
+    new_cur = int(query.data.split("_")[1])
+    curq = data.get("curq") or data.get("current")
+    if new_cur == curq:
+        await query.answer("Siz allaqachon shu savolda turibsiz.")
+        return
+    donel = data.get("donel")
+    typesl = data.get("typesl")
+    numq = data.get("total")  # changed from "numquest"
+    page = data.get("page")
+    ans_confirm = bool(data.get("ans_confirm"))
+    await state.update_data(curq=new_cur)
+    if typesl[new_cur-1] == 0:
+        prompt_text = html.underline("yuboring")
+    else:
+        prompt_text = html.underline("tanlang")
+    await query.message.edit_text(
+        f"{get_user_ans_text(donel, typesl)}\n" +
+        (f"🔔 Barcha savollarga javob berib bo'ldingiz, javobingizni topshirishni davom ettirsangiz bo'ladi.\n\n" if not donel.count(None) else "") +
+        f"Iltimos, #{new_cur}/{numq} savol uchun javobingizni {prompt_text}:",
+        reply_markup=get_answering_keys(new_cur, numq, donel, typesl, page, ans_confirm)
+    )
+
+@chhw.callback_query(F.data.startswith("page_"), check_hw_states.answer)
+async def handle_page(query: types.CallbackQuery, state: FSMContext):
+    data = await state.get_data()
+    total = data.get("total")  # now using total key
+    donel = data.get("donel")
+    typesl = data.get("typesl")
+    page = data.get("page") or 1
+    ans_confirm = bool(data.get("ans_confirm"))
+    sign = query.data.split("_")[1]  # "next", "prev", or "now"
+    from data import config
+    max_page = (total + config.MAX_QUESTION_IN_A_PAGE - 1) // config.MAX_QUESTION_IN_A_PAGE
+    if sign == "next":
+        if page >= max_page:
+            await query.answer("Siz allaqachon oxirgi sahifadasiz.")
+            return
+        page += 1
+    elif sign == "prev":
+        if page <= 1:
+            await query.answer("Siz allaqachon birinchi sahifadasiz.")
+            return
+        page -= 1
+    else:
+        await query.answer("Hozirgi sahifani ko'rsatish uchun.")
+        return
+    await state.update_data(page=page)
+    curq = data.get("curq") or 1
+    if typesl[curq-1] == 0:
+        prompt_text = html.underline("yuboring")
+    else:
+        prompt_text = html.underline("tanlang")
+    await query.message.edit_text(
+        f"{get_user_ans_text(donel, typesl)}\n" +
+        (f"🔔 Barcha savollarga javob berib bo'ldingiz, javobingizni topshirishni davom ettirsangiz bo'ladi.\n\n" if not donel.count(None) else "") +
+        f"Iltimos, #{curq}/{total} savol uchun javobingizni {prompt_text}:",
+        reply_markup=get_answering_keys(curq, total, donel, typesl, page, ans_confirm)
+    )
+
+@chhw.message(check_hw_states.answer)
+async def handle_open_ended(message: types.Message, state: FSMContext):
+    data = await state.get_data()
+    typesl = data.get("typesl")
+    curq = data.get("curq") or data.get("current")
+    entering = data.get("entering")
+    donel = data.get("donel")
+    total = data.get("total")
+    msg = data.get("msg")
+    if entering=="all":
+        if msg:
+            await message.bot.edit_message_reply_markup(chat_id=message.chat.id, message_id=msg)
+        raw = message.text
+        cnt = raw.count("\n")
+        if cnt != total-1:
+            await message.reply(f"Iltimos, savollar soniga teng bo'lgan javob taqdim qiling. Sizning xabaringizda {cnt+1}/{total} ta javob bor.\n\nJavoblaringizni quyidagi ko'rinishda jo'nating:\n{html.code('Javob1\nJavob2\nJavob3\n...')}")
+            return
+        donel = list(filter(None, raw.split("\n")))
+        print(donel)
+        msg = await message.answer(f"{get_user_ans_text(donel, typesl)}\nBarcha savollarga javob taqdim etdingiz, javobingizni topshirishni davom ettirsangiz bo'ladi.\n\nAgar javoblaringizni o'zgartirmoqchi bo'lsangiz, yangi xabarda javoblaringizni quyidagi ko'rinishda jo'nating:\n{html.code('Javob1\nJavob2\nJavob3\n...')}",
+            reply_markup=all_continue_usr)
+        await state.update_data(donel=donel, msg=msg.message_id)
+        return
+    
+    
+    if typesl[curq-1] > 0:
+        await message.delete()
+        msg = await message.answer("Bu ochiq savol emas. Iltimos, berilgan variantlardan birini tanlang.")
+        sleep(2)
+        await msg.delete()
+        return
+    
+    
+
+    donel = data.get("donel")
+    page = data.get("page")
+    ans_confirm = data.get("ans_confirm")
+    donel[curq-1] = message.text
+    new_cur = -1
+    for i, ans in enumerate(donel):
+        if ans is None:
+            new_cur = i+1
+            break
+    await state.update_data(donel=donel)
+    msg = data.get("msg")
+    await message.bot.edit_message_text(chat_id=message.chat.id, message_id=msg, text=f"Iltimos, #{curq}/{data.get('total')} savol uchun javobingizni jo'nating:")
+    if new_cur == -1:
+        ans_confirm = True
+        await state.update_data(ans_confirm=ans_confirm)
+        if typesl[curq-1] == 0:
+            prompt_text = html.underline("yuboring")
+        else:
+            prompt_text = html.underline("tanlang")
+        msg_resp = await message.answer(
+            f"{get_user_ans_text(donel, typesl)}\n" +
+            (f"🔔 Barcha savollarga javob berib bo'ldingiz, javobingizni topshirishni davom ettirsangiz bo'ladi.\n\n" if not donel.count(None) else "") +
+            f"Iltimos, #{curq}/{total} savol uchun javobingizni {prompt_text}:",
+            reply_markup=get_answering_keys(curq, total, donel, typesl, data.get('page'), ans_confirm)
+        )
+        await state.update_data(msg=msg_resp.message_id)
+        return
+    new_page = (new_cur-1)//config.MAX_QUESTION_IN_A_PAGE + 1
+    await state.update_data(curq=new_cur, donel=donel, page=new_page)
+    if typesl[new_cur-1] == 0:
+        prompt_text = html.underline("yuboring")
+    else:
+        prompt_text = html.underline("tanlang")
+    msg_resp = await message.answer(
+        f"{get_user_ans_text(donel, typesl)}\n" +
+        (f"🔔 Barcha savollarga javob berib bo'ldingiz, javobingizni topshirishni davom ettirsangiz bo'ladi.\n\n" if not donel.count(None) else "") +
+        f"Iltimos, #{new_cur}/{total} savol uchun javobingizni {prompt_text}:",
+        reply_markup=get_answering_keys(new_cur, total, donel, typesl, new_page, data.get("ans_confirm"))
+    )
+    await state.update_data(msg=msg_resp.message_id)
+
+@chhw.callback_query(F.data == "continue", check_hw_states.answer)
+async def request_submit_hw(query: types.CallbackQuery, state: FSMContext):
+    # Ask for final confirmation before submission
+    data = await state.get_data()
+    donel = data.get("donel")
+    typesl = data.get("typesl")
+    await query.message.edit_text(f"{get_user_ans_text(donel, typesl)}\nJavoblaringizni jo'natishni tasdiqlaysizmi?", reply_markup=submit_ans_user)
+    await state.set_state(check_hw_states.confirm)
+
+@chhw.callback_query(F.data == "submit", check_hw_states.confirm)
+async def confirm_submit(query: types.CallbackQuery, state: FSMContext):
+    await query.message.edit_text("Kutib turing...")
+    data = await state.get_data()
+    submission_time = datetime.now(timezone(timedelta(hours=5)))
+    exam_id = data.get("exam_id")
+    # Fetch exam using exam id
+    test = db.fetchone("SELECT * FROM exams WHERE idx = %s", (exam_id,))
+    if not test:
+        await query.message.answer("Javobingizni saqlashni iloji yo'q!\n\nSiz topshirmoqchi bo'lgan vazifa vaqti o'tib ketganga yoki o'chirib tashlangan o'xshaydi.", reply_markup=usr_main_key)
+        await state.clear()
+        return
+    # Check deadline: compare test deadline (sdate) with current time
+    exam_deadline = datetime.fromisoformat(test[6])
+    if submission_time > exam_deadline and not test[7]:
+        await query.message.answer("Vaqt tugagan. Javoblaringiz qabul qilinmaydi.", reply_markup=usr_main_key)
+        await state.clear()
+        return
+    submission = db.fetchone("SELECT * FROM submissions WHERE userid = %s AND exid = %s", (str(query.from_user.id), exam_id))
+    if submission and not test[7]:
+        await query.message.answer("Siz allaqachon vazifaga javoblaringizni topshirib bo'lgansiz va qayta topshirish mumkin emas.")
+        return
+
+    correct = data.get("correct")
+    answers = data.get("donel")
+    userid = query.from_user.id
+    code = gen_code(10)
+    db.store_submission(userid, exam_id, data.get("donel"), code, submission_time)
+    await query.answer("Muvaffaqiyatli jo'natildi.")
+    await query.message.edit_text(
+        f"Vazifaga javoblaringiz muvaffaqiyatli topshirildi.\n\nNatijalaringiz quyidagicha:\n{get_correct_text(correct, answers)}",
+        reply_markup=share_sub_usr(code)
+    )
+    await state.clear()
+
+@chhw.callback_query(F.data == "back", check_hw_states.confirm)
+async def cancel_submit(query: types.CallbackQuery, state: FSMContext):
+    await state.set_state(check_hw_states.answer)
+    # await query.message.delete()
+    data = await state.get_data()
+    curq = data.get("curq") or data.get("current")
+    page = data.get("page")
+    donel = data.get("donel")
+    typesl = data.get("typesl")
+    entering = data.get("entering")
+    total = data.get("total")
+    if entering=="all":
+        await query.message.edit_text(f"{get_user_ans_text(donel, typesl)}\nBarcha savollarga javob berib bo'lgansiz, javobingizni topshirishni davom ettirsangiz bo'ladi.\n\nAgar javoblaringizni o'zgartirmoqchi bo'lsangiz, yangi xabarda javoblaringizni quyidagi ko'rinishda jo'nating:\n{html.code('Javob1\nJavob2\nJavob3\n...')}", reply_markup=all_continue_usr)
+        return
+    
+    if typesl[curq-1] == 0:
+        prompt_text = html.underline("yuboring")
+    else:
+        prompt_text = html.underline("tanlang")
+    await query.message.edit_text(
+        f"Topshirish bekor qilindi. Javob berishda davom eting.\n\n{get_user_ans_text(donel, typesl)}\n" +
+        (f"🔔 Barcha savollarga javob berib bo'ldingiz, javobingizni topshirishni davom ettirsangiz bo'ladi.\n\n" if not donel.count(None) else "") +
+        f"Iltimos, #{curq}/{total} savol uchun javobingizni {prompt_text}:",
+        reply_markup=get_answering_keys(curq, total, donel, typesl, page, True)
+    )
+
+
+
+public_res.py
+
+from aiogram import Router, F, types, html
+from data import dict
+from loader import db
+from datetime import timezone, timedelta, datetime
+import json
+
+
+pub = Router()
+
+UTC_OFFSET = timezone(timedelta(hours=5))  # UTC+5 timezone
+
+
+@pub.inline_query(F.query.startswith("sub_"))
+async def search_results(query: types.InlineQuery):
+    sub_code = query.query.split("_")[1]
+    print(sub_code)
+    sub = db.fetchone("SELECT * FROM submissions WHERE random = %s", (sub_code,))
+    if not sub:
+        res = types.InlineQueryResultArticle(
+            id="no_result",
+            title="🚫 Natija topilmadi",
+            input_message_content=types.InputTextMessageContent(
+                message_text="🚫 Siz qidirgan natija topilmadi."
+            )
+        )
+        return await query.answer([res], cache_time=1, is_personal=True, switch_pm_parameter="myres", switch_pm_text="📊 Natijalarimni botda ko'rish")
+    exam_det = db.fetchone("SELECT title, correct, sdate FROM exams WHERE idx = %s", (sub[2],))
+    deadline_str = exam_det[2]
+    try:
+        parsed_deadline = datetime.strptime(deadline_str, "%d %m %Y")
+        deadline_dt = parsed_deadline.replace(hour=23, minute=59, second=59, tzinfo=UTC_OFFSET)
+    except Exception as e:
+        deadline_dt = None
+    # Ensure sub[3] is offset-aware by treating naive datetime as UTC
+    sub_dt = sub[3] if sub[3].tzinfo else sub[3].replace(tzinfo=timezone.utc)
+    sub_dt = sub_dt.astimezone(UTC_OFFSET)  # Convert to UTC+5
+    
+    sub_time = sub_dt.strftime('%H:%M:%S — %Y-%m-%d')
+    exsub_time = ""
+    print(f"Sub: {sub_dt}, Deadline: {deadline_dt}")
+    if deadline_dt and sub_dt > deadline_dt:
+        exsub_time = html.italic("\n⚠️ Vaqtidan keyin topshirilgan")
+    
+    title_of_exam = exam_det[0] if exam_det else "O'chirilgan test"
+
+    user_name = db.fetchone("SELECT fullname FROM users WHERE userid = %s", (sub[1],))
+    if not user_name:
+        user_name = "Noma'lum"
+    else:
+        user_name = user_name[0]
+    cnt = 0
+    correct = json.loads(exam_det[1]).get("answers", [])
+    answers = json.loads(sub[4])
+
+    for i in range(len(correct)):
+        if answers[i] == correct[i]:
+            cnt += 1
+    ter = (
+        f"📝 {html.bold(title_of_exam)} uchun natija {html.bold(f'#{sub[0]}')}"
+        f"\n\n👤 Egasi: {html.bold(query.from_user.mention_html() if str(query.from_user.id) == sub[1] else html.link(user_name, f'tg://user?id={sub[1]}'))}"
+        f"\n⏰ Topshirilgan vaqti: {html.code(sub_time)}{exsub_time}"
+        f"\n✅ To'g'ri javoblar: {html.bold(f'{cnt}/{len(correct)}')} - {html.bold(f'{cnt/len(correct)*100:.1f}%')}"
+        f"\n📑 SAT taxminiy ball: {html.bold(int(round((cnt/len(correct)*600+200)/10))*10)}"
+    )
+    res = types.InlineQueryResultArticle(
+        id=sub_code,
+        title=f"📊 Natijani ulashish",
+        description=f"📝 {title_of_exam} uchun natija #{sub[0]}",
+        input_message_content=types.InputTextMessageContent(
+            message_text=ter
+        )
+    )
+    return await query.answer([res], cache_time=1, is_personal=True)
+
+
+results.py
+
+from aiogram import types, Router, F, html
+from filters import IsUser, IsUserCallback, IsSubscriber, IsSubscriberCallback
+from loader import db
+from data import dict
+from aiogram.fsm.context import FSMContext
+import json, logging
+from time import sleep
+from states import result_states
+from keyboards.inline import share_sub_usr, results_time
+from keyboards.regular import usr_main_key
+from datetime import datetime, timedelta, timezone
+
+reshow = Router()
+reshow.message.filter(IsUser(), IsSubscriber())
+reshow.callback_query.filter(IsUserCallback(), IsSubscriberCallback())
+
+UTC_OFFSET = timezone(timedelta(hours=5))  # UTC+5 timezone
+
+@reshow.message(F.text == dict.results)
+async def results(message: types.Message, state: FSMContext):
+    await state.set_state(result_states.show)
+    await message.answer(f"{html.bold(dict.results)} menyusi", reply_markup=usr_main_key)
+    msg = await message.answer("Yuklanmoqda...")
+    sub = db.fetchone("SELECT * FROM submissions WHERE userid = %s ORDER BY idx DESC LIMIT 1", (str(message.from_user.id),))
+    if not sub:
+        await msg.edit_text("Bu yerda sizning natijalaringiz bo'ladi. Hozircha natijalaringiz yo'q.")
+        return
+    await show_result(msg, sub)
+
+
+async def show_result(message: types.Message, sub):
+    # await message.edit_text("Yuklanmoqda...")
+    # Modified query to select deadline as third field
+    exam_det = db.fetchone("SELECT title, correct, sdate FROM exams WHERE idx = %s", (sub[2],))
+    if not exam_det:
+        await message.answer("Ushbu natija topshirilgan imtihon o'chirib tashlangan. Boshqa natijalar qidirilmoqda...")
+        
+        query = "SELECT * FROM submissions WHERE idx < %s AND userid = %s ORDER BY idx DESC LIMIT 1"
+        
+        sub = db.fetchone(query, (sub[0], str(message.from_user.id),))
+        if not sub:
+            await message.answer("Boshqa natijalar topilmadi.")
+        else:
+            if await show_result(message, sub):
+                await message.answer("Xatolik yuz berdi.")
+        # await message.answer()
+        return 0
+    deadline_str = exam_det[2]
+    try:
+        parsed_deadline = datetime.strptime(deadline_str, "%d %m %Y")
+        deadline_dt = parsed_deadline.replace(hour=23, minute=59, second=59, tzinfo=UTC_OFFSET)
+    except Exception as e:
+        logging.error(f"Deadline parsing error: {e}", exc_info=True)
+        deadline_dt = None
+
+    # Ensure sub[3] is offset-aware by treating naive datetime as UTC
+    sub_dt = sub[3] if sub[3].tzinfo else sub[3].replace(tzinfo=timezone.utc)
+    sub_dt = sub_dt.astimezone(UTC_OFFSET)  # Convert to UTC+5
+    
+    date_str = sub_dt.strftime('%H:%M:%S — %Y-%m-%d')
+    exsub_time = ""
+    print(f"Sub: {sub_dt}, Deadline: {deadline_dt}")
+    if deadline_dt and sub_dt > deadline_dt:
+        exsub_time = html.italic("\n⚠️ Vaqtidan keyin topshirilgan")
+    ccode = sub[5]
+
+    correct, answers = [], []
+    try:
+        correct = json.loads(exam_det[1])['answers']
+        answers = json.loads(sub[4])
+    except Exception as e:
+        logging.error(f"Error parsing answers: {e}", exc_info=True)
+        return 1
+    cnt = sum(a == b for a, b in zip(answers, correct))
+
+    result_text = (
+        f"📝 {html.bold(exam_det[0])} uchun natija #{sub[0]}\n"
+        f"⏰ Topshirilgan vaqti: {html.code(date_str)}{exsub_time}\n"
+        f"✅ To'g'ri javoblar: {html.bold(f'{cnt}/{len(correct)}')} ({cnt/len(correct)*100:.1f}%)\n"
+        f"📑 SAT taxminiy ball: {html.bold(int(round((cnt/len(correct)*600+200)/10))*10)}"
+    )
+    res = ""
+    print(correct, answers)
+    cnt = 0
+    for i in range((len(correct)+1)//2):
+        i1 = i
+        i2 = (len(correct)+1)//2+i
+        # print(i1, i2)
+        tex1 = f"{html.bold(i1+1)}. {html.code(answers[i1])} "
+        tex2 = ""
+        if correct[i1] == answers[i1]:
+            cnt += 1
+            tex1 += "✅\t"
+        else:
+            tex1 += "❌\t"
+        if i2 != len(correct):
+            tex2 = f"{html.bold(i2+1)}. {html.code(answers[i2])} "
+            if correct[i2] == answers[i2]:
+                cnt += 1
+                tex2 += "✅"
+            else:
+                tex2 += "❌"
+        res += tex1 + tex2 + "\n"
+    result_text += "\n\n" + html.expandable_blockquote("#Raq. Natija\n" + res)
+    # print(message.text)
+    # await message.reply("this one")
+    await message.edit_text(result_text, reply_markup=results_time(sub[0], ccode, 0))
+    return 0
+
+
+@reshow.callback_query(F.data.startswith("result_"), result_states.show)
+async def navigate_results(callback: types.CallbackQuery):
+    _, action, sub_id = callback.data.split('_')
+    if action == 'earlier':
+        query = "SELECT * FROM submissions WHERE idx < %s AND userid = %s ORDER BY idx DESC LIMIT 1"
+    else:
+        query = "SELECT * FROM submissions WHERE idx > %s AND userid = %s ORDER BY idx ASC LIMIT 1"
+
+    sub = db.fetchone(query, (sub_id, str(callback.from_user.id),))
+    if not sub:
+        await callback.answer("Boshqa natijalar topilmadi.", show_alert=True)
+    else:
+        if await show_result(callback.message, sub):
+            await callback.answer("Xatolik yuz berdi.", show_alert=True)
+    await callback.answer()
+
+
+adm_inline.py
+
+from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup, SwitchInlineQueryChosenChat
+from data import dict, config
+
+
+def mandchans(channels = []):
+    # channels = db.fetchall("SELECT title, link FROM channels")
+    btns = []
+    for channel in channels:
+        btns.append([
+                InlineKeyboardButton(text=channel[0], url=channel[1]),
+                InlineKeyboardButton(text=dict.delete, callback_data=f"delete_{channel[2]}")
+            ])
+    btns.append([InlineKeyboardButton(text=dict.add_chat, callback_data="add_chat")])
+    return InlineKeyboardMarkup(inline_keyboard=btns)
+
+
+def mandconfirm(channel):
+    btns = [
+        [
+            InlineKeyboardButton(text=channel[0], url=channel[1])
+        ],
+        [
+            InlineKeyboardButton(text=dict.cancel, callback_data="cancel"),
+            InlineKeyboardButton(text=dict.confirm, callback_data="confirm")
+        ]
+    ]
+    return InlineKeyboardMarkup(inline_keyboard=btns)
+
+btns1 = [
+    [
+        InlineKeyboardButton(text=dict.defaults, callback_data="defaults"),
+        InlineKeyboardButton(text=dict.ping, callback_data="ping")
+    ]
+]
+set_menu = InlineKeyboardMarkup(inline_keyboard=btns1)
+
+def post_chan(channel):
+    btns = []
+    if channel:
+        btns.append([InlineKeyboardButton(text=channel[0], url=channel[1])])
+        btns.append([InlineKeyboardButton(text=dict.reset, callback_data="reset")])
+    btns.append([InlineKeyboardButton(text=dict.set_new, callback_data="set_new")])
+    btns.append([InlineKeyboardButton(text=dict.back, callback_data="back")])
+    return InlineKeyboardMarkup(inline_keyboard=btns)
+
+btns2 = [
+    [
+        InlineKeyboardButton(text=dict.all_at_one, callback_data="all"),
+        InlineKeyboardButton(text=dict.one_by_one, callback_data="one")
+    ]
+]
+ans_enter_meth = InlineKeyboardMarkup(inline_keyboard=btns2)
+
+btns3 = [
+    [
+        InlineKeyboardButton(text=dict.back, callback_data="back"),
+        InlineKeyboardButton(text=dict.refresh_txt, callback_data="refresh_ping")
+    ]
+]
+ping_set = InlineKeyboardMarkup(inline_keyboard=btns3)
+
+def obom(cur, numq, donel, typesl, page=1, confirm=False):
+    """
+    cur: current question number
+    numq: total number of questions
+    donel: list of done questions
+    typesl: list where each element is the number of options for that question (0 means open ended)
+    page: current page
+    """
+    mode = 1 if typesl[cur-1] > 0 else 0
+    btns = []
+    if confirm:
+        btns.append([InlineKeyboardButton(text=dict.contin, callback_data="continue")])
+    if mode == 1:
+        arow = [InlineKeyboardButton(text="-", callback_data="test_minus")]
+        for i in range(typesl[cur-1]):
+            if chr(65+i) == donel[cur-1]:
+                arow.append(InlineKeyboardButton(text="🟢", callback_data=f"mcq_{chr(65+i)}"))
+            else:
+                arow.append(InlineKeyboardButton(text=f"{chr(65+i)}", callback_data=f"mcq_{chr(65+i)}"))
+        arow.append(InlineKeyboardButton(text="+", callback_data="test_plus"))
+        btns.append(arow)
+        btns.append([InlineKeyboardButton(text=dict.switch_to_open, callback_data="switch_open")])
+    else:
+        btns.append([InlineKeyboardButton(text=dict.switch_to_mcq, callback_data="switch_mcq")])
+    qforthis = min(config.MAX_QUESTION_IN_A_PAGE, numq - (page-1)*config.MAX_QUESTION_IN_A_PAGE)
+    for i in range((qforthis+4)//5):
+        row = []
+        for j in range(min(5, qforthis - i*5)):
+            now = (page-1)*config.MAX_QUESTION_IN_A_PAGE + i*5 + j + 1
+            if now == cur:
+                row.append(InlineKeyboardButton(text=f"🟡{now}", callback_data=f"jump_{now}"))
+            elif donel[now-1]:
+                row.append(InlineKeyboardButton(text=f"🟢{now}", callback_data=f"jump_{now}"))
+            else:
+                row.append(InlineKeyboardButton(text=f"🔴{now}", callback_data=f"jump_{now}"))
+        btns.append(row)
+    allp = (numq+config.MAX_QUESTION_IN_A_PAGE-1)//config.MAX_QUESTION_IN_A_PAGE
+    if allp==1:
+        return InlineKeyboardMarkup(inline_keyboard=btns)
+    row = [
+        InlineKeyboardButton(text="⇐", callback_data="page_prev"),
+        InlineKeyboardButton(text=f"Pg: {page}/{allp}", callback_data="page_now"),
+        InlineKeyboardButton(text="⇒", callback_data="page_next")
+    ]
+    btns.append(row)
+    return InlineKeyboardMarkup(inline_keyboard=btns)
+
+
+btns4 = [
+    [
+        InlineKeyboardButton(text="Ruxsat olish", callback_data="get_perm"),
+    ]
+]
+perm_inl = InlineKeyboardMarkup(inline_keyboard=btns4)
+
+
+
+def goto_bot(username):
+
+    btns = [
+        [
+            InlineKeyboardButton(text="🤖 Botni ishga tushirish", url=f"https://t.me/{username}?start")
+        ]
+    ]
+    return InlineKeyboardMarkup(inline_keyboard=btns)
+
+
+btns5 = [
+    [
+        InlineKeyboardButton(text=dict.post, callback_data="post"),
+        InlineKeyboardButton(text=dict.manually, callback_data="manually")
+    ],
+    [
+        InlineKeyboardButton(text="🔎 On inline mode", switch_inline_query_chosen_chat=SwitchInlineQueryChosenChat(query="allow", allow_user_chats=True))
+    ]
+]
+access_menu = InlineKeyboardMarkup(inline_keyboard=btns5)
+
+btns6 = [
+    [
+        InlineKeyboardButton(text=dict.add_access, callback_data="add_access"),
+        InlineKeyboardButton(text=dict.del_access, callback_data="remove_access")
+    ],
+    [
+        InlineKeyboardButton(text=dict.back, callback_data="back")
+    ]
+]
+man_access = InlineKeyboardMarkup(inline_keyboard=btns6)
+
+btns7 = [
+    [
+        InlineKeyboardButton(text=dict.today, callback_data="today"),
+    ]
+]
+today = InlineKeyboardMarkup(inline_keyboard=btns7)
+
+def ans_set_fin(visibility, resub, folder=None):
+    btns = [[InlineKeyboardButton(text=dict.back, callback_data="back"), InlineKeyboardButton(text=dict.contin, callback_data="continue")]]
+    if folder:
+        btns.append([InlineKeyboardButton(text=dict.folder+folder, callback_data="folder")])
+    else:
+        btns.append([InlineKeyboardButton(text=dict.folder_not, callback_data="folder")])
+    btns.append([
+            InlineKeyboardButton(text=dict.vis_cur_off, callback_data=f"vis_on") if not visibility else InlineKeyboardButton(text=dict.vis_cur_on, callback_data="vis_off")
+        ])
+    btns.append([
+            InlineKeyboardButton(text=dict.resub_not, callback_data="resub_on") if not resub else InlineKeyboardButton(text=dict.resub_ok, callback_data="resub_off")
+        ])
+    # btns.append()
+    return InlineKeyboardMarkup(inline_keyboard=btns)
+
+def inl_folders(folders, curf):
+    btns = []
+    if curf:
+        btns.append([InlineKeyboardButton(text=dict.folder_dont, callback_data="folder_0")])
+    for idx, title in folders:
+        btns.append([InlineKeyboardButton(text=("✅ " if idx == curf else "") + title, callback_data=f"folder_{idx}")])
+    btns.append([InlineKeyboardButton(text=dict.back, callback_data="back")])
+    return InlineKeyboardMarkup(inline_keyboard=btns)
+
+def get_create_folders(folders=[]):
+    btns = [[InlineKeyboardButton(text=dict.null_folder, callback_data="fmng_0")]]
+    for i, j in folders:
+        btns.append([InlineKeyboardButton(text=j, callback_data=f"fmng_{i}")])
+    arow = [InlineKeyboardButton(text=dict.add_folder, callback_data="add_folder")]
+    if folders:
+        arow.append(InlineKeyboardButton(text=dict.rm_folder, callback_data="rm_folder"))
+    btns.append(arow)
+    return InlineKeyboardMarkup(inline_keyboard=btns)
+
+def get_folder_tests(tests):
+    btns = []
+    for i, j in tests:
+        btns.append([InlineKeyboardButton(text=j, callback_data=f"exman_{i}")])
+    btns.append([InlineKeyboardButton(text=dict.back, callback_data="back")])
+    return InlineKeyboardMarkup(inline_keyboard=btns)
+    # btns.append([InlineKeyboardButton(text=dict.add_folder, callback_data="")])
+
+def remove_att(attach_id):
+    btns = [
+        [
+            InlineKeyboardButton(text=dict.unattach, callback_data=f"rma_{attach_id}")
+        ]
+    ]
+    return InlineKeyboardMarkup(inline_keyboard=btns)
+
+def edit_test_menu(visibility, resub):
+    btns = [
+        [
+            InlineKeyboardButton(text=dict.edit_title, callback_data="edit_title"),
+            InlineKeyboardButton(text=dict.edit_about, callback_data="edit_about")
+        ],
+        [
+            InlineKeyboardButton(text=dict.edit_instr, callback_data="edit_instr"),
+            InlineKeyboardButton(text=dict.edit_sdate, callback_data="edit_sdate")
+        ],
+        [
+            InlineKeyboardButton(text=dict.edit_attaches, callback_data="edit_attaches"),
+            InlineKeyboardButton(text=dict.edit_ans, callback_data="edit_ans")
+        ],
+    ]
+    btns.append([
+            InlineKeyboardButton(text=dict.vis_cur_off, callback_data=f"vis_on") if not visibility else InlineKeyboardButton(text=dict.vis_cur_on, callback_data="vis_off")
+        ])
+    btns.append([
+            InlineKeyboardButton(text=dict.resub_not, callback_data="resub_on") if not resub else InlineKeyboardButton(text=dict.resub_ok, callback_data="resub_off")
+        ])
+    btns += [
+        [
+            InlineKeyboardButton(text=dict.delete, callback_data="delete"),
+        ],
+        [
+            InlineKeyboardButton(text=dict.save_changes, callback_data="back"),
+        ]
+    ]
+    return InlineKeyboardMarkup(inline_keyboard=btns)
+
+def details_test(code, folder, exid):
+    btns = [
+        [
+            InlineKeyboardButton(text=dict.folder+folder if folder else dict.folder_not, callback_data="folder")
+        ],
+        [
+            InlineKeyboardButton(text=dict.edit, callback_data=f"edit_{exid}"),
+            InlineKeyboardButton(text=dict.share, switch_inline_query=f"ex_{code}")
+        ],
+        [
+            InlineKeyboardButton(text=dict.back, callback_data="back")
+        ]
+    ]
+    return InlineKeyboardMarkup(inline_keyboard=btns)
+
+def rm_folders_menu(folders):
+    btns = []
+    for i, j in folders:
+        btns.append([InlineKeyboardButton(text=j, callback_data=f"rmf_{i}")])
+    btns.append([InlineKeyboardButton(text=dict.back, callback_data="back")])
+    return InlineKeyboardMarkup(inline_keyboard=btns)
+
+btns8 = [
+    [
+        InlineKeyboardButton(text="Ruxsat olish", callback_data="get_arch"),
+    ]
+]
+arch_inl = InlineKeyboardMarkup(inline_keyboard=btns8)
+
+comm_keys.py
+
+
+from aiogram.types import KeyboardButton, ReplyKeyboardMarkup
+from data import dict
+
+btns1 = [
+    [
+        KeyboardButton(text=dict.back)
+    ]
+]
+
+back_key = ReplyKeyboardMarkup(keyboard=btns1, resize_keyboard=True)
+
+btns2 = [
+    [
+        KeyboardButton(text=dict.main_menu)
+    ]
+]
+
+main_key = ReplyKeyboardMarkup(keyboard=btns2, resize_keyboard=True)
+
+
+comm_inline.py
+
+
+from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup
+from data import dict
+
+btns = [
+    [
+        InlineKeyboardButton(text=dict.main_menu, callback_data="main_menu")
+    ]
+]
+main_menu_in = InlineKeyboardMarkup(inline_keyboard=btns)
+
+btns1 = [
+    [
+        InlineKeyboardButton(text=dict.back, callback_data="back"),
+    ]
+]
+back_inl_key = InlineKeyboardMarkup(inline_keyboard=btns1)
+
+btns2 = [
+    [
+        InlineKeyboardButton(text=dict.cancel, callback_data="cancel"),
+        InlineKeyboardButton(text=dict.confirm, callback_data="confirm")
+    ]
+]
+confirm_inl_key = InlineKeyboardMarkup(inline_keyboard=btns2)
+
+
+usr_inline.py
+
+
+from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup, SwitchInlineQueryChosenChat
+from data.dict import check_subs
+from data import config, dict
+
+def mand_chans(channels) -> InlineKeyboardMarkup:
+    btns = []
+    for name, idx, url in channels:
+        btns.append([InlineKeyboardButton(text=name, url=url)])
+    btns.append([InlineKeyboardButton(text=check_subs, callback_data="check_subs")])
+    return InlineKeyboardMarkup(inline_keyboard=btns)
+
+
+
+def get_answering_keys(current, total, answers, typesl, page=1, confirm=False) -> InlineKeyboardMarkup:
+    btns = [[InlineKeyboardButton(text=dict.continue_uz, callback_data="continue")]]
+    if not confirm:
+        btns = []
+    if typesl[current-1] > 0: # MCQ
+        arow = []
+        for i in range(typesl[current-1]):
+            arow.append(InlineKeyboardButton(text="🟢" if chr(65+i)==answers[current-1] else chr(65+i), callback_data=f"mcq_{chr(65+i)}"))
+        btns.append(arow)
+    qforthis = min(config.MAX_QUESTION_IN_A_PAGE, total - (page-1)*config.MAX_QUESTION_IN_A_PAGE)
+    for i in range((qforthis+4)//5):
+        row = []
+        for j in range(min(5, qforthis - i*5)):
+            now = (page-1)*config.MAX_QUESTION_IN_A_PAGE + i*5 + j + 1
+            if now == current:
+                row.append(InlineKeyboardButton(text=f"🟡{now}", callback_data=f"jump_{now}"))
+            elif answers[now-1]:
+                row.append(InlineKeyboardButton(text=f"🟢{now}", callback_data=f"jump_{now}"))
+            else:
+                row.append(InlineKeyboardButton(text=f"🔴{now}", callback_data=f"jump_{now}"))
+        btns.append(row)
+    allp = (total+config.MAX_QUESTION_IN_A_PAGE-1)//config.MAX_QUESTION_IN_A_PAGE
+    if allp==1:
+        return InlineKeyboardMarkup(inline_keyboard=btns)
+    row = [
+        InlineKeyboardButton(text="⇐", callback_data="page_prev"),
+        InlineKeyboardButton(text=f"Bet: {page}/{allp}", callback_data="page_now"),
+        InlineKeyboardButton(text="⇒", callback_data="page_next")
+    ]
+    btns.append(row)
+    return InlineKeyboardMarkup(inline_keyboard=btns)
+
+btns1 = [
+    [
+        InlineKeyboardButton(text="🖋 Adminga yozish", url=config.ADMIN_URL)
+    ]
+]
+
+elbek = InlineKeyboardMarkup(inline_keyboard=btns1)
+
+btns2 = [
+    [
+        InlineKeyboardButton(text=dict.start_test, callback_data="start_test")
+    ]
+]
+lets_start = InlineKeyboardMarkup(inline_keyboard=btns2)
+
+btns3 = [
+    [
+        InlineKeyboardButton(text=dict.all_at_once_uz, callback_data="all"),
+        InlineKeyboardButton(text=dict.one_by_one_uz, callback_data="one")
+    ]
+]
+ans_enter_method_usr = InlineKeyboardMarkup(inline_keyboard=btns3)
+
+btns4 = [
+    [
+        InlineKeyboardButton(text=dict.back_uz, callback_data="back"),
+        InlineKeyboardButton(text=dict.send_uz, callback_data="submit")    
+    ]
+]
+submit_ans_user = InlineKeyboardMarkup(inline_keyboard=btns4)
+
+def share_sub_usr(code):
+    btns = [
+        [
+            InlineKeyboardButton(text=dict.share_uz, switch_inline_query=f"sub_{code}")
+        ]
+    ]
+    return InlineKeyboardMarkup(inline_keyboard=btns)
+
+
+def results_time(subid, ccode, vis):
+    btns = [
+        [
+            InlineKeyboardButton(text=dict.share_uz, switch_inline_query=f"sub_{ccode}")
+        ],
+        [
+            InlineKeyboardButton(text=dict.earlier, callback_data=f"result_earlier_{subid}"),
+            InlineKeyboardButton(text=dict.later, callback_data=f"result_later_{subid}")
+        ]
+    ]
+    return InlineKeyboardMarkup(inline_keyboard=btns)
+
+btns5 = [
+    [
+        InlineKeyboardButton(text=dict.continue_uz, callback_data="continue")
+    ]
+]
+all_continue_usr = InlineKeyboardMarkup(inline_keyboard=btns5)
+
+def get_missing_exams(exams):
+    btns = []
+    for title, idx in exams:
+        btns.append([InlineKeyboardButton(text=title, callback_data=f"mexam_{idx}")])
+    return InlineKeyboardMarkup(inline_keyboard=btns)
+
+
+
+adm_keys.py
+
+from aiogram.types import KeyboardButton, ReplyKeyboardMarkup
+from data import dict
+
+btns1 = [
+    [
+        KeyboardButton(text=dict.cr_test)
+    ],
+    [
+        KeyboardButton(text=dict.exams),
+        KeyboardButton(text=dict.man_access)
+    ],
+    [
+        KeyboardButton(text=dict.settings), 
+        KeyboardButton(text=dict.stats)
+    ]
+]
+
+adm_default = ReplyKeyboardMarkup(keyboard=btns1, resize_keyboard=True)
+
+btns2 = [
+    [
+        KeyboardButton(text=dict.back),
+        KeyboardButton(text=dict.skip)
+    ]
+]
+skip_desc = ReplyKeyboardMarkup(keyboard=btns2, resize_keyboard=True)
+
+btns3 = [
+    [
+        KeyboardButton(text=dict.back),
+        KeyboardButton(text=dict.done)
+    ]
+]
+attach_done = ReplyKeyboardMarkup(keyboard=btns3, resize_keyboard=True)
+
+usr_keys.py
+
+from data.dict import do_todays_hw, results, help_txt, archive, bosh_menu
+from aiogram import types
+
+btns = [
+    [
+        types.KeyboardButton(text=do_todays_hw)
+    ],
+    [
+        types.KeyboardButton(text=results),
+        types.KeyboardButton(text=help_txt)
+    ],
+    [
+        types.KeyboardButton(text=archive)
+    ]
+]
+
+user_markup = types.ReplyKeyboardMarkup(keyboard=btns, resize_keyboard=True)
+
+btn1 = [
+    [
+        types.KeyboardButton(text=bosh_menu, callback_data="main_menu")
+    ]
+]
+usr_main_key = types.ReplyKeyboardMarkup(keyboard=btn1, resize_keyboard=True)
+
+
+adm_states.py
+
+from aiogram.fsm.state import State, StatesGroup
+
+class mands(StatesGroup):
+    mmenu = State()
+    title = State()
+    link = State()
+    confirm = State()
+
+class dels(StatesGroup):
+    confirm = State()
+
+class sets(StatesGroup):
+    smenu = State()
+    defs = State()
+    ping = State()
+
+class accstates(StatesGroup):
+    acmenu = State()
+    post = State()
+    link = State()
+    confirm = State()
+    fmans = State()
+    del_con = State()
+    
+    manl = State()
+    adda = State()
+    rema = State()
+    confirm_add = State()
+    confirm_del = State()
+
+class creates(StatesGroup):
+    title = State()
+    about = State()
+    instructions = State() 
+    attachments = State()
+    number = State()
+    sdate = State()
+    # duration = State()
+    way = State()
+    ans = State()
+    setts = State()
+    folder_change = State()
+    confirm = State()
+
+class arch_states(StatesGroup):
+    folders = State()
+    fol_title = State()
+    tests = State()
+    rdis = State()
+    folder_change = State()
+    rmfconfirm = State()
+    emenu = State()
+    edit = State()
+    title = State()
+    about = State()
+    edans = State()
+    share = State()
+    post = State()
+    rmtconfirm = State()
+
+class statsstates(StatesGroup):
+    stmenu = State()
+
+
+
+usr_states.py
+
+from aiogram.fsm.state import StatesGroup, State
+
+class check_hw_states(StatesGroup):
+    details = State()
+    way = State()
+    answer = State()
+    confirm = State()
+
+class result_states(StatesGroup):
+    show = State()
+
+class missing_hw_states(StatesGroup):
+    exams = State()
+    details = State()
+    way = State()
+    answer = State()
+    confirm = State()
+
+
+storage.py
+
+
+import logging
+import psycopg2
+import json
+from psycopg2 import sql, DatabaseError
+
+# Configure logging as needed
+logging.basicConfig(level=logging.INFO)
+
+class DatabaseManager:
+    def __init__(self, DB_URL):
+        """
+        Initialize connection to the database.
+        DB_URL: Connection string (e.g., 'postgresql://user:password@host:port/dbname')
+        """
+        try:
+            # Removed sslmode="require" to allow flexibility based on DB_URL
+            self.conn = psycopg2.connect(DB_URL)
+            self.cur = self.conn.cursor()
+        except DatabaseError as e:
+            logging.error("Database connection error", exc_info=True)
+            raise
+
+    def create_tables(self):
+        """
+        Create necessary tables if they do not exist.
+        Corrected TIMESTAMPS to TIMESTAMP for proper data type.
+        """
+        try:
+            self.query('''CREATE TABLE IF NOT EXISTS users (
+                idx SERIAL PRIMARY KEY, 
+                userid TEXT, 
+                fullname TEXT, 
+                username TEXT, 
+                regdate TIMESTAMP DEFAULT CURRENT_TIMESTAMP, 
+                allowed INTEGER DEFAULT 0, 
+                arch INTEGER DEFAULT 0
+            )''')
+            self.query("CREATE TABLE IF NOT EXISTS folders (idx SERIAL PRIMARY KEY, title TEXT)")
+            self.query("CREATE TABLE IF NOT EXISTS exams (idx SERIAL PRIMARY KEY, title TEXT, about TEXT DEFAULT NULL, instructions TEXT, num_questions INTEGER, correct TEXT, sdate TEXT DEFAULT NULL, resub INTEGER DEFAULT 0, folder INTEGER DEFAULT 0, hide INTEGER DEFAULT 0, random TEXT)")
+            self.query("""CREATE TABLE IF NOT EXISTS submissions (
+                idx SERIAL PRIMARY KEY, 
+                userid TEXT, 
+                exid INTEGER, 
+                date TIMESTAMP DEFAULT CURRENT_TIMESTAMP, 
+                answers TEXT, 
+                random TEXT
+            )""")
+            self.query("CREATE TABLE IF NOT EXISTS channel (idx SERIAL PRIMARY KEY, chid TEXT, title TEXT, link TEXT)")
+            self.query("CREATE TABLE IF NOT EXISTS attachments (idx SERIAL PRIMARY KEY, ty TEXT DEFAULT NULL, tgfileid TEXT DEFAULT NULL, caption TEXT DEFAULT NULL, exid INTEGER DEFAULT NULL)")
+        except DatabaseError as e:
+            logging.error("Error creating tables", exc_info=True)
+
+    def query(self, arg, values=None):
+        """
+        Execute a query that does not return results.
+        """
+        try:
+            self.cur.execute(arg, values or ())
+            self.conn.commit()
+        except DatabaseError as e:
+            self.conn.rollback()
+            logging.error("Query error", exc_info=True)
+
+    def fetchone(self, arg, values=None):
+        """
+        Execute a query and return a single result.
+        """
+        try:
+            self.cur.execute(arg, values or ())
+            return self.cur.fetchone()
+        except DatabaseError as e:
+            self.conn.rollback()
+            logging.error("FetchOne error", exc_info=True)
+            return None
+
+    def fetchall(self, arg, values=None):
+        """
+        Execute a query and return all results.
+        """
+        try:
+            self.cur.execute(arg, values or ())
+            return self.cur.fetchall()
+        except DatabaseError as e:
+            self.conn.rollback()
+            logging.error("FetchAll error", exc_info=True)
+            return None
+
+    def get_tables(self):
+        """
+        Return a list of all table names in the public schema.
+        """
+        try:
+            tables = self.fetchall("SELECT tablename FROM pg_catalog.pg_tables WHERE schemaname = 'public';")
+            return [table[0] for table in tables] if tables else []
+        except DatabaseError as e:
+            logging.error("Error fetching tables", exc_info=True)
+            return []
+
+    def execute_sql(self, query):
+        """
+        Execute any SQL query and return results if applicable.
+        """
+        try:
+            self.cur.execute(query)
+            if query.strip().lower().startswith("select"):
+                return self.fetchall(query)
+            else:
+                self.conn.commit()
+                return "Query executed successfully."
+        except DatabaseError as e:
+            self.conn.rollback()
+            logging.error("SQL Execution error", exc_info=True)
+            return None
+
+    def store_submission(self, userid, exid, answers, code, sub_time):
+        """
+        Store a submission in the database with the submission time.
+        
+        Parameters:
+        userid: user identifier (str)
+        exid: exam/test id (int)
+        answers: answers given by the user (list)
+        code: submission code (str)
+        sub_time: submission timestamp (datetime)
+        """
+        answers = json.dumps(answers)
+        try:
+            self.query(
+                "INSERT INTO submissions(userid, exid, answers, random, date) VALUES (%s, %s, %s, %s, %s)", 
+                (userid, exid, answers, code, sub_time)
+            )
+        except Exception:
+            logging.error("Error storing submission", exc_info=True)
+            return False
+        return True
+
+    def get_last_n_rows(self, table, n):
+        """
+        Retrieve the last n rows from the specified table.
+        """
+        try:
+            self.cur.execute(sql.SQL("SELECT * FROM {} ORDER BY idx DESC LIMIT %s").format(sql.Identifier(table)), (n,))
+            return self.cur.fetchall()
+        except DatabaseError as e:
+            self.conn.rollback()
+            logging.error(f"SQL Error fetching last {n} rows from {table}", exc_info=True)
+            return None
+
+    def __del__(self):
+        """
+        Close the cursor and connection when the object is destroyed.
+        """
+        if hasattr(self, 'conn') and self.conn:
+            self.cur.close()
+            self.conn.close()
+
+        
+    
+.env 
+
+DATABASE_URL=postgresql://geeky:idgaf@localhost:5432/hwcheck
+BOT_TOKEN=8147677803:AAGklnHV8O0H29v9w_xlgBCnIudM9-VVUt4
+
+
+loader.py
+
+from utils.db import DatabaseManager
+from aiogram import Bot, Dispatcher
+from aiogram.client.default import DefaultBotProperties
+from aiogram.enums import ParseMode
+from data import config
+
+bot = Bot(token=config.BOT_TOKEN, default=DefaultBotProperties(parse_mode=ParseMode.HTML))
+
+async def get_info(bot):
+    config.bot_info = await bot.get_me()
+
+dp = Dispatcher()
+
+db = DatabaseManager(config.DB_URL)
+
+
+
+register.py
+
+from .admins import *
+from .users import *
+from .not_handled import remover
+
+def register_handlers(dp):
+    dp.include_routers(admin, reger, user, reshow, pub, allow, chhw, usrarch, test, stater, access, arch, set, nosub, remover)
+
+
+
