@@ -8,9 +8,10 @@ async def send_notice(chat_id: int, text: str, keyboard: InlineKeyboardMarkup = 
 
 btns = [
     [
-        InlineKeyboardButton("🤖 Natijalarni botda ko'rish", url="https://t.me/satelbekhc_bot?start=myres")
+        InlineKeyboardButton(text="🤖 Natijalarni botda ko'rish", url="https://t.me/satelbekhc_bot?start=myres")
     ]
 ]
 keyboard = InlineKeyboardMarkup(inline_keyboard=btns)
-
-asyncio.run(send_notice(7345917761, "📊 Natijarlarni tekshirishda botda xatolik ketayotgan ekan. Xatolik to'g'rilandi va natijalaringizni qayta ko'rsangiz bo'ladi.", keyboard))
+chat_id = input("Enter chat id: ")
+msg = input("Enter message: ")
+asyncio.run(send_notice(int(chat_id), msg, keyboard))
