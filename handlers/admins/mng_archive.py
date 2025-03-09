@@ -58,7 +58,13 @@ async def manage_test(callback: types.CallbackQuery, state: FSMContext):
     data = await state.get_data()
     test_id = int(callback.data.split("_")[1]) if callback.data.startswith("exman_") else data.get("exam_id")
     test = db.fetchone("SELECT * FROM exams WHERE idx = %s", (test_id,))
-    print(test)
+    
+    # Convert deadline to UTC+5 for admin display
+    sdate = test[6]
+    if sdate:
+        if sdate.tzinfo is None:
+            sdate = sdate.replace(tzinfo=timezone.utc)
+        sdate = sdate.astimezone(UTC_OFFSET)
     
     correct = json.loads(test[5])
     donel = correct.get("answers", [])
@@ -67,7 +73,24 @@ async def manage_test(callback: types.CallbackQuery, state: FSMContext):
     if folder:
         folder = folder[0]
     attaches = db.fetchall("SELECT ty, tgfileid, caption FROM attachments WHERE exid = %s", (test_id,))
-    await state.update_data(exam_id=test_id, title=test[1], about=test[2], instructions=test[3], numquest=test[4], sdate=test[6], resub=test[7], folder=test[8], hide=test[9], random=test[10], correct=donel, types=typesl, attaches=attaches)
+    
+    # Store UTC+5 time in state for display
+    await state.update_data(
+        exam_id=test_id, 
+        title=test[1], 
+        about=test[2], 
+        instructions=test[3], 
+        numquest=test[4], 
+        sdate=sdate,  # Now in UTC+5 for display
+        resub=test[7], 
+        folder=test[8], 
+        hide=test[9], 
+        random=test[10], 
+        correct=donel, 
+        types=typesl, 
+        attaches=attaches
+    )
+    
     res = f"{await get_text(state)}\n\n{get_ans_text(donel, typesl)}\n\nYou may edit the test, change its folder or share it:"
     await callback.message.edit_text(res, reply_markup=details_test(test[10], folder, test_id))
     await state.set_state(arch_states.emenu)
@@ -156,20 +179,21 @@ async def refresh_edit_menu(message: types.Message, state: FSMContext, oddiy: bo
 async def edit_test(callback: types.CallbackQuery, state: FSMContext):
     data = await state.get_data()
     exid = callback.data.split("_")[1] if callback.data.startswith("edit_") else data.get("exam_id")
-    # exam_id=data.get("exam_id")
+    
+    # Get the data
     title=data.get("title")
     about=data.get("about")
     instructions=data.get("instructions")
     numquest=data.get("numquest")
-    sdate=data.get("sdate")
+    sdate=data.get("sdate")  # This should already be in UTC+5 from manage_test
     resub=data.get("resub")
     folder=data.get("folder")
     hide=data.get("hide")
     correct=data.get("correct")
     typesl=data.get("types")
     attaches=data.get("attaches")
-    rand = data.get("random")
-    # await state.update_data(exid=exid)
+    rand=data.get("random")
+    
     res = f"{await get_text(state)}\n\n{get_ans_text(correct, typesl)}\n\nYou may edit the test, change its folder or share it:"
     await callback.message.edit_text(res, reply_markup=edit_test_menu(not hide, resub))
     await state.set_state(arch_states.edit)
@@ -533,15 +557,14 @@ async def back_from_deadline_cb(callback: types.CallbackQuery, state: FSMContext
 @arch.message(arch_states.sdate)
 async def save_new_deadline(message: types.Message, state: FSMContext):
     try:
-        # Parse the datetime from user input
+        # Parse the datetime from user input (assuming it's in UTC+5 from admin perspective)
         new_deadline = parse_datetime(message.text)
         
-        # Ensure it's in UTC for database storage
+        # Always treat admin input as UTC+5, then convert to UTC for storage
         if new_deadline.tzinfo is None:
-            # If it's naive (no timezone), assume it's in UTC+5 and convert to UTC
-            new_deadline = new_deadline.replace(tzinfo=UTC_OFFSET).astimezone(timezone.utc)
-        else:
-            # If it has a timezone already, ensure it's in UTC
+            # If naive datetime, explicitly set it as UTC+5
+            new_deadline = new_deadline.replace(tzinfo=UTC_OFFSET)
+            # Then convert to UTC for storage
             new_deadline = new_deadline.astimezone(timezone.utc)
         
         data = await state.get_data()
@@ -550,8 +573,10 @@ async def save_new_deadline(message: types.Message, state: FSMContext):
         # Store in database as UTC
         db.query("UPDATE exams SET sdate = %s WHERE idx = %s", (new_deadline, exam_id))
         
-        # For display purposes in state data, keep UTC
-        await state.update_data(sdate=new_deadline)
+        # For display purposes in state, convert back to UTC+5
+        display_deadline = new_deadline.astimezone(UTC_OFFSET)
+        await state.update_data(sdate=display_deadline)
+        
         await message.delete()
         await refresh_edit_menu(message, state, oddiy=True)
     except ValueError:
