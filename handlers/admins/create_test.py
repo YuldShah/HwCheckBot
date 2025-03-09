@@ -456,7 +456,7 @@ async def get_open_ans(message: types.Message, state: FSMContext):
             if not line:
                 continue
             if "," in line:
-                line = list(line.split(","))
+                line = [item.strip() for item in line.split(",")]
             ans.append(line)
             cnt += 1
         if cnt == numq:
