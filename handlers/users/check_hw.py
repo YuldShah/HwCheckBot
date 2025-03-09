@@ -23,6 +23,9 @@ async def do_today_hw(message: types.Message, state: FSMContext):
     now = datetime.now(timezone(timedelta(hours=5)))
     # Fetch exams that are scheduled in the future (not today)
     exams = db.fetchall("SELECT * FROM exams WHERE sdate > %s", (now,))
+    if not exams:
+        await message.answer("Hozirda javob berish mumkin bo'lgan vazifa topilmadi. Agar bu xato deb o'ylasangiz, iltimos, admin bilan bog'laning.")
+        return
     available = []
     for exam in exams:
         # exam[6]: deadline; exam[7]: resubmission flag
