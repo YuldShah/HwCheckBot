@@ -35,7 +35,7 @@ async def do_today_hw(message: types.Message, state: FSMContext):
             continue
         available.append(exam)
     if not available:
-        await message.answer("Bugungi yoki kelajakda javob berish mumkin bo'lgan vazifa topilmadi. Agar bu xato deb o'ylasangiz, iltimos, admin bilan bog'laning.")
+        await message.answer("Hozirda javob berish mumkin bo'lgan vazifa topilmadi. Agar bu xato deb o'ylasangiz, iltimos, admin bilan bog'laning.")
         return
     if len(available) == 1:
         exam = available[0]

@@ -6,11 +6,11 @@ from states import statsstates
 from aiogram.fsm.context import FSMContext
 from filters import IsAdmin, IsAdminCallback, CbData, CbDataStartsWith
 
-stater = Router()
-stater.message.filter(IsAdmin())
-stater.callback_query.filter(IsAdminCallback())
+reser = Router()
+reser.message.filter(IsAdmin())
+reser.callback_query.filter(IsAdminCallback())
 
-@stater.message(F.text == dict.stats)
+@reser.message(F.text == dict.stats)
 async def show_stats(message: types.Message, state: FSMContext):
     await message.answer(f"Menu {html.bold(f"{dict.stats}")}", reply_markup=main_key)
     response = "Here you can see the statistics of the bot, the number of users, the number of submissions received and etc."
