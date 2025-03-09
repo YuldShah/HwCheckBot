@@ -85,18 +85,32 @@ async def show_result(message: types.Message, sub):
         i2 = (len(correct)+1)//2+i
         tex1 = f"{html.bold(i1+1)}. {html.code(answers[i1])} "
         tex2 = ""
-        if correct[i1] == answers[i1]:
-            cnt += 1
-            tex1 += "✅\t"
+        if type(answers[i1]) == list:
+            if correct[i1] in answers[i1]:
+                cnt += 1
+                tex1 += "✅\t"
+            else:
+                tex1 += "❌\t"
         else:
-            tex1 += "❌\t"
+            if correct[i1] == answers[i1]:
+                cnt += 1
+                tex1 += "✅\t"
+            else:
+                tex1 += "❌\t"
         if i2 != len(correct):
             tex2 = f"{html.bold(i2+1)}. {html.code(answers[i2])} "
-            if correct[i2] == answers[i2]:
-                cnt += 1
-                tex2 += "✅"
+            if type(answers[i2]) == list:
+                if correct[i2] in answers[i2]:
+                    cnt += 1
+                    tex2 += "✅"
+                else:
+                    tex2 += "❌"
             else:
-                tex2 += "❌"
+                if correct[i2] == answers[i2]:
+                    cnt += 1
+                    tex2 += "✅"
+                else:
+                    tex2 += "❌"
         res += tex1 + tex2 + "\n"
     result_text += "\n\n" + html.expandable_blockquote("#Raq. Natija\n" + res)
     await message.edit_text(result_text, reply_markup=results_time(sub[0], ccode, 0))

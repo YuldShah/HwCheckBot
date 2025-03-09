@@ -89,18 +89,32 @@ def get_correct_text(correct, answers):
         # print(i1, i2)
         tex1 = f"{html.bold(i1+1)}. {html.code(answers[i1])} "
         tex2 = ""
-        if correct[i1] == answers[i1]:
-            cnt += 1
-            tex1 += "✅\t"
+        if type(answers[i1]) == list:
+            if correct[i1] in answers[i1]:
+                cnt += 1
+                tex1 += "✅\t"
+            else:
+                tex1 += "❌\t"
         else:
-            tex1 += "❌\t"
+            if correct[i1] == answers[i1]:
+                cnt += 1
+                tex1 += "✅\t"
+            else:
+                tex1 += "❌\t"
         if i2 != len(correct):
             tex2 = f"{html.bold(i2+1)}. {html.code(answers[i2])} "
-            if correct[i2] == answers[i2]:
-                cnt += 1
-                tex2 += "✅"
+            if type(answers[i2]) == list:
+                if correct[i2] in answers[i2]:
+                    cnt += 1
+                    tex2 += "✅"
+                else:
+                    tex2 += "❌"
             else:
-                tex2 += "❌"
+                if correct[i2] == answers[i2]:
+                    cnt += 1
+                    tex2 += "✅"
+                else:
+                    tex2 += "❌"
         res += tex1 + tex2 + "\n"
     res = html.expandable_blockquote(f"✅ To'g'ri javoblar: {html.bold(f"{cnt}/{len(correct)}")} - {html.bold(f"{cnt/len(correct)*100:.1f}%")}\n📑 SAT taxminiy ball: {html.bold(int(round((cnt/len(correct)*600+200)/10))*10)}\n#Raq. Natija\n" + res)
     return res
