@@ -414,8 +414,8 @@ async def start_edit_answers(callback: types.CallbackQuery, state: FSMContext):
     res = f"{await get_text(state)}\n\n{get_ans_text(data.get('correct', []), data.get('types', []))}"
     # Fixed HTML parsing error by not using angle brackets
     await callback.message.edit_text(
-        f"{res}\n\nSend the question number, answer, and number of options in format: {html.code('question answer options')}.\n"
-        f"Example: {html.code('5 A 4')} for question 5, answer A, 4 options.", 
+        f"{res}\n\nSend the question number, answer, and number of options in format (seperate the parts with |): {html.code('question answer options')}.\n"
+        f"Example: {html.code('5 | A | 4')} for question 5, answer A, 4 options.", 
         reply_markup=back_inl_key
     )
     await state.set_state(arch_states.edans)
@@ -429,7 +429,7 @@ async def back_from_answers_cb(callback: types.CallbackQuery, state: FSMContext)
 @arch.message(arch_states.edans)
 async def save_new_answer(message: types.Message, state: FSMContext):
     try:
-        parts = message.text.split()
+        parts = message.text.split("|")
         if len(parts) != 3:
             raise ValueError(f"Invalid format. Use: {html.code('&lt;question&gt; &lt;answer&gt; &lt;options&gt;')}")
         q_num = int(parts[0]) - 1  # Convert to 0-based index
