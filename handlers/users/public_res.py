@@ -61,8 +61,12 @@ async def search_results(query: types.InlineQuery):
     correct = json.loads(exam_det[1]).get("answers", [])
     answers = json.loads(sub[4])
     for i in range(len(correct)):
-        if answers[i] == correct[i]:
-            cnt += 1
+        if type(correct[i]) == list:
+            if answers[i] in correct[i]:
+                cnt += 1
+        else:
+            if answers[i] == correct[i]:
+                cnt += 1
     ter = (
         f"📝 {html.bold(title_of_exam)} uchun natija {html.bold(f'#{sub[0]}')}"
         f"\n\n👤 Egasi: {html.bold(query.from_user.mention_html() if str(query.from_user.id) == sub[1] else html.link(user_name, f'tg://user?id={sub[1]}'))}"

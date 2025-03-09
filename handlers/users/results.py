@@ -71,13 +71,8 @@ async def show_result(message: types.Message, sub):
     except Exception as e:
         logging.error(f"Error parsing answers: {e}", exc_info=True)
         return 1
-    cnt = sum(a == b for a, b in zip(answers, correct))
-    result_text = (
-        f"📝 {html.bold(exam_det[0])} uchun natija #{sub[0]}\n"
-        f"⏰ Topshirilgan vaqti: {html.code(date_str)}{exsub_time}\n"
-        f"✅ To'g'ri javoblar: {html.bold(f'{cnt}/{len(correct)}')} ({cnt/len(correct)*100:.1f}%)\n"
-        f"📑 SAT taxminiy ball: {html.bold(int(round((cnt/len(correct)*600+200)/10))*10)}"
-    )
+    # cnt = sum(a == b for a, b in zip(answers, correct))
+    
     res = ""
     cnt = 0
     for i in range((len(correct)+1)//2):
@@ -113,6 +108,12 @@ async def show_result(message: types.Message, sub):
                 else:
                     tex2 += "❌"
         res += tex1 + tex2 + "\n"
+    result_text = (
+        f"📝 {html.bold(exam_det[0])} uchun natija #{sub[0]}\n"
+        f"⏰ Topshirilgan vaqti: {html.code(date_str)}{exsub_time}\n"
+        f"✅ To'g'ri javoblar: {html.bold(f'{cnt}/{len(correct)}')} ({cnt/len(correct)*100:.1f}%)\n"
+        f"📑 SAT taxminiy ball: {html.bold(int(round((cnt/len(correct)*600+200)/10))*10)}"
+    )
     result_text += "\n\n" + html.expandable_blockquote("#Raq. Natija\n" + res)
     await message.edit_text(result_text, reply_markup=results_time(sub[0], ccode, 0))
     return 0
