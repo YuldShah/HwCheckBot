@@ -40,8 +40,25 @@ async def show_result(message: types.Message, sub):
             if await show_result(message, sub):
                 await message.answer("Xatolik yuz berdi.")
         return 0
-    deadline_dt = exam_det[2].replace(tzinfo=UTC_OFFSET) if exam_det[2] else None  # sdate is a datetime
-    sub_dt = sub[3].replace(tzinfo=UTC_OFFSET)  # date is a datetime
+    
+    # Proper timezone handling for both dates
+    deadline_dt = exam_det[2]
+    if deadline_dt:
+        if deadline_dt.tzinfo is None:
+            # If naive datetime, assume UTC and convert to UTC+5
+            deadline_dt = deadline_dt.replace(tzinfo=timezone.utc).astimezone(UTC_OFFSET)
+        else:
+            # If already has timezone, ensure it's in UTC+5
+            deadline_dt = deadline_dt.astimezone(UTC_OFFSET)
+    
+    sub_dt = sub[3]
+    if sub_dt.tzinfo is None:
+        # If naive datetime, assume UTC and convert to UTC+5
+        sub_dt = sub_dt.replace(tzinfo=timezone.utc).astimezone(UTC_OFFSET)
+    else:
+        # If already has timezone, ensure it's in UTC+5
+        sub_dt = sub_dt.astimezone(UTC_OFFSET)
+    
     date_str = sub_dt.strftime('%H:%M:%S — %Y-%m-%d')
     exsub_time = ""
     if deadline_dt and sub_dt > deadline_dt:

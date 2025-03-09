@@ -20,7 +20,8 @@ chhw.callback_query.filter(IsUserCallback(), IsSubscriber())
 @chhw.message(F.text == dict.do_todays_hw)
 async def do_today_hw(message: types.Message, state: FSMContext):
     await message.answer(f"{html.bold(dict.do_todays_hw)} menyusi", reply_markup=usr_main_key)
-    now = datetime.now(timezone(timedelta(hours=5)))
+    # Use UTC for backend comparisons
+    now = datetime.now(timezone.utc)
     # Fetch exams that are scheduled in the future (not today)
     exams = db.fetchall("SELECT * FROM exams WHERE sdate > %s", (now,))
     if not exams:
@@ -29,7 +30,10 @@ async def do_today_hw(message: types.Message, state: FSMContext):
     available = []
     for exam in exams:
         # exam[6]: deadline; exam[7]: resubmission flag
-        exam_deadline = exam[6].replace(tzinfo=timezone(timedelta(hours=5))) if exam[6] else None
+        exam_deadline = exam[6]
+        # Ensure deadline is in UTC for comparison
+        if exam_deadline and exam_deadline.tzinfo is None:
+            exam_deadline = exam_deadline.replace(tzinfo=timezone.utc)
         # Skip exam if the deadline exists and has passed
         if exam_deadline and now > exam_deadline:
             continue
@@ -328,28 +332,45 @@ async def request_submit_hw(query: types.CallbackQuery, state: FSMContext):
 async def confirm_submit(query: types.CallbackQuery, state: FSMContext):
     await query.message.edit_text("Kutib turing...")
     data = await state.get_data()
-    submission_time = datetime.now(timezone(timedelta(hours=5)))
+    # Use UTC for backend operations
+    submission_time = datetime.now(timezone.utc)
     exam_id = data.get("exam_id")
     test = db.fetchone("SELECT * FROM exams WHERE idx = %s", (exam_id,))
     if not test:
         await query.message.answer("Vazifa topilmadi. Iltimos, admin bilan bog'laning.", reply_markup=usr_main_key)
         await state.clear()
         return
-    exam_deadline = test[6].replace(tzinfo=timezone(timedelta(hours=5))) if test[6] else None
+    
+    # Ensure deadline is in UTC for comparison
+    exam_deadline = test[6]
+    if exam_deadline and exam_deadline.tzinfo is None:
+        exam_deadline = exam_deadline.replace(tzinfo=timezone.utc)
+        
     # Check exam availability again (deadline check)
     if exam_deadline and submission_time > exam_deadline and not test[7]:
-        await query.message.answer("Vaqt tugagan yoki vazifa yopilgan. Javoblaringiz qabul qilinmaydi.", reply_markup=usr_main_key)
+        # For display, convert to UTC+5
+        deadline_display = exam_deadline.astimezone(timezone(timedelta(hours=5)))
+        submission_display = submission_time.astimezone(timezone(timedelta(hours=5)))
+        await query.message.answer(f"Vaqt tugagan yoki vazifa yopilgan. Javoblaringiz qabul qilinmaydi.\n"
+                                  f"Vazifa vaqti: {deadline_display.strftime('%H:%M:%S — %Y-%m-%d')}\n"
+                                  f"Hozirgi vaqt: {submission_display.strftime('%H:%M:%S — %Y-%m-%d')}",
+                                  reply_markup=usr_main_key)
         await state.clear()
         return
+    
     submission = db.fetchone("SELECT * FROM submissions WHERE userid = %s AND exid = %s", (str(query.from_user.id), exam_id))
     if submission and not test[7]:
         await query.message.answer("Siz allaqachon vazifaga javoblaringizni topshirib bo'lgansiz va qayta topshirish mumkin emas.")
         return
+    
     correct = data.get("correct")
     answers = data.get("donel")
     userid = query.from_user.id
     code = gen_code(10)
+    
+    # Store the submission time in UTC
     db.store_submission(userid, exam_id, data.get("donel"), code, submission_time)
+    
     await query.answer("Muvaffaqiyatli jo'natildi.")
     await query.message.edit_text(
         f"Vazifaga javoblaringiz muvaffaqiyatli topshirildi.\n\nNatijalaringiz quyidagicha:\n{get_correct_text(correct, answers)}",

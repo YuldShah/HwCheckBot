@@ -24,12 +24,33 @@ async def search_results(query: types.InlineQuery):
         )
         return await query.answer([res], cache_time=1, is_personal=True, switch_pm_parameter="myres", switch_pm_text="📊 Natijalarimni botda ko'rish")
     exam_det = db.fetchone("SELECT title, correct, sdate FROM exams WHERE idx = %s", (sub[2],))
-    deadline_dt = exam_det[2].replace(tzinfo=UTC_OFFSET) if exam_det[2] else None
-    sub_dt = sub[3].replace(tzinfo=UTC_OFFSET)
-    sub_time = sub_dt.strftime('%H:%M:%S — %Y-%m-%d')
+    
+    # Properly handle deadline timestamp (backend in UTC)
+    deadline_dt = exam_det[2]
+    if deadline_dt:
+        if deadline_dt.tzinfo is None:
+            # If naive datetime, assume UTC
+            deadline_dt = deadline_dt.replace(tzinfo=timezone.utc)
+        # Convert to UTC+5 for display
+        deadline_display = deadline_dt.astimezone(UTC_OFFSET)
+    else:
+        deadline_display = None
+    
+    # Handle submission timestamp (backend in UTC)
+    sub_dt = sub[3]
+    if sub_dt.tzinfo is None:
+        # If naive datetime, assume UTC
+        sub_dt = sub_dt.replace(tzinfo=timezone.utc)
+    # Convert to UTC+5 for display
+    sub_display = sub_dt.astimezone(UTC_OFFSET)
+    
+    # Format the time in UTC+5 for display
+    sub_time = sub_display.strftime('%H:%M:%S — %Y-%m-%d')
+    
     exsub_time = ""
-    if deadline_dt and sub_dt > deadline_dt:
+    if deadline_dt and sub_dt > deadline_dt:  # Compare in UTC for backend logic
         exsub_time = html.italic("\n⚠️ Vaqtidan keyin topshirilgan")
+        
     title_of_exam = exam_det[0] if exam_det else "O'chirilgan test"
     user_name = db.fetchone("SELECT fullname FROM users WHERE userid = %s", (sub[1],))
     if not user_name:
