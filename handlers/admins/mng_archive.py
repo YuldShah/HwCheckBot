@@ -111,6 +111,15 @@ async def refresh_edit_menu(message: types.Message, state: FSMContext, oddiy: bo
     data = await state.get_data()
     exam_id = data["exam_id"]
     exam = db.fetchone("SELECT * FROM exams WHERE idx = %s", (exam_id,))
+    
+    # Handle dates for display
+    sdate = exam[6]
+    if sdate:
+        # Convert to UTC+5 for display purposes
+        if sdate.tzinfo is None:
+            sdate = sdate.replace(tzinfo=timezone.utc)
+        sdate = sdate.astimezone(UTC_OFFSET)
+    
     correct = json.loads(exam[5])
     donel = correct.get("answers", [])
     typesl = correct.get("types", [])
@@ -118,13 +127,15 @@ async def refresh_edit_menu(message: types.Message, state: FSMContext, oddiy: bo
     if folder:
         folder = folder[0]
     attaches = db.fetchall("SELECT ty, tgfileid, caption FROM attachments WHERE exid = %s", (exam_id,))
+    
+    # Update state with proper timezone-aware datetime
     await state.update_data(
         exam_id=exam_id,
         title=exam[1],
         about=exam[2],
         instructions=exam[3],
         numquest=exam[4],
-        sdate=exam[6],
+        sdate=sdate,  # This is now in UTC+5 for display
         resub=exam[7],
         folder=exam[8],
         hide=exam[9],
@@ -133,6 +144,7 @@ async def refresh_edit_menu(message: types.Message, state: FSMContext, oddiy: bo
         types=typesl,
         attaches=attaches
     )
+    
     res = f"{await get_text(state)}\n\n{get_ans_text(donel, typesl)}\n\nYou may edit the test, change its folder or share it:"
     if oddiy:
         await message.answer(res, reply_markup=edit_test_menu(not exam[9], exam[7]))
@@ -521,10 +533,24 @@ async def back_from_deadline_cb(callback: types.CallbackQuery, state: FSMContext
 @arch.message(arch_states.sdate)
 async def save_new_deadline(message: types.Message, state: FSMContext):
     try:
+        # Parse the datetime from user input
         new_deadline = parse_datetime(message.text)
+        
+        # Ensure it's in UTC for database storage
+        if new_deadline.tzinfo is None:
+            # If it's naive (no timezone), assume it's in UTC+5 and convert to UTC
+            new_deadline = new_deadline.replace(tzinfo=UTC_OFFSET).astimezone(timezone.utc)
+        else:
+            # If it has a timezone already, ensure it's in UTC
+            new_deadline = new_deadline.astimezone(timezone.utc)
+        
         data = await state.get_data()
         exam_id = data["exam_id"]
+        
+        # Store in database as UTC
         db.query("UPDATE exams SET sdate = %s WHERE idx = %s", (new_deadline, exam_id))
+        
+        # For display purposes in state data, keep UTC
         await state.update_data(sdate=new_deadline)
         await message.delete()
         await refresh_edit_menu(message, state, oddiy=True)
