@@ -85,8 +85,9 @@ async def show_result(message: types.Message, sub):
         i2 = (len(correct)+1)//2+i
         tex1 = f"{html.bold(i1+1)}. {html.code(answers[i1])} "
         tex2 = ""
-        if type(answers[i1]) == list:
-            if correct[i1] in answers[i1]:
+        if type(correct[i1]) == list:
+            print("here")
+            if answers[i1] in correct[i1]:
                 cnt += 1
                 tex1 += "✅\t"
             else:
@@ -99,8 +100,8 @@ async def show_result(message: types.Message, sub):
                 tex1 += "❌\t"
         if i2 != len(correct):
             tex2 = f"{html.bold(i2+1)}. {html.code(answers[i2])} "
-            if type(answers[i2]) == list:
-                if correct[i2] in answers[i2]:
+            if type(correct[i2]) == list:
+                if answers[i2] in correct[i2]:
                     cnt += 1
                     tex2 += "✅"
                 else:
