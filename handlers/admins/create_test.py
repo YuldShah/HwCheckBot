@@ -170,6 +170,10 @@ def parse_datetime(input_str: str) -> datetime:
         else:
             h_str, m_str = parts[0], "00"
         dt = now.replace(hour=int(h_str), minute=int(m_str), second=0, microsecond=0)
+    elif len(parts) == 2:
+        # Time provided as HH MM
+        h_str, m_str = parts[0], parts[1]
+        dt = now.replace(hour=int(h_str), minute=int(m_str), second=0, microsecond=0)
     elif len(parts) == 3:
         # Only date provided: DD MM YYYY
         day = int(parts[0])
