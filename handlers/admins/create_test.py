@@ -453,6 +453,7 @@ async def get_open_ans(message: types.Message, state: FSMContext):
         lines = message.text.split("\n")
         cnt = 0
         for line in lines:
+            line = line.strip()
             if not line:
                 continue
             if "," in line:

@@ -12,6 +12,9 @@ btns = [
     ]
 ]
 keyboard = InlineKeyboardMarkup(inline_keyboard=btns)
-chat_id = input("Enter chat id: ")
+chat_id = input("Enter chat id: ") # 1002264412537 - group, -1002258255154 - channel
 msg = input("Enter message: ")
-asyncio.run(send_notice(int(chat_id), msg, keyboard))
+
+loop = asyncio.get_event_loop()
+loop.run_until_complete(send_notice(int(chat_id), msg, keyboard))
+loop.close()
