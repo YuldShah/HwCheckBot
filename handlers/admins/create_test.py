@@ -1,7 +1,7 @@
 from aiogram import Router, types, F, html
 from filters import IsAdmin, IsAdminCallback, CbData, CbDataStartsWith
 from loader import db
-from keyboards.inline import today, ans_enter_meth, obom, ans_set_fin, inl_folders, remove_att
+from keyboards.inline import today, ans_enter_meth, obom, ans_set_fin, inl_folders, remove_att, continue_inl_to_sett
 from keyboards.regular import main_key, back_key, skip_desc, adm_default
 from keyboards.regular import attach_done_for_create
 from data import dict, config
@@ -550,7 +550,7 @@ async def back_to_ans(message: types.Message, state: FSMContext):
     entering = data.get("entering")
     await state.set_state(creates.ans)
     if entering == "all":
-        await message.answer(f"{await get_text(state)}\nPlease, send the answers in the following format:\n{html.code('Answer1\nAnswer2\nAnswer3,AgainAnswer3')}")
+        await message.answer(f"{await get_text(state)}\n\nAnswers you have entered:\n{get_ans_text(donel, typesl)}\n\nPlease, send the answers in the following format if you want to change or continue with the answers with the current state:\n{html.code('Answer1\nAnswer2\nAnswer3,AgainAnswer3')}", reply_markup=continue_inl_to_sett)
         return
     else:
         await message.answer(
@@ -575,7 +575,7 @@ async def confirm_ans(query: types.CallbackQuery, state: FSMContext):
     folder = data.get("folder")
     await state.set_state(creates.setts)
     # await state.update_data()
-    await query.message.edit_text(f"{await get_text(state)}\n{get_ans_text(donel, typesl)}\nPlease, change the settings as you wish. (Pressing toggles on/off)", reply_markup=ans_set_fin(vis, resub, folder))
+    await query.message.edit_text(f"{await get_text(state)}\n{get_ans_text(donel, typesl)}\n\nPlease, change the settings as you wish. (Pressing toggles on/off)", reply_markup=ans_set_fin(vis, resub, folder))
 
 # @test.callback_query(creates.setts, CbData("folder"))
 # async def set_folder(query: types.CallbackQuery, state: FSMContext):
@@ -586,23 +586,27 @@ async def confirm_ans(query: types.CallbackQuery, state: FSMContext):
 #     await query.message.edit_text("Please, choose the folder:", reply_markup=inl_folders(folders))
 
 @test.callback_query(creates.setts, CbData("back"))
-async def back_to_ans(callback: types.CallbackQuery, state: FSMContext):
+async def back_to_ans_from_cb(callback: types.CallbackQuery, state: FSMContext):
     data = await state.get_data()
     curq = data.get("curq")
     typesl = data.get("typesl")
     numq = data.get("numquest")
     page = data.get("page")
     donel = data.get("donel")
+    entering = data.get("entering")
     await state.set_state(creates.ans)
-    await callback.message.edit_text(
-        f"{html.blockquote('ps. 🟢 - done, 🟡 - current, 🔴 - not done (yes, traffic lights, you dumb*ss)')}"
-        f"\n\n{get_ans_text(donel, typesl)}"
-        f"\n\nPlease, {html.underline('choose' if typesl[curq-1] > 0 else 'send')} the right answer for question {html.bold(f'#{curq}/{numq}')}:"
-        f"\n\n{html.bold('Note: you have entered all the answers. You can change the answers for each question by clicking on the question number, navigating through pages.')}",
-        reply_markup=obom(curq, numq, donel, typesl, page, confirm=True)
-    )
-    await state.update_data(ans_confirm=True)
-        # await state.set_state(creates.ans)
+    if entering == "all":
+        await callback.message.edit_text(f"{await get_text(state)}\n\nAnswers you have entered:\n{get_ans_text(donel, typesl)}\n\nPlease, send the answers in the following format if you want to change or continue with the answers with the current state:\n{html.code('Answer1\nAnswer2\nAnswer3,AgainAnswer3')}", reply_markup=continue_inl_to_sett)
+        return
+    else:
+        await callback.message.edit_text(
+            f"{html.blockquote('ps. 🟢 - done, 🟡 - current, 🔴 - not done (yes, traffic lights, you dumb*ss)')}"
+            f"\n\n{get_ans_text(donel, typesl)}"
+            f"\n\nPlease, {html.underline('choose' if typesl[curq-1] > 0 else 'send')} the right answer for question {html.bold(f'#{curq}/{numq}')}:"
+            f"\n\n{html.bold('Note: you have entered all the answers. You can change the answers for each question by clicking on the question number, navigating through pages.')}",
+            
+            reply_markup=obom(curq, numq, donel, typesl, page, confirm=True))
+        await state.update_data(ans_confirm=True)
 
 
 @test.callback_query(creates.setts, CbDataStartsWith("vis_"))
