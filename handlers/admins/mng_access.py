@@ -1,11 +1,14 @@
+import re
+import asyncio
 from aiogram import types, Router, F, html
 from data import config, dict
 from keyboards.inline import access_menu, post_chan, mandconfirm, man_access
+from keyboards.inline.comm_inline import confirm_inl_key
 from keyboards.regular import main_key, back_key
 from time import sleep
 from states import accstates
 from aiogram.fsm.context import FSMContext
-from filters import IsAdmin, IsAdminCallback, CbData, CbDataStartsWith
+from filters import IsAdmin, IsAdminCallback
 from loader import bot, db
 
 access = Router()
@@ -21,48 +24,49 @@ async def manage_access(message: types.Message, state: FSMContext):
     response = "Here you can manage the access of users to the bot"
     await message.answer(response, reply_markup=access_menu)
 
-@access.callback_query(CbData("post"), accstates.acmenu)
+@access.callback_query(F.data == "post", accstates.acmenu)
 async def post_c(callback: types.CallbackQuery, state: FSMContext):
     await state.set_state(accstates.post)
-    response = "Here you can change or reset the permission giving chat.\n\nThe bot will automatically give permissions to members of the following chat."
-    channel = db.fetchone("SELECT title, link FROM channel")
-    print(channel)
-    if not channel:
-        response = "The chat that users will be checked to give permission to the bot was not set, you can set a new one\n\nOnce you set a chat, the bot will automatically give permissions to members of that chat"
-    await callback.message.edit_text(response, reply_markup=post_chan(channel))
+    response = "Here you can manage the permission giving chats.\n\nThe bot will automatically give permissions to users who are members of any of the following chats."
+    channels = db.fetchall("SELECT title, link, idx FROM channel")
+    if not channels:
+        response = "No chats have been set for automatic permissions. You can add chats that users will need to join to get permission to use the bot."
+    await callback.message.edit_text(response, reply_markup=post_chan(channels))
 
-@access.callback_query(CbData("back"), accstates.post)
+@access.callback_query(F.data == "back", accstates.post)
 async def back_to_s(callback: types.CallbackQuery, state: FSMContext):
     await state.set_state(accstates.acmenu)
-    # await callback.message.answer(f"Menu: <b>{dict.settings}</b>", reply_markup=main_key)
     response = "Here you can manage the access of users to the bot"
     await callback.message.edit_text(response, reply_markup=access_menu)
     await callback.answer(f"Back to {dict.man_access} menu")
 
-@access.callback_query(CbData("set_new"), accstates.post)
-async def setnew(callback: types.CallbackQuery, state: FSMContext):
-    await state.set_state(accstates.link)
+# @access.callback_query(F.data == "add_perm_chat", accstates.post)
+# async def add_perm_chat(callback: types.CallbackQuery, state: FSMContext):
+#     await state.set_state(accstates.link)
+#     await callback.message.answer("Send the title of the chat to add", reply_markup=back_key)
+#     await callback.message.delete()
+
+# @access.message(accstates.link, F.text == dict.back)
+
+
+@access.callback_query(F.data == "add_perm_chat", accstates.post)
+async def get_title(callback: types.CallbackQuery, state: FSMContext):
+    await state.set_state(accstates.chat_link)
     await callback.message.answer("Forward a message from the private chat to here (Make sure the message was sent by the group as anonymous)\n\nOr send the chat id", reply_markup=back_key)
     await callback.message.delete()
 
-@access.message(F.text == dict.back, accstates.link)
+@access.message(accstates.chat_link, F.text == dict.back)
 async def back_to_c(message: types.Message, state: FSMContext):
     await state.set_state(accstates.post)
     await message.answer("Back to posting channel menu", reply_markup=main_key)
-    response = "Here you can change or reset the permission giving chat.\n\nThe bot will automatically give permissions to members of the following chat."
-    channel = db.fetchone("SELECT title, link FROM channel")
-    print(channel)
-    if not channel:
-        response = "The chat that users will be checked to give permission to the bot was not set, you can set a new one\n\nOnce you set a chat, the bot will automatically give permissions to members of that chat"
-    await message.answer(response, reply_markup=post_chan(channel))
+    response = "Here you can manage the permission giving chats.\n\nThe bot will automatically give permissions to users who are members of any of the following chats."
+    channels = db.fetchall("SELECT title, link, idx FROM channel")
+    if not channels:
+        response = "No chats have been set for automatic permissions. You can add chats that users will need to join to get permission to use the bot."
+    await message.answer(response, reply_markup=post_chan(channels))
 
-@access.message(accstates.link)
+@access.message(accstates.chat_link)
 async def get_link(message: types.Message, state: FSMContext):
-    # USERNAME_PATTERN = r"^[a-zA-Z][\w\d_]{4,31}$"  # Username (e.g., channelname)
-    # AT_USERNAME_PATTERN = r"^@[a-zA-Z][\w\d_]{4,31}$"  # Username starting with @
-    # PRIVATE_LINK_PATTERN = r"^https://t\.me/\+\w+$"  # Private links (e.g., https://t.me/+W3UbzATqipEzYTVi)
-    # PUBLIC_LINK_PATTERN = r"^https://t\.me/[a-zA-Z][\w\d_]{4,31}$"  # Public links (e.g., https://t.me/channelname)
-    # text = None
     lk = None
     chanid = None
     # print(message.forward_from_chat)
@@ -117,68 +121,143 @@ async def get_link(message: types.Message, state: FSMContext):
             f"\n\t\tDescription: {html.blockquote(channel_info.description or 'No description')}", reply_markup=mandconfirm((title, lk)), disable_web_page_preview=True)
 
 @access.message(F.text == dict.back, accstates.confirm)
-async def back_to_link(message: types.Message, state: FSMContext) -> None:
-    await state.set_state(accstates.link)
-    await message.answer("This time do it correctly.\n\nForward a message from the private chat to here (Make sure the message was sent by the group as anonymous)\n\nOr send the chat id", reply_markup=back_key)
+async def back_to_chat_link(message: types.Message, state: FSMContext) -> None:
+    await state.set_state(accstates.chat_link)
+    # await state.set_state(accstates.link)
+    await message.answer("Forward a message from the private chat to here (Make sure the message was sent by the group as anonymous)\n\nOr send the chat id", reply_markup=back_key)
 
-@access.callback_query(CbData("reset"), accstates.post)
-async def reset(callback: types.CallbackQuery, state: FSMContext) -> None:
-    # old = db.fetchone("SELECT title, link, chid FROM channel")
+@access.message(F.text == dict.back, accstates.link)
+async def back_to_c(message: types.Message, state: FSMContext):
+    await state.set_state(accstates.post)
+    await message.answer("Back to posting channel menu", reply_markup=main_key)
+    response = "Here you can manage the permission giving chats.\n\nThe bot will automatically give permissions to users who are members of any of the following chats."
+    channels = db.fetchall("SELECT title, link, idx FROM channel")
+    if not channels:
+        response = "No chats have been set for automatic permissions. You can add chats that users will need to join to get permission to use the bot."
+    await message.answer(response, reply_markup=post_chan(channels))
+
+@access.message(accstates.link)
+async def get_link(message: types.Message, state: FSMContext):
+    lk = None
+    chanid = None
+    if message.forward_from_chat:
+        chanid = message.forward_from_chat.id
+        if message.forward_from_chat.username == None:
+            try:
+                lk = (await bot.create_chat_invite_link(chat_id=chanid, name=f"Join link by {config.bot_info.username}")).invite_link
+            except Exception as e:
+                print(e)
+                await message.answer("Please, make sure to add the bot to the chat as an admin and try again")
+                return
+        else:
+            lk = f"https://t.me/{message.forward_from_chat.username}"
+    else:
+        if message.text[1:].isnumeric() and message.text.startswith("-100"):
+            chanid = message.text
+        else:
+            await message.answer("This message neither forwarded from private chat nor includes a valid chat id. Forward a message from the private chat to here (Make sure the message was sent by the group as anonymous)\n\nOr send the chat id")
+            return
+    try:
+        channel_info = await bot.get_chat(chanid)
+        mb_cnt = await bot.get_chat_member_count(chanid)
+        if channel_info.username:
+            lk = f"https://t.me/{channel_info.username}"
+        else:
+            lk = (await bot.create_chat_invite_link(chat_id=chanid, name=f"Join link by {config.bot_info.username}")).invite_link
+    except Exception as e:
+        print(e)
+        print(lk)
+        await message.answer("Please, make sure to add the bot to the chat as an admin, chat exists and try again")
+        return
+    title = channel_info.title
+    print(title, lk)
+    print(channel_info)
+    await state.set_state(accstates.confirm)
+    await state.update_data(title=title)
+    await state.update_data(link=lk)
+    await state.update_data(chid=chanid)
+    await message.answer(f"Check and confirm everything is correct\n\nChat Information:"
+            f"\n\t\tTitle: {html.bold(channel_info.title)}"
+            f"\n\t\tMembers count: {html.bold(mb_cnt)}"
+            f"\n\t\tDescription: {html.blockquote(channel_info.description or 'No description')}", reply_markup=confirm_inl_key, disable_web_page_preview=True)
+
+@access.callback_query(F.data == "reset", accstates.post)
+async def reset_confirm(callback: types.CallbackQuery, state: FSMContext) -> None:
+    await state.set_state(accstates.reset_con)
+    await state.update_data(action="reset_all")
+    message_text = "⚠️ Are you sure you want to delete ALL permission chats?\nThis action cannot be undone."
+    await callback.message.edit_text(message_text, reply_markup=confirm_inl_key)
+
+@access.callback_query(F.data.startswith("delete_perm_"))
+async def delete_perm_chat_confirm(callback: types.CallbackQuery, state: FSMContext) -> None:
+    idx = callback.data.split("_")[2]
+    channel = db.fetchone("SELECT title, link, idx FROM channel WHERE idx=%s", (idx,))
+    if not channel:
+        await callback.answer("Channel not found")
+        return
+    await state.set_state(accstates.del_con)
+    await state.update_data(action="delete_chat", chat_idx=idx)
+    message_text = f"⚠️ Are you sure you want to delete the chat '{html.bold(channel[0])}'?\nThis action cannot be undone."
+    await callback.message.edit_text(message_text, reply_markup=mandconfirm((channel[0], channel[1])), disable_web_page_preview=True)
+
+@access.callback_query(F.data == "confirm", accstates.reset_con)
+async def confirm_reset_all(callback: types.CallbackQuery, state: FSMContext) -> None:
     db.query("DELETE FROM channel")
-    # db.query("INSERT INTO channel (chid, title, link) VALUES (%s, %s, %s)", (config.bot_info.id, config.bot_info.username, f"https://t.me/{config.bot_info.username}"))
-    await callback.answer("Reset successfull")
-    await post_c(callback, state)
+    await callback.answer("All permission chats have been deleted")
+    await state.set_state(accstates.post)
+    response = "Here you can manage the permission giving chats.\n\nThe bot will automatically give permissions to users who are members of any of the following chats."
+    channels = db.fetchall("SELECT title, link, idx FROM channel")
+    if not channels:
+        response = "No chats have been set for automatic permissions. You can add chats that users will need to join to get permission to use the bot."
+    await callback.message.edit_text(response, reply_markup=post_chan(channels))
 
-@access.callback_query(accstates.confirm)
-async def confirm(callback: types.CallbackQuery, state: FSMContext) -> None:
-    if callback.data == "cancel":
-        await callback.answer("Cancelled")
-        await callback.message.answer("Back to auto-permit menu", reply_markup=main_key)
-        await post_c(callback, state)
-        # await callback.message.delete()
-        return
+@access.callback_query(F.data == "cancel", accstates.reset_con)
+async def cancel_reset_all(callback: types.CallbackQuery, state: FSMContext) -> None:
+    await callback.answer("Operation cancelled")
+    await state.set_state(accstates.post)
+    response = "Here you can manage the permission giving chats.\n\nThe bot will automatically give permissions to users who are members of any of the following chats."
+    channels = db.fetchall("SELECT title, link, idx FROM channel")
+    if not channels:
+        response = "No chats have been set for automatic permissions. You can add chats that users will need to join to get permission to use the bot."
+    await callback.message.edit_text(response, reply_markup=post_chan(channels))
+
+@access.callback_query(F.data == "confirm", accstates.del_con)
+async def confirm_delete_chat(callback: types.CallbackQuery, state: FSMContext) -> None:
     data = await state.get_data()
-    chid = data.get("chid")
-    title = data.get("title")
-    link = data.get("link")
-    chck = db.fetchone("SELECT title FROM channel WHERE chid = %s", (chid,))
-    if chck:
-        msg = await callback.message.answer(f"This channel already has been set as the permission giving chat")
-        await callback.answer("Already this one")
-        await callback.message.answer("Back to auto-permit menu", reply_markup=main_key)
-        await post_c(callback, state)
-        sleep(2)
-        await msg.delete()
-        # await callback.message.delete()
-        return
-    chck = db.fetchone("SELECT title FROM channel")
-    if chck:
-        db.query("DELETE FROM channel")
-    # db.query("DELETE FROM channel")
-    db.query("INSERT INTO channel (chid, title, link) VALUES (%s, %s, %s)", (chid, title, link))
-    await callback.answer(f"Successfully set")
-    await callback.message.answer("Back to posting channel menu", reply_markup=main_key)
-    await post_c(callback, state)
-    # await callback.message.delete()
+    idx = data.get("chat_idx")
+    db.query("DELETE FROM channel WHERE idx=%s", (idx,))
+    await callback.answer(f"Chat has been deleted")
+    await state.set_state(accstates.post)
+    response = "Here you can manage the permission giving chats.\n\nThe bot will automatically give permissions to users who are members of any of the following chats."
+    channels = db.fetchall("SELECT title, link, idx FROM channel")
+    if not channels:
+        response = "No chats have been set for automatic permissions. You can add chats that users will need to join to get permission to use the bot."
+    await callback.message.edit_text(response, reply_markup=post_chan(channels))
 
+@access.callback_query(F.data == "cancel", accstates.del_con)
+async def cancel_delete_chat(callback: types.CallbackQuery, state: FSMContext) -> None:
+    await callback.answer("Operation cancelled")
+    await state.set_state(accstates.post)
+    response = "Here you can manage the permission giving chats.\n\nThe bot will automatically give permissions to users who are members of any of the following chats."
+    channels = db.fetchall("SELECT title, link, idx FROM channel")
+    if not channels:
+        response = "No chats have been set for automatic permissions. You can add chats that users will need to join to get permission to use the bot."
+    await callback.message.edit_text(response, reply_markup=post_chan(channels))
 
-@access.callback_query(CbData("manually"))
+@access.callback_query(F.data == "manually")
 async def manually(callback: types.CallbackQuery, state: FSMContext) -> None:
     await state.set_state(accstates.manl)
     await callback.message.edit_text("You can give or remove access to users manually here", reply_markup=man_access)
-    # await callback.message.delete()
 
-@access.callback_query(CbData("back"), accstates.manl)
+@access.callback_query(F.data == "back", accstates.manl)
 async def back_to_m(callback: types.CallbackQuery, state: FSMContext) -> None:
     await callback.message.answer(f"Back to {html.bold(f"{dict.man_access}")} menu", reply_markup=main_key)
     await state.set_state(accstates.acmenu)
     await callback.message.answer(f"Here you can manage the access of users to the bot", reply_markup=access_menu)
-    # sleep(1)
     await callback.message.delete()
-    # await callback.message.delete()
 
-@access.callback_query(CbData("add_access"))
-async def add_access(callback: types.CallbackQuery, state: FSMContext) -> None:
+@access.callback_query(F.data == "add_access")
+async def add_access_callback(callback: types.CallbackQuery, state: FSMContext) -> None:
     await state.set_state(accstates.adda)
     await callback.message.answer("Forward the message of the user you want to give access to the bot, or give the id of the user.", reply_markup=back_key)
     await callback.message.delete()
@@ -203,25 +282,24 @@ async def add_access(message: types.Message, state: FSMContext) -> None:
         return
     exist = db.fetchone("SELECT idx, allowed FROM users WHERE userid=%s::text", (userid,))
     if exist:
-        if exist[1]:
-            await message.answer(f"{mention} already has access to the bot.\n\nBack to the access menu.")
+        if exist[1] == 2:
+            await message.answer(f"{mention} already has manual access to the bot.\n\nBack to the access menu.")
             await state.set_state(accstates.manl)
             await message.answer("You can give or remove access to users manually here", reply_markup=man_access)
             return
         else:
-            db.query("UPDATE users SET allowed = 1 WHERE idx = %s", (exist[0],))
-            await message.answer(f"{mention} has been given access to the bot.\n\nBack to the access menu.")
+            db.query("UPDATE users SET allowed = 2 WHERE idx = %s", (exist[0],))
+            await message.answer(f"{mention} has been given manual access to the bot. User won't need to join required channels.\n\nBack to the access menu.")
             await state.set_state(accstates.manl)
             await message.answer("You can give or remove access to users manually here", reply_markup=man_access)
             return
-    db.query("INSERT INTO users (userid, allowed) VALUES (%s, 1)", (userid,))
-
-    await message.answer(f"{mention} has been given access to the bot.\n\nBack to the access menu.")
+    db.query("INSERT INTO users (userid, allowed) VALUES (%s, 2)", (userid,))
+    await message.answer(f"{mention} has been given manual access to the bot. User won't need to join required channels.\n\nBack to the access menu.")
     await state.set_state(accstates.manl)
     await message.answer("You can give or remove access to users manually here", reply_markup=man_access)
 
-@access.callback_query(CbData("remove_access"))
-async def remove_access(callback: types.CallbackQuery, state: FSMContext) -> None:
+@access.callback_query(F.data == "remove_access")
+async def remove_access_callback(callback: types.CallbackQuery, state: FSMContext) -> None:
     await state.set_state(accstates.rema)
     await callback.message.answer("Forward the message of the user you want to remove access to the bot, or give the id of the user.", reply_markup=back_key)
     await callback.message.delete()
@@ -246,15 +324,65 @@ async def remove_access(message: types.Message, state: FSMContext) -> None:
         return
     exist = db.fetchone("SELECT idx, allowed FROM users WHERE userid=%s::text", (userid,))
     if exist:
-        if not exist[1]:
+        if exist[1] == -1:
             await message.answer(f"{mention} already doesn't have access to the bot.\n\nBack to the access menu.")
             await state.set_state(accstates.manl)
             await message.answer("You can give or remove access to users manually here", reply_markup=man_access)
             return
         else:
-            db.query("UPDATE users SET allowed = 0 WHERE idx = %s", (exist[0],))
+            db.query("UPDATE users SET allowed = -1 WHERE idx = %s", (exist[0],))
             await message.answer(f"{mention} has been removed access to the bot.\n\nBack to the access menu.")
             await state.set_state(accstates.manl)
             await message.answer("You can give or remove access to users manually here", reply_markup=man_access)
             return
-    await message.answer(f"{mention} already doesn't have access to the bot.\n\nBack to the access menu.")
+    db.query("INSERT INTO users (userid, allowed) VALUES (%s, -1)", (userid,))
+    await message.answer(f"{mention} has been denied access to the bot.\n\nBack to the access menu.")
+    await state.set_state(accstates.manl)
+    await message.answer("You can give or remove access to users manually here", reply_markup=man_access)
+
+@access.callback_query(F.data == "confirm", accstates.confirm)
+async def confirm_add_chat(callback: types.CallbackQuery, state: FSMContext) -> None:
+    data = await state.get_data()
+    chid = data.get("chid")
+    title = data.get("title")
+    link = data.get("link")
+    chck = db.fetchone("SELECT title FROM channel WHERE chid = %s", (str(chid),))
+    if chck:
+        await callback.message.answer(f"This channel already has been set as a permission giving chat with title <b>{chck[0]}</b>", reply_markup=main_key)
+        await callback.answer("Already added")
+        await state.set_state(accstates.post)
+        response = "Here you can manage the permission giving chats.\n\nThe bot will automatically give permissions to users who are members of any of the following chats."
+        channels = db.fetchall("SELECT title, link, idx FROM channel")
+        if not channels:
+            response = "No chats have been set for automatic permissions. You can add chats that users will need to join to get permission to use the bot."
+        await callback.message.answer(response, reply_markup=post_chan(channels))
+        return
+    db.query("INSERT INTO channel (chid, title, link) VALUES (%s, %s, %s)", (str(chid), title, link))
+    await callback.answer(f"Successfully added")
+    await callback.message.answer("Chat successfully added!", reply_markup=main_key)
+    await callback.message.delete()
+    await state.set_state(accstates.post)
+    response = "Here you can manage the permission giving chats.\n\nThe bot will automatically give permissions to users who are members of any of the following chats."
+    channels = db.fetchall("SELECT title, link, idx FROM channel")
+    await callback.message.answer(response, reply_markup=post_chan(channels))
+
+@access.callback_query(F.data == "cancel", accstates.confirm)
+async def cancel_add_chat(callback: types.CallbackQuery, state: FSMContext) -> None:
+    await callback.answer("Operation cancelled")
+    await callback.message.answer("Operation cancelled", reply_markup=main_key)
+    await callback.message.delete()
+    await state.set_state(accstates.post)
+    response = "Here you can manage the permission giving chats.\n\nThe bot will automatically give permissions to users who are members of any of the following chats."
+    channels = db.fetchall("SELECT title, link, idx FROM channel")
+    if not channels:
+        response = "No chats have been set for automatic permissions. You can add chats that users will need to join to get permission to use the bot."
+    await callback.message.answer(response, reply_markup=post_chan(channels))
+
+# Helper function for auto-deleting messages after a delay
+async def delete_after_delay(message, delay_seconds):
+    """Delete a message after specified delay"""
+    await asyncio.sleep(delay_seconds)
+    try:
+        await message.delete()
+    except Exception:
+        pass  # Message might have been deleted already

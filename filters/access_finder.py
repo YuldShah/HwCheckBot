@@ -17,45 +17,146 @@ class IsNotRegistered(BaseFilter):
 class IsSubscriber(BaseFilter):
     async def __call__(self, message: Message) -> bool:
         allowed = db.fetchone("SELECT allowed FROM users WHERE userid=%s::text", (message.from_user.id,))
-        if allowed:
-            return bool(int(allowed[0]))
-        chid = db.fetchone("SELECT chid FROM channel")
-        if chid:
-            chid = int(chid[0])
-            return await checksub(message.from_user.id, chid)
+        
+        # Manual permission (allowed=2) overrides channel subscription requirements
+        if allowed and allowed[0] == 2:
+            return True
+            
+        # If admin explicitly denied access (allowed=-1), always return False
+        if allowed and allowed[0] == -1:
+            return False
+        
+        # If user has standard permission (allowed=1), check they're still subscribed
+        if allowed and allowed[0] == 1:
+            # Check if they're still subscribed to all required channels
+            channels = db.fetchall("SELECT chid FROM channel")
+            if channels:
+                for channel in channels:
+                    if await checksub(message.from_user.id, channel[0]):
+                        return True
+            return False
+        
+        # Otherwise check channel subscriptions
+        channels = db.fetchall("SELECT chid FROM channel")
+        if not channels:
+            return True
+        
+        # Check if user is subscribed to ALL required channels
+        for channel in channels:
+            if await checksub(message.from_user.id, channel[0]):
+                return True
+        
+        # User is subscribed to all channels - update database
+        db.query("UPDATE users SET allowed=0 WHERE userid=%s::text", (message.from_user.id,))
         return False
 
 class IsNotSubscriber(BaseFilter):
     async def __call__(self, message: Message) -> bool:
         allowed = db.fetchone("SELECT allowed FROM users WHERE userid=%s::text", (message.from_user.id,))
-        if allowed:
-            return not bool(int(allowed[0]))
-        chid = db.fetchone("SELECT chid FROM channel")
-        if chid:
-            chid = int(chid[0])
-            return not await checksub(message.from_user.id, chid)
+        
+        # Manual permission (allowed=2) overrides channel subscription requirements
+        if allowed and allowed[0] == 2:
+            return False
+            
+        # If admin explicitly denied access (allowed=-1), always return True 
+        if allowed and allowed[0] == -1:
+            return True
+            
+        # If user has standard permission (allowed=1), check they're still subscribed
+        if allowed and allowed[0] == 1:
+            # Check if they're still subscribed to all required channels
+            channels = db.fetchall("SELECT chid FROM channel")
+            if channels:
+                for channel in channels:
+                    if await checksub(message.from_user.id, channel[0]):
+                        return False
+            return True
+            
+        # Otherwise check channel subscriptions
+        channels = db.fetchall("SELECT chid FROM channel")
+        if not channels:
+            return False
+        
+        # Check if user is missing ANY required channel
+        for channel in channels:
+            if await checksub(message.from_user.id, channel[0]):
+                return False
+                
+        # User is subscribed to all channels - update database
+        db.query("UPDATE users SET allowed=0 WHERE userid=%s::text", (message.from_user.id,))
         return True
 
 class IsSubscriberCallback(BaseFilter):
     async def __call__(self, callback: CallbackQuery) -> bool:
         allowed = db.fetchone("SELECT allowed FROM users WHERE userid=%s::text", (callback.from_user.id,))
-        if allowed:
-            return bool(int(allowed[0]))
-        chid = db.fetchone("SELECT chid FROM channel")
-        if chid:
-            chid = int(chid[0])
-            return await checksub(callback.from_user.id, chid)
+        
+        # Manual permission (allowed=2) overrides channel subscription requirements
+        if allowed and allowed[0] == 2:
+            return True
+            
+        # If admin explicitly denied access (allowed=-1), always return False
+        if allowed and allowed[0] == -1:
+            return False
+            
+        # If user has standard permission (allowed=1), check they're still subscribed
+        if allowed and allowed[0] == 1:
+            # Check if they're still subscribed to all required channels
+            channels = db.fetchall("SELECT chid FROM channel")
+            if channels:
+                for channel in channels:
+                    if await checksub(callback.from_user.id, channel[0]):
+                        return True
+            return False
+            
+        # Otherwise check channel subscriptions
+        channels = db.fetchall("SELECT chid FROM channel")
+        if not channels:
+            return True
+        
+        # Check if user is subscribed to ALL required channels
+        for channel in channels:
+            if await checksub(callback.from_user.id, channel[0]):
+                return True
+                
+        # User is subscribed to all channels - update database
+        db.query("UPDATE users SET allowed=0 WHERE userid=%s::text", (callback.from_user.id,))
         return False
 
 class IsNotSubscriberCallback(BaseFilter):
     async def __call__(self, callback: CallbackQuery) -> bool:
         allowed = db.fetchone("SELECT allowed FROM users WHERE userid=%s::text", (callback.from_user.id,))
-        if allowed:
-            return not bool(int(allowed[0]))
-        chid = db.fetchone("SELECT chid FROM channel")
-        if chid:
-            chid = int(chid[0])
-            return not await checksub(callback.from_user.id, chid)
+        
+        # Manual permission (allowed=2) overrides channel subscription requirements
+        if allowed and allowed[0] == 2:
+            return False
+            
+        # If admin explicitly denied access (allowed=-1), always return True
+        if allowed and allowed[0] == -1:
+            return True
+            
+        # If user has standard permission (allowed=1), check they're still subscribed
+        if allowed and allowed[0] == 1:
+            # Check if they're still subscribed to all required channels
+            channels = db.fetchall("SELECT chid FROM channel")
+            if channels:
+                for channel in channels:
+                    if await checksub(callback.from_user.id, channel[0]):
+                        return False
+            db.query("UPDATE users SET allowed=0 WHERE userid=%s::text", (callback.from_user.id,))
+            return True
+            
+        # Otherwise check channel subscriptions
+        channels = db.fetchall("SELECT chid FROM channel")
+        if not channels:
+            return False
+        
+        # Check if user is missing ANY required channel
+        for channel in channels:
+            if await checksub(callback.from_user.id, channel[0]):
+                return False
+                
+        # User is subscribed to all channels - update database
+        db.query("UPDATE users SET allowed=0 WHERE userid=%s::text", (callback.from_user.id,))
         return True
 
 class IsAdmin(BaseFilter):

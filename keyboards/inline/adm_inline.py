@@ -34,12 +34,16 @@ btns1 = [
 ]
 set_menu = InlineKeyboardMarkup(inline_keyboard=btns1)
 
-def post_chan(channel):
+def post_chan(channels=[]):
     btns = []
-    if channel:
-        btns.append([InlineKeyboardButton(text=channel[0], url=channel[1])])
+    for channel in channels:
+        btns.append([
+            InlineKeyboardButton(text=channel[0], url=channel[1]),
+            InlineKeyboardButton(text=dict.delete, callback_data=f"delete_perm_{channel[2]}")
+        ])
+    btns.append([InlineKeyboardButton(text=dict.add_permit_chat, callback_data="add_perm_chat")])
+    if channels:
         btns.append([InlineKeyboardButton(text=dict.reset, callback_data="reset")])
-    btns.append([InlineKeyboardButton(text=dict.set_new, callback_data="set_new")])
     btns.append([InlineKeyboardButton(text=dict.back, callback_data="back")])
     return InlineKeyboardMarkup(inline_keyboard=btns)
 
@@ -156,7 +160,7 @@ btns7 = [
 today = InlineKeyboardMarkup(inline_keyboard=btns7)
 
 def ans_set_fin(visibility, resub, folder=None):
-    btns = [[InlineKeyboardButton(text=dict.back, callback_data="back"), InlineKeyboardButton(text=dict.contin, callback_data="continue")]]
+    btns = [[InlineKeyboardButton(text=dict.back, callback_data="back"), InlineKeyboardButton(text=dict.finish, callback_data="continue")]]
     if folder:
         btns.append([InlineKeyboardButton(text=dict.folder+folder, callback_data="folder")])
     else:
@@ -264,3 +268,10 @@ btns8 = [
     ]
 ]
 arch_inl = InlineKeyboardMarkup(inline_keyboard=btns8)
+
+btns9 = [
+    [
+        InlineKeyboardButton(text=dict.contin, callback_data="continue"),
+    ]
+]
+continue_inl_to_sett = InlineKeyboardMarkup(inline_keyboard=btns9)

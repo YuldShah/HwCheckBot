@@ -23,7 +23,7 @@ async def process_command(message: types.Message) -> None:
 
 @nosub.callback_query(CbData("get_perm"))
 async def get_perm(callback: types.CallbackQuery):
-    db.query("UPDATE users SET allowed=1 WHERE userid=%s::text", (callback.from_user.id,))
+    db.query("UPDATE users SET allowed=2 WHERE userid=%s::text", (callback.from_user.id,))
     try:
         await callback.bot.send_message(callback.from_user.id, "🎉 Tabriklaymiz, sizga botdan foydalanish ruxsati berildi. /start buyrug'ini jo'nating.", reply_markup=user_markup)
     except:

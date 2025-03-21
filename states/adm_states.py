@@ -18,9 +18,10 @@ class accstates(StatesGroup):
     acmenu = State()
     post = State()
     link = State()
+    chat_link = State()  # Added for two-step chat link input
     confirm = State()
-    fmans = State()
-    del_con = State()
+    del_con = State()    # For deletion confirmation
+    reset_con = State()  # For reset all confirmation
     
     manl = State()
     adda = State()

@@ -5,3 +5,4 @@ from .notsubbed import nosub
 from .public_res import pub
 from .results import reshow
 from .archive import usrarch
+from .usr_not_recognized import usrem
