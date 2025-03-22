@@ -324,7 +324,7 @@ async def rm_folder_done(callback: types.CallbackQuery, state: FSMContext):
     await show_folders(callback.message, state)
     await callback.message.delete()
 
-arch.callback_query(CbData("cancel"), arch_states.rmfconfirm)
+@arch.callback_query(CbData("cancel"), arch_states.rmfconfirm)
 async def cancel_rm_folder(callback: types.CallbackQuery, state: FSMContext):
     await show_folders(callback.message, state)
     await callback.message.delete()
