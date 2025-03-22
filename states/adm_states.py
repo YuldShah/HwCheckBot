@@ -64,3 +64,8 @@ class arch_states(StatesGroup):
 
 class statsstates(StatesGroup):
     stmenu = State()
+    viewing_all = State()  # For viewing all submissions
+    viewing_by_user = State()  # For viewing submissions by user
+    viewing_by_exam = State()  # For viewing submissions by exam
+    select_user = State()  # For selecting a user
+    select_exam = State()  # For selecting an exam

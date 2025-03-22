@@ -275,3 +275,77 @@ btns9 = [
     ]
 ]
 continue_inl_to_sett = InlineKeyboardMarkup(inline_keyboard=btns9)
+
+# Statistics menus
+btns_stats = [
+    [
+        InlineKeyboardButton(text=dict.all_submissions, callback_data="stats_all"),
+        InlineKeyboardButton(text=dict.by_user, callback_data="stats_by_user")
+    ],
+    [
+        InlineKeyboardButton(text=dict.by_exam, callback_data="stats_by_exam"),
+        InlineKeyboardButton(text=dict.export_excel, callback_data="stats_export")
+    ],
+    [
+        InlineKeyboardButton(text=dict.back, callback_data="stats_back")
+    ]
+]
+stats_menu = InlineKeyboardMarkup(inline_keyboard=btns_stats)
+
+def stats_pagination(page=1, total_pages=1):
+    btns = [
+        [
+            InlineKeyboardButton(text="⬅️", callback_data="stats_prev_page"),
+            InlineKeyboardButton(text=f"{page}/{total_pages}", callback_data="stats_page_info"),
+            InlineKeyboardButton(text="➡️", callback_data="stats_next_page")
+        ],
+        [
+            InlineKeyboardButton(text=dict.back_to_stats, callback_data="stats_back")
+        ]
+    ]
+    return InlineKeyboardMarkup(inline_keyboard=btns)
+
+def user_selection_kb(users):
+    btns = []
+    for user in users:
+        display_name = f"{user[2] or 'User'} (@{user[3] or 'No username'})"
+        btns.append([InlineKeyboardButton(text=display_name, callback_data=f"stats_user_{user[1]}")])
+    
+    btns.append([InlineKeyboardButton(text=dict.back, callback_data="stats_back")])
+    return InlineKeyboardMarkup(inline_keyboard=btns)
+
+def exam_selection_kb(exams):
+    btns = []
+    for exam in exams:
+        btns.append([InlineKeyboardButton(text=exam[1], callback_data=f"stats_exam_{exam[0]}")])
+    
+    btns.append([InlineKeyboardButton(text=dict.back, callback_data="stats_back")])
+    return InlineKeyboardMarkup(inline_keyboard=btns)
+
+def submission_details_kb(submissions, page, total_pages):
+    """Keyboard for submission details with view buttons and pagination"""
+    keyboard = []
+    for idx, sub in enumerate(submissions, 1):
+        sub_id = sub[0]
+        keyboard.append([
+            InlineKeyboardButton(text=f"{idx}. View Details", callback_data=f"view_details_{sub_id}")
+        ])
+    
+    # Add pagination buttons
+    pagination_row = []
+    if page > 1:
+        pagination_row.append(InlineKeyboardButton(text="⬅️", callback_data="stats_prev_page"))
+    pagination_row.append(InlineKeyboardButton(text=f"{page}/{total_pages}", callback_data="stats_page_info"))
+    if page < total_pages:
+        pagination_row.append(InlineKeyboardButton(text="➡️", callback_data="stats_next_page"))
+    
+    keyboard.append(pagination_row)
+    keyboard.append([InlineKeyboardButton(text=dict.back_to_stats, callback_data="stats_back")])
+    
+    return InlineKeyboardMarkup(inline_keyboard=keyboard)
+
+def submission_detail_back_kb():
+    """Back button for submission details view"""
+    return InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text=dict.back, callback_data="back_to_submissions")]
+    ])
