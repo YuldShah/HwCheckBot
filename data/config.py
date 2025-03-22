@@ -1,5 +1,3 @@
-
-
 import os
 
 BOT_TOKEN = os.getenv("BOT_TOKEN")
@@ -9,5 +7,7 @@ ADMIN_URL = "https://t.me/satelbekadmin"
 # DB_URI =  "mongodb+srv://notyuldshah:<Description_56>@prproj.xbst3.mongodb.net/?retryWrites=true&w=majority&appName=prproj" #os.getenv("URI")
 MAX_EXAMS_AT_A_TIME = 5
 MULTIPLE_CHOICE_DEF = 4
-MAX_QUESTION_IN_A_PAGE = 15
+MAX_QUESTION_IN_A_PAGE = 15 # divisible by 5
+MAX_FOLDERS_PER_PAGE = 5
+MAX_EXAMS_PER_PAGE = 5
 bot_info = None

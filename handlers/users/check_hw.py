@@ -86,6 +86,10 @@ async def process_exam(message_or_query, exam, state: FSMContext):
 
 @chhw.callback_query(F.data.startswith("exam_"))
 async def choose_exam(callback: types.CallbackQuery, state: FSMContext):
+    # Check if this is a navigation command like "exam_page_prev"
+    if not callback.data.split("_")[1].isdigit():
+        return
+        
     # Set the new "choose" state for exam selection if desired
     await state.set_state(check_hw_states.choose)
     exam_id = int(callback.data.split("_")[1])

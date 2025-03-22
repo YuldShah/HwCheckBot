@@ -99,3 +99,65 @@ btns2 = [
     ]
 ]
 usr_main_inl_key = InlineKeyboardMarkup(inline_keyboard=btns2)
+
+def get_folders_keyboard(folders, page=1):
+    """Create keyboard with folders pagination"""
+    btns = []
+    
+    # Always show null folder (ID 0) at the top if it's in the folders list
+    null_folder = next((f for f in folders if f[0] == 0), None)
+    if null_folder:
+        btns.append([InlineKeyboardButton(text=f"{null_folder[1]}", callback_data=f"folder_0")])
+    
+    # Sort other folders by ID (newest to oldest)
+    other_folders = sorted([f for f in folders if f[0] != 0], key=lambda x: x[0], reverse=True)
+    
+    # Pagination
+    total_pages = max(1, (len(other_folders) + config.MAX_FOLDERS_PER_PAGE - 1) // config.MAX_FOLDERS_PER_PAGE)
+    start_idx = (page - 1) * config.MAX_FOLDERS_PER_PAGE
+    end_idx = min(start_idx + config.MAX_FOLDERS_PER_PAGE, len(other_folders))
+    
+    # Add folder buttons for current page
+    for folder_id, folder_title in other_folders[start_idx:end_idx]:
+        btns.append([InlineKeyboardButton(text=f"{folder_title}", callback_data=f"folder_{folder_id}")])
+    
+    # Only add navigation buttons if there are multiple pages
+    if total_pages > 1:
+        nav_row = [
+            InlineKeyboardButton(text="⬅️", callback_data="folder_page_prev"),
+            InlineKeyboardButton(text=f"{page}/{total_pages}", callback_data="folder_page_now"),
+            InlineKeyboardButton(text="➡️", callback_data="folder_page_next")
+        ]
+        btns.append(nav_row)
+    
+    return InlineKeyboardMarkup(inline_keyboard=btns)
+
+def get_folder_exams(exams, page=1):
+    """Create keyboard with exams pagination for a specific folder"""
+    btns = []
+    
+    # Pagination
+    total_pages = max(1, (len(exams) + config.MAX_EXAMS_PER_PAGE - 1) // config.MAX_EXAMS_PER_PAGE if exams else 1)
+    start_idx = (page - 1) * config.MAX_EXAMS_PER_PAGE
+    end_idx = min(start_idx + config.MAX_EXAMS_PER_PAGE, len(exams) if exams else 0)
+    
+    # Add exam buttons for current page
+    for title, idx in exams[start_idx:end_idx]:
+        btns.append([InlineKeyboardButton(text=title, callback_data=f"mexam_{idx}")])
+    
+    # Only add navigation buttons if there are multiple pages
+    if total_pages > 1:
+        nav_row = [
+            # InlineKeyboardButton(text=dict.earlier, callback_data="mexampage_prev"),
+            # InlineKeyboardButton(text=dict.later, callback_data="mexampage_next")
+        ]
+        if page > 1:
+            nav_row.append(InlineKeyboardButton(text=dict.later, callback_data="mexampage_next"))
+        if page < total_pages:
+            nav_row.append(InlineKeyboardButton(text=dict.earlier, callback_data="mexampage_prev")) 
+        btns.append(nav_row)
+    
+    # Add back button to return to folder selection
+    btns.append([InlineKeyboardButton(text=dict.back_uz, callback_data="back_to_folders")])
+    
+    return InlineKeyboardMarkup(inline_keyboard=btns)

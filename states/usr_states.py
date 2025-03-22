@@ -11,6 +11,7 @@ class result_states(StatesGroup):
     show = State()
 
 class missing_hw_states(StatesGroup):
+    folders = State()  # New state for folder selection
     exams = State()
     details = State()
     way = State()
