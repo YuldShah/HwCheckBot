@@ -22,6 +22,7 @@ async def not_for_you(callback: CallbackQuery) -> None:
 
 @remover.callback_query()
 async def remove_callback(callback: CallbackQuery) -> None:
+    print(f"Callback not recognized: {callback.data}")
     response = await callback.message.answer("Not recognized", reply_markup=main_menu_in)
     await callback.answer("Not recognized")
     # Delete the message after 5 seconds

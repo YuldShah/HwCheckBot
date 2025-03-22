@@ -279,46 +279,76 @@ continue_inl_to_sett = InlineKeyboardMarkup(inline_keyboard=btns9)
 # Statistics menus
 btns_stats = [
     [
-        InlineKeyboardButton(text=dict.all_submissions, callback_data="stats_all"),
-        InlineKeyboardButton(text=dict.by_user, callback_data="stats_by_user")
+        InlineKeyboardButton(text=dict.by_user, callback_data="stats_by_user"),
+        InlineKeyboardButton(text=dict.by_exam, callback_data="stats_by_exam")
     ],
     [
-        InlineKeyboardButton(text=dict.by_exam, callback_data="stats_by_exam"),
-        InlineKeyboardButton(text=dict.export_excel, callback_data="stats_export")
+        InlineKeyboardButton(text=dict.all_submissions, callback_data="stats_all")
     ],
     [
-        InlineKeyboardButton(text=dict.back, callback_data="stats_back")
+        InlineKeyboardButton(text=dict.export_excel, callback_data="stats_export_select")
     ]
 ]
 stats_menu = InlineKeyboardMarkup(inline_keyboard=btns_stats)
 
-def stats_pagination(page=1, total_pages=1):
-    btns = [
-        [
-            InlineKeyboardButton(text="⬅️", callback_data="stats_prev_page"),
-            InlineKeyboardButton(text=f"{page}/{total_pages}", callback_data="stats_page_info"),
-            InlineKeyboardButton(text="➡️", callback_data="stats_next_page")
-        ],
-        [
-            InlineKeyboardButton(text=dict.back_to_stats, callback_data="stats_back")
-        ]
+# Export selection menu
+btns_export_select = [
+    [
+        InlineKeyboardButton(text=dict.by_user, callback_data="stats_export_by_user"),
+        InlineKeyboardButton(text=dict.by_exam, callback_data="stats_export_by_exam")
+    ],
+    [
+        InlineKeyboardButton(text=dict.all_submissions, callback_data="stats_export_all")
+    ],
+    [
+        InlineKeyboardButton(text=dict.back_to_stats, callback_data="stats_back")
     ]
-    return InlineKeyboardMarkup(inline_keyboard=btns)
+]
+export_select_menu = InlineKeyboardMarkup(inline_keyboard=btns_export_select)
 
-def user_selection_kb(users):
+
+def user_selection_kb(users, page=1, total_pages=1, export_prefix="stats_user_"):
     btns = []
     for user in users:
         display_name = f"{user[2] or 'User'} (@{user[3] or 'No username'})"
-        btns.append([InlineKeyboardButton(text=display_name, callback_data=f"stats_user_{user[1]}")])
-    
+        btns.append([InlineKeyboardButton(text=display_name, callback_data=f"{export_prefix}{user[1]}")])
+    if export_prefix.startswith("export_user_"):
+        pagination_row = [
+            InlineKeyboardButton(text="⏪", callback_data=f"export_users_jump_page_{page-config.USERS_PAGE_JUMP}"),
+            InlineKeyboardButton(text="⬅️", callback_data="export_users_prev_page"),
+            InlineKeyboardButton(text="➡️", callback_data="export_users_next_page"),
+            InlineKeyboardButton(text="⏩", callback_data=f"export_users_jump_page_{page+config.USERS_PAGE_JUMP}")
+        ]
+    else:
+        pagination_row = [
+            InlineKeyboardButton(text="⏪", callback_data=f"users_jump_page_{page-config.USERS_PAGE_JUMP}"),
+            InlineKeyboardButton(text="⬅️", callback_data="users_prev_page"),
+            InlineKeyboardButton(text="➡️", callback_data="users_next_page"),
+            InlineKeyboardButton(text="⏩", callback_data=f"users_jump_page_{page+config.USERS_PAGE_JUMP}")
+        ]
+    btns.append(pagination_row)
     btns.append([InlineKeyboardButton(text=dict.back, callback_data="stats_back")])
     return InlineKeyboardMarkup(inline_keyboard=btns)
 
-def exam_selection_kb(exams):
+def exam_selection_kb(exams, page=1, total_pages=1, export_prefix="stats_exam_"):
     btns = []
     for exam in exams:
-        btns.append([InlineKeyboardButton(text=exam[1], callback_data=f"stats_exam_{exam[0]}")])
-    
+        btns.append([InlineKeyboardButton(text=exam[1], callback_data=f"{export_prefix}{exam[0]}")])
+    if export_prefix.startswith("export_exam_"):
+        pagination_row = [
+            InlineKeyboardButton(text="⏪", callback_data=f"export_exams_jump_page_{page-config.EXAMS_PAGE_JUMP}"),
+            InlineKeyboardButton(text="⬅️", callback_data="export_exams_prev_page"),
+            InlineKeyboardButton(text="➡️", callback_data="export_exams_next_page"),
+            InlineKeyboardButton(text="⏩", callback_data=f"export_exams_jump_page_{page+config.EXAMS_PAGE_JUMP}")
+        ]
+    else:
+        pagination_row = [
+            InlineKeyboardButton(text="⏪", callback_data=f"exams_jump_page_{page-config.EXAMS_PAGE_JUMP}"),
+            InlineKeyboardButton(text="⬅️", callback_data="exams_prev_page"),
+            InlineKeyboardButton(text="➡️", callback_data="exams_next_page"),
+            InlineKeyboardButton(text="⏩", callback_data=f"exams_jump_page_{page+config.EXAMS_PAGE_JUMP}")
+        ]
+    btns.append(pagination_row)
     btns.append([InlineKeyboardButton(text=dict.back, callback_data="stats_back")])
     return InlineKeyboardMarkup(inline_keyboard=btns)
 
@@ -327,17 +357,18 @@ def submission_details_kb(submissions, page, total_pages):
     keyboard = []
     for idx, sub in enumerate(submissions, 1):
         sub_id = sub[0]
-        keyboard.append([
-            InlineKeyboardButton(text=f"{idx}. View Details", callback_data=f"view_details_{sub_id}")
-        ])
+        if idx % 2 == 1:
+            keyboard.append([InlineKeyboardButton(text=f"👁 #{sub_id}", callback_data=f"view_details_{sub_id}")])
+        else:
+            keyboard[-1].append(InlineKeyboardButton(text=f"👁 #{sub_id}", callback_data=f"view_details_{sub_id}"))
     
-    # Add pagination buttons
-    pagination_row = []
-    if page > 1:
-        pagination_row.append(InlineKeyboardButton(text="⬅️", callback_data="stats_prev_page"))
-    pagination_row.append(InlineKeyboardButton(text=f"{page}/{total_pages}", callback_data="stats_page_info"))
-    if page < total_pages:
-        pagination_row.append(InlineKeyboardButton(text="➡️", callback_data="stats_next_page"))
+    # Add pagination buttons with big jumps
+    pagination_row = [
+        InlineKeyboardButton(text=f"⏪", callback_data=f"stats_jump_page_{page-config.SUBMISSIONS_PAGE_JUMP}"),
+        InlineKeyboardButton(text="⬅️", callback_data="stats_prev_page"),
+        InlineKeyboardButton(text="➡️", callback_data="stats_next_page"),
+        InlineKeyboardButton(text=f"⏩", callback_data=f"stats_jump_page_{page+config.SUBMISSIONS_PAGE_JUMP}")
+    ]
     
     keyboard.append(pagination_row)
     keyboard.append([InlineKeyboardButton(text=dict.back_to_stats, callback_data="stats_back")])

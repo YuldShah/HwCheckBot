@@ -22,6 +22,7 @@ async def not_for_you(callback: CallbackQuery) -> None:
 
 @usrem.callback_query()
 async def remove_callback(callback: CallbackQuery) -> None:
+    print(f"Callback not recognized: {callback.data}")
     response = await callback.message.answer("Sizni tushunmadim.", reply_markup=usr_main_inl_key)
     await callback.answer("Yuklanmoqda...")
     # Delete the message after 5 seconds

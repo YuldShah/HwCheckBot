@@ -69,3 +69,6 @@ class statsstates(StatesGroup):
     viewing_by_exam = State()  # For viewing submissions by exam
     select_user = State()  # For selecting a user
     select_exam = State()  # For selecting an exam
+    export_select = State()  # For selecting export type
+    select_user_export = State()  # For selecting a user to export
+    select_exam_export = State()  # For selecting an exam to export
