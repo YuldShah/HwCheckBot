@@ -8,6 +8,7 @@ from filters import IsAdmin, IsAdminCallback, CbData, CbDataStartsWith
 import pandas as pd
 from io import BytesIO
 from datetime import datetime, timezone, timedelta
+import pytz
 import json
 import logging
 import traceback
@@ -28,7 +29,6 @@ reser.callback_query.filter(IsAdminCallback())
 # Initialize database connection
 db = DatabaseManager(config.DB_URL)
 
-# Helper function to convert UTC datetime to UTC+5
 def to_local_time(utc_dt):
     if utc_dt is None:
         return None
@@ -37,8 +37,9 @@ def to_local_time(utc_dt):
     if utc_dt.tzinfo is None:
         utc_dt = utc_dt.replace(tzinfo=timezone.utc)
     
-    # Convert to UTC+5
-    return utc_dt.astimezone(UTC_PLUS_5)
+    # Convert to UTC+5 using pytz
+    local_tz = pytz.timezone('Asia/Karachi')
+    return utc_dt.astimezone(local_tz)
 
 # Helper function to format datetime for display
 def format_datetime(dt):
