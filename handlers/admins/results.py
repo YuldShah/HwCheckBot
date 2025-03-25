@@ -1495,7 +1495,9 @@ async def back_to_stats_menu(callback: types.CallbackQuery, state: FSMContext, n
     subs = ""
     if recent_subs:
         for idx, sub in enumerate(recent_subs, 1):
-            subs += f"{idx}. {html.bold(sub[1])} - {html.italic(sub[2])}: {sub[3].strftime('%Y-%m-%d %H:%M')}\n"
+            # Convert date to UTC+5 using the format_datetime function
+            local_date = format_datetime(sub[3])
+            subs += f"{idx}. {html.bold(sub[1])} - {html.italic(sub[2])}: {local_date}\n"
     else:
         subs = "No recent submissions.\n"
     stats_message += html.blockquote(subs)
