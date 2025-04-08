@@ -193,13 +193,38 @@ def get_create_folders(folders=[]):
     btns.append(arow)
     return InlineKeyboardMarkup(inline_keyboard=btns)
 
-def get_folder_tests(tests):
+def get_folder_tests(tests, page=1):
     btns = []
-    for i, j in tests:
+    # If tests is empty, just return back button
+    if not tests:
+        btns.append([InlineKeyboardButton(text=dict.back, callback_data="back")])
+        return InlineKeyboardMarkup(inline_keyboard=btns)
+    
+    # Sort tests by ID (newest to oldest)
+    sorted_tests = sorted(tests, key=lambda x: x[0], reverse=True)
+    
+    # Pagination
+    total_pages = max(1, (len(sorted_tests) + config.MAX_EXAMS_PER_PAGE - 1) // config.MAX_EXAMS_PER_PAGE)
+    start_idx = (page - 1) * config.MAX_EXAMS_PER_PAGE
+    end_idx = min(start_idx + config.MAX_EXAMS_PER_PAGE, len(sorted_tests))
+    
+    # Add test buttons for current page
+    for i, j in sorted_tests[start_idx:end_idx]:
         btns.append([InlineKeyboardButton(text=j, callback_data=f"exman_{i}")])
+    
+    # Add pagination navigation if needed
+    if total_pages > 1:
+        pagination_row = []
+        if page > 1:
+            pagination_row.append(InlineKeyboardButton(text="⬅️", callback_data="tests_page_prev"))
+        pagination_row.append(InlineKeyboardButton(text=f"{page}/{total_pages}", callback_data="tests_page_now"))
+        if page < total_pages:
+            pagination_row.append(InlineKeyboardButton(text="➡️", callback_data="tests_page_next"))
+        btns.append(pagination_row)
+    
+    # Always add back button
     btns.append([InlineKeyboardButton(text=dict.back, callback_data="back")])
     return InlineKeyboardMarkup(inline_keyboard=btns)
-    # btns.append([InlineKeyboardButton(text=dict.add_folder, callback_data="")])
 
 def remove_att(attach_id):
     btns = [
@@ -310,7 +335,7 @@ export_select_menu = InlineKeyboardMarkup(inline_keyboard=btns_export_select)
 def user_selection_kb(users, page=1, total_pages=1, export_prefix="stats_user_"):
     btns = []
     for user in users:
-        display_name = f"{user[2] or 'User'} (@{user[3] or 'No username'})"
+        display_name = f"{user[2] or 'User'} - {user[1]} - @{user[3] or 'No username'}"
         btns.append([InlineKeyboardButton(text=display_name, callback_data=f"{export_prefix}{user[1]}")])
     if export_prefix.startswith("export_user_"):
         pagination_row = [

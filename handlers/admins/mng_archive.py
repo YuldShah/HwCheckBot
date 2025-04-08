@@ -4,7 +4,7 @@ from loader import db
 from keyboards.inline import get_folder_tests, details_test, edit_test_menu, inl_folders, remove_att, get_create_folders, confirm_inl_key, rm_folders_menu, back_inl_key
 from keyboards.regular import main_key, back_key, skip_desc, adm_default, attach_done
 from time import sleep
-from data import dict
+from data import dict, config
 from datetime import datetime, timezone, timedelta
 from states import arch_states
 from aiogram.fsm.context import FSMContext
@@ -35,13 +35,31 @@ async def show_tests_of_folder(callback: types.CallbackQuery, state: FSMContext)
     data = await state.get_data()
     await callback.message.edit_text("Loading...")
     folder_id = int(callback.data.split("_")[1]) if callback.data.startswith("fmng_") else data.get("folder_id")
-    await state.update_data(folder_id=folder_id)
-    tests = db.fetchall("SELECT idx, title FROM exams WHERE folder = %s", (folder_id,))
-    if tests:
-        await callback.message.edit_text(f"Here you can manage, see the details of the tests in the folder", reply_markup=get_folder_tests(tests))
+    
+    # Store folder_id and initialize page number
+    await state.update_data(folder_id=folder_id, current_test_page=1)
+    
+    # If folder_id is 0 (All tests), get ALL tests regardless of folder
+    # Otherwise, get only tests for the specific folder
+    if folder_id == 0:
+        tests = db.fetchall("SELECT idx, title FROM exams ORDER BY idx DESC")
     else:
-        await callback.answer("No tests were moved here yet")
-        await callback.message.edit_text(f"🚫 Folder doesn't contain any tests. Please, move tests here first")
+        tests = db.fetchall("SELECT idx, title FROM exams WHERE folder = %s ORDER BY idx DESC", (folder_id,))
+    
+    if tests:
+        # Calculate total pages
+        total_pages = max(1, (len(tests) + config.MAX_EXAMS_PER_PAGE - 1) // config.MAX_EXAMS_PER_PAGE)
+        await state.update_data(total_test_pages=total_pages)
+        
+        # Show first page
+        folder_name = "All tests" if folder_id == 0 else db.fetchone("SELECT title FROM folders WHERE idx = %s", (folder_id,))[0]
+        await callback.message.edit_text(
+            f"Here you can manage, see the details of the tests in {folder_name}", 
+            reply_markup=get_folder_tests(tests, 1)
+        )
+    else:
+        await callback.answer("No tests were found")
+        await callback.message.edit_text(f"🚫 No tests found")
         await show_folders(callback.message, state)
         return
     await state.set_state(arch_states.tests)
@@ -584,3 +602,44 @@ async def save_new_deadline(message: types.Message, state: FSMContext):
         await message.delete()
         sleep(2)
         await msg.delete()
+
+@arch.callback_query(CbDataStartsWith("tests_page_"), arch_states.tests)
+async def navigate_test_pages(callback: types.CallbackQuery, state: FSMContext):
+    action = callback.data.split("_")[2]  # prev, next, or now
+    data = await state.get_data()
+    current_page = data.get("current_test_page", 1)
+    folder_id = data.get("folder_id")
+    total_pages = data.get("total_test_pages", 1)
+    
+    # Adjust page based on action
+    if action == "prev":
+        if current_page > 1:
+            current_page -= 1
+        else:
+            await callback.answer("Already on the first page")
+            return
+    elif action == "next":
+        if current_page < total_pages:
+            current_page += 1
+        else:
+            await callback.answer("Already on the last page")
+            return
+    else:  # now - showing current page info
+        await callback.answer(f"Page {current_page} of {total_pages}")
+        return
+    
+    # Update state with new page
+    await state.update_data(current_test_page=current_page)
+    
+    # Get tests for this folder again
+    if folder_id == 0:
+        tests = db.fetchall("SELECT idx, title FROM exams ORDER BY idx DESC")
+    else:
+        tests = db.fetchall("SELECT idx, title FROM exams WHERE folder = %s ORDER BY idx DESC", (folder_id,))
+    
+    # Update the message with the correct page
+    folder_name = "All tests" if folder_id == 0 else db.fetchone("SELECT title FROM folders WHERE idx = %s", (folder_id,))[0]
+    await callback.message.edit_text(
+        f"Here you can manage, see the details of the tests in {folder_name}", 
+        reply_markup=get_folder_tests(tests, current_page)
+    )

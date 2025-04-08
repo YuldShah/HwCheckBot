@@ -147,14 +147,20 @@ def get_folder_exams(exams, page=1):
     
     # Only add navigation buttons if there are multiple pages
     if total_pages > 1:
-        nav_row = [
-            # InlineKeyboardButton(text=dict.earlier, callback_data="mexampage_prev"),
-            # InlineKeyboardButton(text=dict.later, callback_data="mexampage_next")
-        ]
+        nav_row = []
+        
+        # Always show current page indicator
+        page_indicator = f"{page}/{total_pages}"
+        
+        # Add pagination buttons in correct order
         if page > 1:
-            nav_row.append(InlineKeyboardButton(text=dict.later, callback_data="mexampage_next"))
+            nav_row.append(InlineKeyboardButton(text=dict.earlier, callback_data="mexampage_prev"))
+        
+        nav_row.append(InlineKeyboardButton(text=page_indicator, callback_data="mexampage_now"))
+        
         if page < total_pages:
-            nav_row.append(InlineKeyboardButton(text=dict.earlier, callback_data="mexampage_prev")) 
+            nav_row.append(InlineKeyboardButton(text=dict.later, callback_data="mexampage_next"))
+            
         btns.append(nav_row)
     
     # Add back button to return to folder selection

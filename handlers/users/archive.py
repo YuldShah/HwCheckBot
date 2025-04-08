@@ -29,7 +29,7 @@ async def show_archive(message: types.Message, state: FSMContext):
     uncategorized_count = db.fetchone("SELECT COUNT(*) FROM exams WHERE folder = 0 AND hide = 0")
     if uncategorized_count and uncategorized_count[0] > 0:
         folder_name = db.fetchone("SELECT title FROM folders WHERE idx = 0")
-        folder_title = folder_name[0] if folder_name else "🗂Aralash"
+        folder_title = folder_name[0] if folder_name else "🔠 Barcha vazifalar"
         folders_with_tests.append((0, folder_title))
     
     # Fetch other folders that have at least one visible test
@@ -44,11 +44,11 @@ async def show_archive(message: types.Message, state: FSMContext):
         await state.set_state(missing_hw_states.folders)
         await state.update_data(current_folder_page=1)
         await msg.edit_text(
-            "Quyida arxivdagi mavzular:",
+            "Quyida arxivdagi mavzular, barcha vazifalarni yoki qaysidir vazifa mavzusini tanlang.",
             reply_markup=get_folders_keyboard(folders_with_tests)
         )
     else:
-        await msg.edit_text("Afsuski, hozirda arxivda testlar yo'q.")
+        await msg.edit_text("Afsuski, hozirda arxivda vazifalar yo'q.")
 
 @usrarch.callback_query(F.data.startswith("folder_page_"), missing_hw_states.folders)
 async def navigate_folder_pages(callback: types.CallbackQuery, state: FSMContext):
@@ -63,7 +63,7 @@ async def navigate_folder_pages(callback: types.CallbackQuery, state: FSMContext
     uncategorized_count = db.fetchone("SELECT COUNT(*) FROM exams WHERE folder = 0 AND hide = 0")
     if uncategorized_count and uncategorized_count[0] > 0:
         folder_name = db.fetchone("SELECT title FROM folders WHERE idx = 0")
-        folder_title = folder_name[0] if folder_name else "🗂Aralash"
+        folder_title = folder_name[0] if folder_name else "🔠 Barcha vazifalar"
         folders_with_tests.append((0, folder_title))
     
     # Fetch other folders that have at least one visible test
@@ -98,7 +98,7 @@ async def navigate_folder_pages(callback: types.CallbackQuery, state: FSMContext
     
     try:
         await callback.message.edit_text(
-            "Quyida arxivdagi mavzular:",
+            "Quyida arxivdagi mavzular, barcha vazifalarni yoki qaysidir vazifa mavzusini tanlang.",
             reply_markup=get_folders_keyboard(folders_with_tests, current_page)
         )
     except TelegramBadRequest as e:
@@ -118,11 +118,17 @@ async def show_folder_exams(callback: types.CallbackQuery, state: FSMContext):
     folder_id = int(callback.data.split("_")[1])
     await callback.message.edit_text("Yuklanmoqda...")
     
-    # Fetch exams for the selected folder (newest to oldest)
-    exams = db.fetchall(
-        "SELECT title, idx FROM exams WHERE folder = %s AND hide = 0 ORDER BY idx DESC;",
-        (folder_id,)
-    )
+    # If folder_id is 0 (All tests), get ALL tests regardless of folder
+    # otherwise, get only tests for the specific folder
+    if folder_id == 0:
+        exams = db.fetchall(
+            "SELECT title, idx FROM exams WHERE hide = 0 ORDER BY idx DESC;"
+        )
+    else:
+        exams = db.fetchall(
+            "SELECT title, idx FROM exams WHERE folder = %s AND hide = 0 ORDER BY idx DESC;",
+            (folder_id,)
+        )
     
     if exams:
         # Calculate total pages
@@ -132,9 +138,9 @@ async def show_folder_exams(callback: types.CallbackQuery, state: FSMContext):
         await state.update_data(current_exam_page=1, selected_folder=folder_id, total_exam_pages=total_pages)
         await state.set_state(missing_hw_states.exams)
         folder_name = db.fetchone("SELECT title FROM folders WHERE idx = %s", (folder_id,))
-        folder_title = folder_name[0] if folder_name else "🗂Aralash"
+        folder_title = folder_name[0] if folder_name else "🔠 Barcha vazifalar"
         await callback.message.edit_text(
-            f"📝 {html.bold(folder_title)} mavzusidagi vazifalar:",
+            f"📝 Mavzu: {html.bold(folder_title)}. Quyidagi vazifalardan birini tanlang:",
             reply_markup=get_folder_exams(exams, 1)
         )
     else:
@@ -146,7 +152,7 @@ async def show_folder_exams(callback: types.CallbackQuery, state: FSMContext):
         uncategorized_count = db.fetchone("SELECT COUNT(*) FROM exams WHERE folder = 0 AND hide = 0")
         if uncategorized_count and uncategorized_count[0] > 0:
             folder_name = db.fetchone("SELECT title FROM folders WHERE idx = 0")
-            folder_title = folder_name[0] if folder_name else "🗂Aralash"
+            folder_title = folder_name[0] if folder_name else "🔠 Barcha vazifalar"
             all_folders_with_tests.append((0, folder_title))
         
         all_folders = db.fetchall("SELECT idx, title FROM folders WHERE idx != 0 ORDER BY idx DESC")
@@ -166,38 +172,42 @@ async def navigate_exam_pages(callback: types.CallbackQuery, state: FSMContext):
     data = await state.get_data()
     current_page = data.get("current_exam_page", 1)
     folder_id = data.get("selected_folder")
+    total_pages = data.get("total_exam_pages", 1)
     
-    # Fetch exams for the selected folder (newest to oldest)
-    exams = db.fetchall(
-        "SELECT title, idx FROM exams WHERE folder = %s AND hide = 0 ORDER BY idx DESC;",
-        (folder_id,)
-    )
+    # If folder_id is 0 (All tests), get ALL tests regardless of folder
+    if folder_id == 0:
+        exams = db.fetchall(
+            "SELECT title, idx FROM exams WHERE hide = 0 ORDER BY idx DESC;"
+        )
+    else:
+        exams = db.fetchall(
+            "SELECT title, idx FROM exams WHERE folder = %s AND hide = 0 ORDER BY idx DESC;",
+            (folder_id,)
+        )
     
-    # Calculate total pages
-    total_pages = max(1, (len(exams) + config.MAX_EXAMS_PER_PAGE - 1) // config.MAX_EXAMS_PER_PAGE)
-    
-    # Check if we're at page boundary and handle accordingly
+    # Fix the pagination logic - earlier/prev should go to previous page (lower number)
+    # later/next should go to next page (higher number)
     if action == "prev":
-        if current_page < total_pages:
-            current_page += 1
+        if current_page > 1:
+            current_page -= 1
         else:
             await callback.answer("Siz allaqachon birinchi sahifadasiz.")
             return
     elif action == "next":
-        if current_page > 1:
-            current_page -= 1
+        if current_page < total_pages:
+            current_page += 1
         else:
             await callback.answer("Siz allaqachon oxirgi sahifadasiz.")
             return
     
     await state.update_data(current_exam_page=current_page)
     folder_name = db.fetchone("SELECT title FROM folders WHERE idx = %s", (folder_id,))
-    folder_title = folder_name[0] if folder_name else "🗂Aralash"
+    folder_title = folder_name[0] if folder_name else "🔠 Barcha vazifalar"
     
     # Wrap edit_text in try-except to handle message not modified errors
     try:
         await callback.message.edit_text(
-            f"📝 {html.bold(folder_title)} mavzusidagi vazifalar:",
+            f"📝 Mavzu: {html.bold(folder_title)}. Quyidagi vazifalardan birini tanlang:",
             reply_markup=get_folder_exams(exams, current_page)
         )
     except TelegramBadRequest as e:
@@ -217,7 +227,7 @@ async def back_to_folders(callback: types.CallbackQuery, state: FSMContext):
     uncategorized_count = db.fetchone("SELECT COUNT(*) FROM exams WHERE folder = 0 AND hide = 0")
     if uncategorized_count and uncategorized_count[0] > 0:
         folder_name = db.fetchone("SELECT title FROM folders WHERE idx = 0")
-        folder_title = folder_name[0] if folder_name else "🗂Aralash"
+        folder_title = folder_name[0] if folder_name else "🔠 Barcha vazifalar"
         folders_with_tests.append((0, folder_title))
     
     # Fetch other folders that have at least one visible test
@@ -233,7 +243,7 @@ async def back_to_folders(callback: types.CallbackQuery, state: FSMContext):
     
     await state.set_state(missing_hw_states.folders)
     await callback.message.edit_text(
-        "Quyida arxivdagi mavzular:",
+        "Quyida arxivdagi mavzular, barcha vazifalarni yoki qaysidir vazifa mavzusini tanlang.",
         reply_markup=get_folders_keyboard(folders_with_tests, current_page)
     )
 
