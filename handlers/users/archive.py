@@ -1,13 +1,14 @@
 from aiogram import Router, F, html, types
 from filters import IsUser, IsSubscriber, IsUserCallback, IsSubscriberCallback, IsArchiveAllowed, IsArchiveAllowedCallback
 from data import dict, config
-from loader import db
+from loader import db, premium_db
 from time import sleep
 from aiogram.fsm.context import FSMContext
 from keyboards.regular import usr_main_key
-from keyboards.inline import (lets_start, ans_enter_method_usr, goto_bot, submit_ans_user, 
-                             all_continue_usr, get_missing_exams, get_answering_keys, share_sub_usr, 
-                             get_folders_keyboard, get_folder_exams)
+from keyboards.inline import (lets_start, ans_enter_method_usr, goto_bot, submit_ans_user,
+                             all_continue_usr, get_missing_exams, get_answering_keys, share_sub_usr,
+                             get_folders_keyboard, get_folder_exams, get_premium_locked_exams,
+                             get_premium_promo_keyboard)
 from datetime import datetime, timezone, timedelta
 from states import missing_hw_states
 from utils.yau import get_user_text, get_user_ans_text, get_correct_text, gen_code
@@ -21,25 +22,36 @@ usrarch.callback_query.filter(IsUserCallback(), IsSubscriberCallback())
 async def show_archive(message: types.Message, state: FSMContext):
     await message.answer(f"{html.bold(dict.archive)} menyusi", reply_markup=usr_main_key)
     msg = await message.answer("Yuklanmoqda...")
-    
+
     # Get all folders with tests
     folders_with_tests = []
-    
+
     # Always include uncategorized folder (ID 0)
     uncategorized_count = db.fetchone("SELECT COUNT(*) FROM exams WHERE folder = 0 AND hide = 0")
     if uncategorized_count and uncategorized_count[0] > 0:
         folder_name = db.fetchone("SELECT title FROM folders WHERE idx = 0")
         folder_title = folder_name[0] if folder_name else "🔠 Barcha vazifalar"
         folders_with_tests.append((0, folder_title))
-    
+
     # Fetch other folders that have at least one visible test
     all_folders = db.fetchall("SELECT idx, title FROM folders WHERE idx != 0 ORDER BY idx DESC")
-    
+
     for folder_id, folder_title in all_folders:
         test_count = db.fetchone("SELECT COUNT(*) FROM exams WHERE folder = %s AND hide = 0", (folder_id,))
         if test_count and test_count[0] > 0:
             folders_with_tests.append((folder_id, folder_title))
-    
+
+    # Add premium folder if premium database is configured and has exams
+    has_premium_content = False
+    if premium_db:
+        premium_count = premium_db.fetchone("SELECT COUNT(*) FROM exams WHERE hide = 0")
+        if premium_count and premium_count[0] > 0:
+            has_premium_content = True
+            # Add premium folder with special ID -1 (will be handled separately)
+            folders_with_tests.append((-1, dict.premium_folder))
+
+    await state.update_data(has_premium_content=has_premium_content)
+
     if folders_with_tests:
         await state.set_state(missing_hw_states.folders)
         await state.update_data(current_folder_page=1)
@@ -55,29 +67,35 @@ async def navigate_folder_pages(callback: types.CallbackQuery, state: FSMContext
     action = callback.data.split("_")[2]  # prev or next
     data = await state.get_data()
     current_page = data.get("current_folder_page", 1)
-    
+
     # Get folders with tests - identical logic as in show_archive
     folders_with_tests = []
-    
+
     # Always include uncategorized folder if it has tests
     uncategorized_count = db.fetchone("SELECT COUNT(*) FROM exams WHERE folder = 0 AND hide = 0")
     if uncategorized_count and uncategorized_count[0] > 0:
         folder_name = db.fetchone("SELECT title FROM folders WHERE idx = 0")
         folder_title = folder_name[0] if folder_name else "🔠 Barcha vazifalar"
         folders_with_tests.append((0, folder_title))
-    
+
     # Fetch other folders that have at least one visible test
     all_folders = db.fetchall("SELECT idx, title FROM folders WHERE idx != 0 ORDER BY idx DESC")
-    
+
     for folder_id, folder_title in all_folders:
         test_count = db.fetchone("SELECT COUNT(*) FROM exams WHERE folder = %s AND hide = 0", (folder_id,))
         if test_count and test_count[0] > 0:
             folders_with_tests.append((folder_id, folder_title))
-    
+
+    # Add premium folder if premium database is configured and has exams
+    if premium_db:
+        premium_count = premium_db.fetchone("SELECT COUNT(*) FROM exams WHERE hide = 0")
+        if premium_count and premium_count[0] > 0:
+            folders_with_tests.append((-1, dict.premium_folder))
+
     # Calculate total pages
     other_folders = [f for f in folders_with_tests if f[0] != 0]
     total_pages = max(1, (len(other_folders) + config.MAX_FOLDERS_PER_PAGE - 1) // config.MAX_FOLDERS_PER_PAGE)
-    
+
     if action == "prev":
         if current_page > 1:
             current_page -= 1
@@ -93,9 +111,9 @@ async def navigate_folder_pages(callback: types.CallbackQuery, state: FSMContext
     else:
         await callback.answer("Hozirgi sahifani ko'rsatish uchun.")
         return
-    
+
     await state.update_data(current_folder_page=current_page)
-    
+
     try:
         await callback.message.edit_text(
             "Quyida arxivdagi mavzular, barcha vazifalarni yoki qaysidir vazifa mavzusini tanlang.",
@@ -114,10 +132,35 @@ async def show_folder_exams(callback: types.CallbackQuery, state: FSMContext):
     # Make sure this isn't a page navigation command
     if callback.data.startswith("folder_page_"):
         return
-        
+
     folder_id = int(callback.data.split("_")[1])
     await callback.message.edit_text("Yuklanmoqda...")
-    
+
+    # Handle premium folder (ID -1)
+    if folder_id == -1:
+        if not premium_db:
+            await callback.answer("Premium materiallar mavjud emas.")
+            return
+
+        # Get exams from premium database
+        exams = premium_db.fetchall(
+            "SELECT title, idx FROM exams WHERE hide = 0 ORDER BY idx DESC;"
+        )
+
+        if exams:
+            # Calculate total pages
+            total_pages = max(1, (len(exams) + config.MAX_EXAMS_PER_PAGE - 1) // config.MAX_EXAMS_PER_PAGE)
+
+            await state.update_data(current_premium_page=1, total_premium_pages=total_pages)
+            await state.set_state(missing_hw_states.premium_exams)
+            await callback.message.edit_text(
+                f"📝 Mavzu: {html.bold(dict.premium_folder)}. Quyidagi vazifalardan birini tanlang:",
+                reply_markup=get_premium_locked_exams(exams, 1)
+            )
+        else:
+            await callback.answer("Premium materiallar mavjud emas.")
+        return
+
     # If folder_id is 0 (All tests), get ALL tests regardless of folder
     # otherwise, get only tests for the specific folder
     if folder_id == 0:
@@ -129,11 +172,11 @@ async def show_folder_exams(callback: types.CallbackQuery, state: FSMContext):
             "SELECT title, idx FROM exams WHERE folder = %s AND hide = 0 ORDER BY idx DESC;",
             (folder_id,)
         )
-    
+
     if exams:
         # Calculate total pages
         total_pages = max(1, (len(exams) + config.MAX_EXAMS_PER_PAGE - 1) // config.MAX_EXAMS_PER_PAGE)
-        
+
         # Start at page 1 (newest exams)
         await state.update_data(current_exam_page=1, selected_folder=folder_id, total_exam_pages=total_pages)
         await state.set_state(missing_hw_states.exams)
@@ -147,19 +190,26 @@ async def show_folder_exams(callback: types.CallbackQuery, state: FSMContext):
         # This shouldn't happen since we're only showing folders with tests,
         # but keeping it as a fallback
         all_folders_with_tests = []
-        
+
         # Get all folders with tests again (same logic as in show_archive)
         uncategorized_count = db.fetchone("SELECT COUNT(*) FROM exams WHERE folder = 0 AND hide = 0")
         if uncategorized_count and uncategorized_count[0] > 0:
             folder_name = db.fetchone("SELECT title FROM folders WHERE idx = 0")
             folder_title = folder_name[0] if folder_name else "🔠 Barcha vazifalar"
             all_folders_with_tests.append((0, folder_title))
-        
+
         all_folders = db.fetchall("SELECT idx, title FROM folders WHERE idx != 0 ORDER BY idx DESC")
         for fid, ftitle in all_folders:
             test_count = db.fetchone("SELECT COUNT(*) FROM exams WHERE folder = %s AND hide = 0", (fid,))
             if test_count and test_count[0] > 0:
                 all_folders_with_tests.append((fid, ftitle))
+
+        # Add premium folder if available
+        if premium_db:
+            premium_count = premium_db.fetchone("SELECT COUNT(*) FROM exams WHERE hide = 0")
+            if premium_count and premium_count[0] > 0:
+                all_folders_with_tests.append((-1, dict.premium_folder))
+
         await callback.answer("Bu mavzuda vazifalar yo'q.")
         await callback.message.edit_text(
             "Bu mavzuda vazifalar yo'q. Boshqa mavzuni tanlang:",
@@ -218,34 +268,140 @@ async def navigate_exam_pages(callback: types.CallbackQuery, state: FSMContext):
             # Some other error occurred
             raise
 
-@usrarch.callback_query(F.data == "back_to_folders", missing_hw_states.exams)
-async def back_to_folders(callback: types.CallbackQuery, state: FSMContext):
-    # Get all folders with tests
+async def _get_all_folders_with_premium():
+    """Helper function to get all folders including premium folder"""
     folders_with_tests = []
-    
+
     # Always include uncategorized folder if it has tests
     uncategorized_count = db.fetchone("SELECT COUNT(*) FROM exams WHERE folder = 0 AND hide = 0")
     if uncategorized_count and uncategorized_count[0] > 0:
         folder_name = db.fetchone("SELECT title FROM folders WHERE idx = 0")
         folder_title = folder_name[0] if folder_name else "🔠 Barcha vazifalar"
         folders_with_tests.append((0, folder_title))
-    
+
     # Fetch other folders that have at least one visible test
     all_folders = db.fetchall("SELECT idx, title FROM folders WHERE idx != 0 ORDER BY idx DESC")
-    
+
     for folder_id, folder_title in all_folders:
         test_count = db.fetchone("SELECT COUNT(*) FROM exams WHERE folder = %s AND hide = 0", (folder_id,))
         if test_count and test_count[0] > 0:
             folders_with_tests.append((folder_id, folder_title))
-    
+
+    # Add premium folder if premium database is configured and has exams
+    if premium_db:
+        premium_count = premium_db.fetchone("SELECT COUNT(*) FROM exams WHERE hide = 0")
+        if premium_count and premium_count[0] > 0:
+            folders_with_tests.append((-1, dict.premium_folder))
+
+    return folders_with_tests
+
+
+@usrarch.callback_query(F.data == "back_to_folders", missing_hw_states.exams)
+async def back_to_folders(callback: types.CallbackQuery, state: FSMContext):
+    folders_with_tests = await _get_all_folders_with_premium()
+
     data = await state.get_data()
     current_page = data.get("current_folder_page", 1)
-    
+
     await state.set_state(missing_hw_states.folders)
     await callback.message.edit_text(
         "Quyida arxivdagi mavzular, barcha vazifalarni yoki qaysidir vazifa mavzusini tanlang.",
         reply_markup=get_folders_keyboard(folders_with_tests, current_page)
     )
+
+
+# Premium exams handlers
+@usrarch.callback_query(F.data == "back_to_folders", missing_hw_states.premium_exams)
+async def back_to_folders_from_premium(callback: types.CallbackQuery, state: FSMContext):
+    folders_with_tests = await _get_all_folders_with_premium()
+
+    data = await state.get_data()
+    current_page = data.get("current_folder_page", 1)
+
+    await state.set_state(missing_hw_states.folders)
+    await callback.message.edit_text(
+        "Quyida arxivdagi mavzular, barcha vazifalarni yoki qaysidir vazifa mavzusini tanlang.",
+        reply_markup=get_folders_keyboard(folders_with_tests, current_page)
+    )
+
+
+@usrarch.callback_query(F.data.startswith("premiumpage_"), missing_hw_states.premium_exams)
+async def navigate_premium_pages(callback: types.CallbackQuery, state: FSMContext):
+    action = callback.data.split("_")[1]  # prev or next
+    data = await state.get_data()
+    current_page = data.get("current_premium_page", 1)
+    total_pages = data.get("total_premium_pages", 1)
+
+    if not premium_db:
+        await callback.answer("Premium materiallar mavjud emas.")
+        return
+
+    exams = premium_db.fetchall(
+        "SELECT title, idx FROM exams WHERE hide = 0 ORDER BY idx DESC;"
+    )
+
+    if action == "prev":
+        if current_page > 1:
+            current_page -= 1
+        else:
+            await callback.answer("Siz allaqachon birinchi sahifadasiz.")
+            return
+    elif action == "next":
+        if current_page < total_pages:
+            current_page += 1
+        else:
+            await callback.answer("Siz allaqachon oxirgi sahifadasiz.")
+            return
+
+    await state.update_data(current_premium_page=current_page)
+
+    try:
+        await callback.message.edit_text(
+            f"📝 Mavzu: {html.bold(dict.premium_folder)}. Quyidagi vazifalardan birini tanlang:",
+            reply_markup=get_premium_locked_exams(exams, current_page)
+        )
+    except TelegramBadRequest as e:
+        if "message is not modified" not in str(e):
+            raise
+
+
+@usrarch.callback_query(F.data.startswith("locked_exam_"), missing_hw_states.premium_exams)
+async def handle_locked_exam(callback: types.CallbackQuery, state: FSMContext):
+    # Show notification that user doesn't have access
+    await callback.answer(dict.premium_no_access, show_alert=False)
+
+    # Get stats from premium database
+    if premium_db:
+        exam_count = premium_db.fetchone("SELECT COUNT(*) FROM exams WHERE hide = 0")
+        submission_count = premium_db.fetchone("SELECT COUNT(*) FROM submissions")
+        num_exams = exam_count[0] if exam_count else 0
+        num_submissions = submission_count[0] if submission_count else 0
+    else:
+        num_exams = 0
+        num_submissions = 0
+
+    # Create promo message with stats
+    promo_message = (
+        f"🔒 <b>Premium kurs materiallari</b>\n\n"
+        f"Bu materiallarga kirish uchun pullik kursga yozilishingiz kerak.\n\n"
+        f"📊 <b>Premium kurs statistikasi:</b>\n"
+        f"• 📚 {num_exams} ta premium material va testlar\n"
+        f"• ✅ {num_submissions} ta topshiriq (javoblaringizni osonlik bilan tekshiring)\n"
+        f"• 🔐 Maxfiy guruh va kanallarga kirish huquqi\n\n"
+        f"Kursga yozilish uchun admin bilan bog'laning:"
+    )
+
+    await callback.message.answer(
+        promo_message,
+        reply_markup=get_premium_promo_keyboard()
+    )
+
+
+@usrarch.callback_query(F.data == "close_premium_msg")
+async def close_premium_message(callback: types.CallbackQuery):
+    await callback.message.delete()
+    await callback.answer()
+
 
 # Keep existing handlers below
 @usrarch.callback_query(F.data.startswith("mexam_"), missing_hw_states.exams)

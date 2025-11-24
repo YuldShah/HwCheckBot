@@ -12,3 +12,6 @@ async def get_info(bot):
 dp = Dispatcher()
 
 db = DatabaseManager(config.DB_URL)
+
+# Premium database for paid course materials (optional - may be None if not configured)
+premium_db = DatabaseManager(config.PREMIUM_DB_URL) if config.PREMIUM_DB_URL else None

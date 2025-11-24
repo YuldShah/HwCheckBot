@@ -88,3 +88,9 @@ all_submissions = "📋 All Submissions"
 by_user = "👤 By User"
 by_exam = "📚 By Exam"
 back_to_stats = "🔙 Back to Stats"
+
+# Premium course materials
+premium_folder = "💎 Pullik kurs materiallari 💳"
+premium_no_access = "Sizda bu materiallarga kirish huquqi yo'q"
+premium_contact_admin = "🖋 Adminga yozish"
+close_msg = "❌ Yopish"

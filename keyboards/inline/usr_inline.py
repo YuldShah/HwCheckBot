@@ -135,35 +135,78 @@ def get_folders_keyboard(folders, page=1):
 def get_folder_exams(exams, page=1):
     """Create keyboard with exams pagination for a specific folder"""
     btns = []
-    
+
     # Pagination
     total_pages = max(1, (len(exams) + config.MAX_EXAMS_PER_PAGE - 1) // config.MAX_EXAMS_PER_PAGE if exams else 1)
     start_idx = (page - 1) * config.MAX_EXAMS_PER_PAGE
     end_idx = min(start_idx + config.MAX_EXAMS_PER_PAGE, len(exams) if exams else 0)
-    
+
     # Add exam buttons for current page
     for title, idx in exams[start_idx:end_idx]:
         btns.append([InlineKeyboardButton(text=title, callback_data=f"mexam_{idx}")])
-    
+
     # Only add navigation buttons if there are multiple pages
     if total_pages > 1:
         nav_row = []
-        
+
         # Always show current page indicator
         page_indicator = f"{page}/{total_pages}"
-        
+
         # Add pagination buttons in correct order
         if page > 1:
             nav_row.append(InlineKeyboardButton(text=dict.earlier, callback_data="mexampage_prev"))
-        
+
         nav_row.append(InlineKeyboardButton(text=page_indicator, callback_data="mexampage_now"))
-        
+
         if page < total_pages:
             nav_row.append(InlineKeyboardButton(text=dict.later, callback_data="mexampage_next"))
-            
+
         btns.append(nav_row)
-    
+
     # Add back button to return to folder selection
     btns.append([InlineKeyboardButton(text=dict.back_uz, callback_data="back_to_folders")])
-    
+
+    return InlineKeyboardMarkup(inline_keyboard=btns)
+
+
+def get_premium_locked_exams(exams, page=1):
+    """Create keyboard with locked premium exams (🔒 prefix)"""
+    btns = []
+
+    # Pagination
+    total_pages = max(1, (len(exams) + config.MAX_EXAMS_PER_PAGE - 1) // config.MAX_EXAMS_PER_PAGE if exams else 1)
+    start_idx = (page - 1) * config.MAX_EXAMS_PER_PAGE
+    end_idx = min(start_idx + config.MAX_EXAMS_PER_PAGE, len(exams) if exams else 0)
+
+    # Add locked exam buttons for current page
+    for title, idx in exams[start_idx:end_idx]:
+        btns.append([InlineKeyboardButton(text=f"🔒 {title}", callback_data=f"locked_exam_{idx}")])
+
+    # Only add navigation buttons if there are multiple pages
+    if total_pages > 1:
+        nav_row = []
+        page_indicator = f"{page}/{total_pages}"
+
+        if page > 1:
+            nav_row.append(InlineKeyboardButton(text=dict.earlier, callback_data="premiumpage_prev"))
+
+        nav_row.append(InlineKeyboardButton(text=page_indicator, callback_data="premiumpage_now"))
+
+        if page < total_pages:
+            nav_row.append(InlineKeyboardButton(text=dict.later, callback_data="premiumpage_next"))
+
+        btns.append(nav_row)
+
+    # Add back button to return to folder selection
+    btns.append([InlineKeyboardButton(text=dict.back_uz, callback_data="back_to_folders")])
+
+    return InlineKeyboardMarkup(inline_keyboard=btns)
+
+
+def get_premium_promo_keyboard():
+    """Create keyboard for premium promo message with admin contact and close button"""
+    btns = [
+        [InlineKeyboardButton(text=dict.premium_contact_admin, url=config.ADMIN_URL)],
+        [InlineKeyboardButton(text=dict.close_msg, callback_data="close_premium_msg")]
+    ]
     return InlineKeyboardMarkup(inline_keyboard=btns)

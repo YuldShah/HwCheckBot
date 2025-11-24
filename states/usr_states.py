@@ -13,6 +13,7 @@ class result_states(StatesGroup):
 class missing_hw_states(StatesGroup):
     folders = State()  # New state for folder selection
     exams = State()
+    premium_exams = State()  # State for viewing premium locked exams
     details = State()
     way = State()
     answer = State()
