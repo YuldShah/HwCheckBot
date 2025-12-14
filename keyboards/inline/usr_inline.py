@@ -152,6 +152,10 @@ def get_folder_exams(exams, page=1):
         # Always show current page indicator
         page_indicator = f"{page}/{total_pages}"
         
+        # Add 5-page step back button if applicable (more than 5 pages from start)
+        if page > 5:
+            nav_row.append(InlineKeyboardButton(text="⏪", callback_data="mexampage_prev5"))
+        
         # Add pagination buttons in correct order
         if page > 1:
             nav_row.append(InlineKeyboardButton(text=dict.earlier, callback_data="mexampage_prev"))
@@ -160,6 +164,10 @@ def get_folder_exams(exams, page=1):
         
         if page < total_pages:
             nav_row.append(InlineKeyboardButton(text=dict.later, callback_data="mexampage_next"))
+        
+        # Add 5-page step forward button if applicable (more than 5 pages from end)
+        if page <= total_pages - 5:
+            nav_row.append(InlineKeyboardButton(text="⏩", callback_data="mexampage_next5"))
             
         btns.append(nav_row)
     

@@ -215,11 +215,17 @@ def get_folder_tests(tests, page=1):
     # Add pagination navigation if needed
     if total_pages > 1:
         pagination_row = []
+        # Add 5-page step back button if applicable
+        if page > 5:
+            pagination_row.append(InlineKeyboardButton(text="⏪", callback_data="tests_page_prev5"))
         if page > 1:
             pagination_row.append(InlineKeyboardButton(text="⬅️", callback_data="tests_page_prev"))
         pagination_row.append(InlineKeyboardButton(text=f"{page}/{total_pages}", callback_data="tests_page_now"))
         if page < total_pages:
             pagination_row.append(InlineKeyboardButton(text="➡️", callback_data="tests_page_next"))
+        # Add 5-page step forward button if applicable
+        if page <= total_pages - 5:
+            pagination_row.append(InlineKeyboardButton(text="⏩", callback_data="tests_page_next5"))
         btns.append(pagination_row)
     
     # Always add back button

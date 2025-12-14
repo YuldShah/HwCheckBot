@@ -168,11 +168,17 @@ async def show_folder_exams(callback: types.CallbackQuery, state: FSMContext):
 
 @usrarch.callback_query(F.data.startswith("mexampage_"), missing_hw_states.exams)
 async def navigate_exam_pages(callback: types.CallbackQuery, state: FSMContext):
-    action = callback.data.split("_")[1]  # prev or next
+    action = callback.data.split("_")[1]  # prev, next, prev5, next5
     data = await state.get_data()
     current_page = data.get("current_exam_page", 1)
     folder_id = data.get("selected_folder")
     total_pages = data.get("total_exam_pages", 1)
+    
+    # Validate current_page is within bounds
+    if current_page < 1:
+        current_page = 1
+    elif current_page > total_pages:
+        current_page = total_pages
     
     # If folder_id is 0 (All tests), get ALL tests regardless of folder
     if folder_id == 0:
@@ -184,6 +190,14 @@ async def navigate_exam_pages(callback: types.CallbackQuery, state: FSMContext):
             "SELECT title, idx FROM exams WHERE folder = %s AND hide = 0 ORDER BY idx DESC;",
             (folder_id,)
         )
+    
+    # Recalculate total_pages based on actual exam count (in case data changed)
+    actual_total_pages = max(1, (len(exams) + config.MAX_EXAMS_PER_PAGE - 1) // config.MAX_EXAMS_PER_PAGE)
+    if total_pages != actual_total_pages:
+        total_pages = actual_total_pages
+        # Ensure current page is still valid
+        if current_page > total_pages:
+            current_page = total_pages
     
     # Fix the pagination logic - earlier/prev should go to previous page (lower number)
     # later/next should go to next page (higher number)
@@ -199,6 +213,22 @@ async def navigate_exam_pages(callback: types.CallbackQuery, state: FSMContext):
         else:
             await callback.answer("Siz allaqachon oxirgi sahifadasiz.")
             return
+    elif action == "prev5":
+        if current_page > 5:
+            current_page -= 5
+        else:
+            current_page = 1
+    elif action == "next5":
+        if current_page <= total_pages - 5:
+            current_page += 5
+        else:
+            current_page = total_pages
+    elif action == "now":
+        await callback.answer(f"Sahifa {current_page}/{total_pages}")
+        return
+    
+    # Final bounds validation after adjustment
+    current_page = max(1, min(current_page, total_pages))
     
     await state.update_data(current_exam_page=current_page)
     folder_name = db.fetchone("SELECT title FROM folders WHERE idx = %s", (folder_id,))

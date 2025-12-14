@@ -605,11 +605,17 @@ async def save_new_deadline(message: types.Message, state: FSMContext):
 
 @arch.callback_query(CbDataStartsWith("tests_page_"), arch_states.tests)
 async def navigate_test_pages(callback: types.CallbackQuery, state: FSMContext):
-    action = callback.data.split("_")[2]  # prev, next, or now
+    action = callback.data.split("_")[2]  # prev, next, prev5, next5, or now
     data = await state.get_data()
     current_page = data.get("current_test_page", 1)
     folder_id = data.get("folder_id")
     total_pages = data.get("total_test_pages", 1)
+    
+    # Validate current_page is within bounds
+    if current_page < 1:
+        current_page = 1
+    elif current_page > total_pages:
+        current_page = total_pages
     
     # Adjust page based on action
     if action == "prev":
@@ -624,9 +630,22 @@ async def navigate_test_pages(callback: types.CallbackQuery, state: FSMContext):
         else:
             await callback.answer("Already on the last page")
             return
+    elif action == "prev5":
+        if current_page > 5:
+            current_page -= 5
+        else:
+            current_page = 1
+    elif action == "next5":
+        if current_page <= total_pages - 5:
+            current_page += 5
+        else:
+            current_page = total_pages
     else:  # now - showing current page info
         await callback.answer(f"Page {current_page} of {total_pages}")
         return
+    
+    # Final bounds validation after adjustment
+    current_page = max(1, min(current_page, total_pages))
     
     # Update state with new page
     await state.update_data(current_test_page=current_page)
