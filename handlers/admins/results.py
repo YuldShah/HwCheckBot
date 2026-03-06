@@ -11,7 +11,7 @@ from datetime import datetime, timezone, timedelta
 import json
 import logging
 import traceback
-from utils.db.storage import DatabaseManager
+from loader import db
 from utils.yau import get_correct_text
 
 # Setup logging for debugging
@@ -24,9 +24,6 @@ UTC_PLUS_5 = timezone(timedelta(hours=5))
 reser = Router()
 reser.message.filter(IsAdmin())
 reser.callback_query.filter(IsAdminCallback())
-
-# Initialize database connection
-db = DatabaseManager(config.DB_URL)
 
 # Helper function to convert UTC datetime to UTC+5
 def to_local_time(utc_dt):
