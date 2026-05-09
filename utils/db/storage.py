@@ -107,15 +107,6 @@ class DatabaseManager:
                 tgfileid TEXT DEFAULT NULL, 
                 caption TEXT DEFAULT NULL, 
                 exid INTEGER DEFAULT NULL
-            )""",
-            """CREATE TABLE IF NOT EXISTS scheduled_tasks (
-                idx SERIAL PRIMARY KEY,
-                user_id TEXT,
-                task_name TEXT NOT NULL,
-                task_data TEXT,
-                run_at TIMESTAMP NOT NULL,
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                completed INTEGER DEFAULT 0
             )"""
         ]
         for query in queries:
@@ -169,24 +160,6 @@ class DatabaseManager:
         except DatabaseError:
             logging.error(f"SQL Error fetching last {n} rows from {table}", exc_info=True)
             return None
-
-    def get_due_tasks(self):
-        """Return all pending scheduled tasks whose run_at time has passed."""
-        return self.fetchall(
-            "SELECT idx, user_id, task_name, task_data, run_at, created_at, completed "
-            "FROM scheduled_tasks WHERE completed = 0 AND run_at <= NOW()"
-        ) or []
-
-    def mark_task_completed(self, task_id):
-        """Mark a scheduled task as completed."""
-        self.query("UPDATE scheduled_tasks SET completed = 1 WHERE idx = %s", (task_id,))
-
-    def schedule_task(self, user_id, task_name, task_data, run_at):
-        """Insert a new scheduled task."""
-        self.query(
-            "INSERT INTO scheduled_tasks (user_id, task_name, task_data, run_at) VALUES (%s, %s, %s, %s)",
-            (user_id, task_name, task_data, run_at)
-        )
 
     def close(self):
         """Close the connection properly."""

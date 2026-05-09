@@ -21,19 +21,9 @@ async def on_shutdown():
     db.close()
     logging.warning("Bot down")
 
-async def run_jobs():
-    from jobs import process_scheduled_tasks
-    while True:
-        try:
-            await process_scheduled_tasks()
-        except Exception as e:
-            logging.error(f"Job runner error: {e}")
-        await asyncio.sleep(60)
-
 async def main():
     await on_startup()
     await bot.delete_webhook(drop_pending_updates=True)
-    asyncio.create_task(run_jobs())
     await dp.start_polling(bot)
     await on_shutdown()
 

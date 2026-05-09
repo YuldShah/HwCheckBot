@@ -733,12 +733,6 @@ async def finalize_test(query: types.CallbackQuery, state: FSMContext):
     if attaches:
         for idx, fileid, caption, ty in attaches:
             db.query("INSERT INTO attachments (ty, tgfileid, caption, exid) VALUES (%s, %s, %s, %s)", (ty, fileid, caption, exid))
-    if sdate:
-        sdate_utc = sdate.astimezone(timezone.utc) if sdate.tzinfo else sdate.replace(tzinfo=timezone.utc)
-        now_utc = datetime.now(timezone.utc)
-        reminder_time = sdate_utc - timedelta(hours=1)
-        if reminder_time > now_utc:
-            db.schedule_task(None, "deadline_broadcast", title, reminder_time)
     await query.message.edit_text(f"📕 Test {html.bold(f"{title}")} created and stored successfully with its attachments.")
     await query.message.answer(f"Back to {html.bold(f"{dict.main_menu}")}", reply_markup=adm_default)
     await state.clear()
