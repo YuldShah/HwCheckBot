@@ -410,7 +410,7 @@ def open_user_button(user_id):
     """URL button that opens a direct chat with the student."""
     if not user_id:
         return None
-    return InlineKeyboardButton(text="👤 Open user", url=f"tg://openmessage?user_id={user_id}")
+    return InlineKeyboardButton(text="👤 Open user", url=f"tg://user?id={user_id}")
 
 def submission_detail_back_kb(standalone=False, user_id=None):
     """Buttons under a submission details view.
