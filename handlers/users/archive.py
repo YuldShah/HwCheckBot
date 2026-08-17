@@ -547,7 +547,7 @@ async def confirm_submit(callback: types.CallbackQuery, state: FSMContext):
     answers = data.get("donel")
     code = gen_code(10)
     db.store_submission(callback.from_user.id, exam_id, answers, code, submission_time)
-    await notify_admins_submission(callback.from_user, test, correct, answers, submission_time)
+    await notify_admins_submission(callback.from_user, test, correct, answers, submission_time, code)
     await callback.answer("Muvaffaqiyatli jo'natildi.")
     await callback.message.edit_text(
         f"Vazifaga javoblaringiz muvaffaqiyatli topshirildi.\n\nNatijalaringiz:\n{get_correct_text(correct, answers)}",

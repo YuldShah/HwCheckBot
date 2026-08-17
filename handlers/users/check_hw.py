@@ -438,7 +438,7 @@ async def confirm_submit(query: types.CallbackQuery, state: FSMContext):
     
     # Store the submission time in UTC
     db.store_submission(userid, exam_id, data.get("donel"), code, submission_time)
-    await notify_admins_submission(query.from_user, test, correct, answers, submission_time)
+    await notify_admins_submission(query.from_user, test, correct, answers, submission_time, code)
     
     await query.answer("Muvaffaqiyatli jo'natildi.")
     await query.message.edit_text(
