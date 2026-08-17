@@ -262,6 +262,7 @@ async def show_submissions_page(callback, state):
 
 @reser.callback_query(CbDataStartsWith("view_details_"))
 async def view_submission_details(callback: types.CallbackQuery, state: FSMContext):
+    standalone = await state.get_state() is None
     sub_id = callback.data.split("_")[2]
     
     # Get submission details with deadline
@@ -302,7 +303,7 @@ async def view_submission_details(callback: types.CallbackQuery, state: FSMConte
                 f"📚 <b>Test:</b> {html.bold(title or 'Unknown')}\n"
                 f"🕒 <b>Date:</b> {local_date}\n\n"
                 f"⚠️ This submission has no answer data or correct answer data.",
-                reply_markup=submission_detail_back_kb()
+                reply_markup=submission_detail_back_kb(standalone)
             )
             return
             
@@ -327,7 +328,7 @@ async def view_submission_details(callback: types.CallbackQuery, state: FSMConte
                 f"📚 <b>Test:</b> {html.bold(title or 'Unknown')}\n"
                 f"🕒 <b>Date:</b> {local_date}\n\n"
                 f"⚠️ This submission has empty answer data or correct answer data.",
-                reply_markup=submission_detail_back_kb()
+                reply_markup=submission_detail_back_kb(standalone)
             )
             return
         
@@ -359,7 +360,7 @@ async def view_submission_details(callback: types.CallbackQuery, state: FSMConte
                 f"📚 <b>Test:</b> {html.bold(title or 'Unknown')}\n"
                 f"🕒 <b>Date:</b> {local_date}\n\n"
                 f"⚠️ Cannot display details: incompatible data formats.",
-                reply_markup=submission_detail_back_kb()
+                reply_markup=submission_detail_back_kb(standalone)
             )
             return
         
@@ -404,7 +405,7 @@ async def view_submission_details(callback: types.CallbackQuery, state: FSMConte
                 details_text += f"{i+1}. {html.code(str(answer))} {match}\n"
         
         # Create back button
-        markup = submission_detail_back_kb()
+        markup = submission_detail_back_kb(standalone)
         
         # Save current state data to restore it when going back
         await state.update_data(viewing_details=True)
@@ -419,7 +420,7 @@ async def view_submission_details(callback: types.CallbackQuery, state: FSMConte
             f"📝 <b>Submission Details</b>\n\n"
             f"❌ Error processing submission details: {str(e)}\n\n"
             f"This may be due to invalid data format in the database.",
-            reply_markup=submission_detail_back_kb()
+            reply_markup=submission_detail_back_kb(standalone)
         )
     
     await callback.answer()
@@ -1568,3 +1569,16 @@ async def export_exams_jump_to_page(callback: types.CallbackQuery, state: FSMCon
     await state.update_data(exams_page=target_page)
     await show_exams_export_page(callback, state)
     await callback.answer(f"Jumped to page {target_page}")
+
+
+@reser.callback_query(CbData("close_sub_details"))
+async def close_submission_details(callback: types.CallbackQuery):
+    """Dismiss a details view opened from a notification."""
+    try:
+        await callback.message.delete()
+    except Exception:
+        try:
+            await callback.message.edit_reply_markup()
+        except Exception:
+            pass
+    await callback.answer()

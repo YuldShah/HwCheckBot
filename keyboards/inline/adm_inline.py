@@ -406,11 +406,21 @@ def submission_details_kb(submissions, page, total_pages):
     
     return InlineKeyboardMarkup(inline_keyboard=keyboard)
 
-def submission_detail_back_kb():
-    """Back button for submission details view"""
+def submission_detail_back_kb(standalone=False):
+    """Back button for the submission details view.
+
+    standalone=True when opened straight from an admin notification: there is
+    no stats list to return to, and the stateful back_to_submissions handlers
+    would not match, so the tap would be silently ignored.
+    """
+    if standalone:
+        return InlineKeyboardMarkup(inline_keyboard=[
+            [InlineKeyboardButton(text="❌ Close", callback_data="close_sub_details")]
+        ])
     return InlineKeyboardMarkup(inline_keyboard=[
         [InlineKeyboardButton(text=dict.back, callback_data="back_to_submissions")]
     ])
+
 def submission_admin_kb(sub_id=None, sub_code=None):
     """Buttons on the admin new-submission notification."""
     rows = []
