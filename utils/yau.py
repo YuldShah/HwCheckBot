@@ -1,6 +1,6 @@
 from aiogram import html
 from aiogram.fsm.context import FSMContext
-from loader import bot
+from loader import bot, db
 from data import config
 import logging
 from datetime import timezone, timedelta
@@ -159,12 +159,13 @@ def score_submission(correct, answers):
             cnt += 1
     return cnt
 
-async def notify_admins_submission(user, exam, correct, answers, submitted_at):
-    """Tell every admin about a submission.
+async def notify_admins_submission(user, exam, correct, answers, submitted_at, sub_code=None):
+    """Tell every admin about a submission (admin side is English).
 
     Never raises: a failed notification must not break the user's submit.
     """
     try:
+        from keyboards.inline import submission_admin_kb
         total = len(correct) or 1
         cnt = score_submission(correct, answers)
         pct = cnt / total * 100
@@ -173,23 +174,35 @@ async def notify_admins_submission(user, exam, correct, answers, submitted_at):
         if when is not None and when.tzinfo is not None:
             when = when.astimezone(timezone(timedelta(hours=5)))
         stamp = when.strftime('%H:%M - %d.%m.%Y') if when else '-'
-        uname = f'@{user.username}' if user.username else '-'
+        uname = f'@{user.username}' if user.username else 'no username'
         code = exam[11] if len(exam) > 11 and exam[11] else '-'
+        late = ''
+        deadline = exam[6]
+        if deadline is not None and submitted_at is not None:
+            if deadline.tzinfo is None:
+                deadline = deadline.replace(tzinfo=timezone.utc)
+            if submitted_at > deadline:
+                late = ' \u23f0 LATE'
+        sub_id = None
+        if sub_code:
+            row = db.fetchone('SELECT idx FROM submissions WHERE random = %s', (sub_code,))
+            sub_id = row[0] if row else None
         lines = [
-            f"📥 {html.bold('Yangi topshiriq')}",
+            f"📥 {html.bold('New submission')}{late}",
             '',
             f'👤 {html.link(user.full_name, f"tg://user?id={user.id}")} ({uname})',
             f'🆔 {html.code(user.id)}',
             f'📝 {html.bold(exam[1])}',
             f'🔑 {html.code(code)}',
-            f"✅ To'g'ri: {html.bold(f'{cnt}/{total}')} ({pct:.1f}%)",
-            f'📑 SAT: {html.bold(sat)}',
-            f'🕐 {stamp} (UTC+5)',
+            f"✅ Score: {html.bold(f'{cnt}/{total}')} ({pct:.1f}%)",
+            f'📑 Est. SAT: {html.bold(sat)}',
+            f'🕒 {stamp} (UTC+5)',
         ]
         text = '\n'.join(lines)
+        kb = submission_admin_kb(sub_id, sub_code)
         for adm in config.ADMINS:
             try:
-                await bot.send_message(adm, text, disable_web_page_preview=True)
+                await bot.send_message(adm, text, reply_markup=kb, disable_web_page_preview=True)
             except Exception:
                 logging.error(f'submission notify failed for admin {adm}', exc_info=True)
     except Exception:

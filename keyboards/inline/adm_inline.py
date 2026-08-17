@@ -405,3 +405,11 @@ def submission_detail_back_kb():
     return InlineKeyboardMarkup(inline_keyboard=[
         [InlineKeyboardButton(text=dict.back, callback_data="back_to_submissions")]
     ])
+def submission_admin_kb(sub_id=None, sub_code=None):
+    """Buttons on the admin new-submission notification."""
+    rows = []
+    if sub_id:
+        rows.append([InlineKeyboardButton(text="📊 Detailed results", callback_data=f"view_details_{sub_id}")])
+    if sub_code:
+        rows.append([InlineKeyboardButton(text="📤 Share result", switch_inline_query=f"sub_{sub_code}")])
+    return InlineKeyboardMarkup(inline_keyboard=rows) if rows else None
