@@ -9,7 +9,7 @@ import json
 from time import sleep
 from datetime import datetime, timezone, timedelta
 from loader import db
-from utils.yau import get_correct_text, get_user_ans_text, get_user_text, gen_code, normalize_test_code, TEST_CODE_LENGTH
+from utils.yau import get_correct_text, get_user_ans_text, get_user_text, gen_code, normalize_test_code, TEST_CODE_LENGTH, notify_admins_submission
 from keyboards.inline import usr_inline, adm_inline, lets_start, lets_start_share, get_answering_keys, ans_enter_method_usr, submit_ans_user, all_continue_usr
 from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup
 
@@ -438,6 +438,7 @@ async def confirm_submit(query: types.CallbackQuery, state: FSMContext):
     
     # Store the submission time in UTC
     db.store_submission(userid, exam_id, data.get("donel"), code, submission_time)
+    await notify_admins_submission(query.from_user, test, correct, answers, submission_time)
     
     await query.answer("Muvaffaqiyatli jo'natildi.")
     await query.message.edit_text(
