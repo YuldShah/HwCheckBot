@@ -1,4 +1,5 @@
 from aiogram import Router, types, F, html
+from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup
 from filters import IsAdmin, IsAdminCallback, CbData, CbDataStartsWith
 from loader import db
 from keyboards.inline import today, ans_enter_meth, obom, ans_set_fin, inl_folders, remove_att, continue_inl_to_sett
@@ -8,7 +9,7 @@ from data import dict, config
 from datetime import datetime, timedelta, timezone
 from states import creates
 from aiogram.fsm.context import FSMContext
-from utils.yau import get_text, get_ans_text
+from utils.yau import get_text, get_ans_text, gen_test_code
 from time import sleep
 import json
 import re
@@ -143,8 +144,8 @@ async def get_number(message: types.Message, state: FSMContext):
     except:
         await message.answer(f"{await get_text(state)}\n❗️ Please, send the number of questions using digits.")
         return
-    if numq < 1 or numq > 100:
-        await message.answer(f"{await get_text(state)}\n❗️ Please, send the number of questions from 1 to 100.")
+    if numq < 1 or numq > 500:
+        await message.answer(f"{await get_text(state)}\n❗️ Please, send the number of questions from 1 to 500.")
         return
     await state.update_data(numquest=numq, vis=1, resub=0, folder=None)
     await state.update_data(donel=[None for i in range(numq)])
@@ -724,15 +725,26 @@ async def finalize_test(query: types.CallbackQuery, state: FSMContext):
     resub = data.get("resub")
     folder_id = data.get("folder_id") or 0
     test_info = {"answers": donel, "types": typesl}
-    query_str = """INSERT INTO exams (title, about, instructions, num_questions, correct, sdate, hide, resub, folder, random) 
-                   VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)"""
+    query_str = """INSERT INTO exams (title, about, instructions, num_questions, correct, sdate, hide, resub, folder, random, code) 
+                   VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)"""
     random_text = datetime.now().strftime("%Y%m%d%H%M%S")
-    db.query(query_str, (title, about, instructions, numquest, json.dumps(test_info), sdate, int(vis), int(resub), folder_id, random_text))
+    test_code = gen_test_code(db)
+    db.query(query_str, (title, about, instructions, numquest, json.dumps(test_info), sdate, int(vis), int(resub), folder_id, random_text, test_code))
     attaches = data.get("attaches")
     exid = db.fetchone("SELECT idx FROM exams WHERE random = %s", (random_text,))[0]
     if attaches:
         for idx, fileid, caption, ty in attaches:
             db.query("INSERT INTO attachments (ty, tgfileid, caption, exid) VALUES (%s, %s, %s, %s)", (ty, fileid, caption, exid))
-    await query.message.edit_text(f"📕 Test {html.bold(f"{title}")} created and stored successfully with its attachments.")
+    deeplink = f"https://t.me/{config.bot_info.username}?start={test_code}"
+    share_kb = InlineKeyboardMarkup(inline_keyboard=[[
+        InlineKeyboardButton(text=dict.share_test, switch_inline_query=f"share {test_code}")
+    ]])
+    await query.message.edit_text(
+        f"📕 Test {html.bold(title)} created and stored successfully with its attachments.\n\n"
+        f"🔑 Kod: {html.code(test_code)}\n"
+        f"🔗 {deeplink}",
+        reply_markup=share_kb,
+        disable_web_page_preview=True
+    )
     await query.message.answer(f"Back to {html.bold(f"{dict.main_menu}")}", reply_markup=adm_default)
     await state.clear()

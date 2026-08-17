@@ -1,9 +1,12 @@
-from data.dict import do_todays_hw, results, help_txt, archive, bosh_menu
+from data.dict import do_todays_hw, results, help_txt, archive, bosh_menu, enter_code
 from aiogram import types
 
 btns = [
     [
         types.KeyboardButton(text=do_todays_hw)
+    ],
+    [
+        types.KeyboardButton(text=enter_code)
     ],
     [
         types.KeyboardButton(text=results),

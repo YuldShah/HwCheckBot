@@ -52,6 +52,13 @@ lets_start = InlineKeyboardMarkup(inline_keyboard=[
     [InlineKeyboardButton(text=dict.start_test, callback_data="start_test")]
 ])
 
+def lets_start_share(code=None):
+    """Start button, plus a Share button that opens the chat picker."""
+    rows = [[InlineKeyboardButton(text=dict.start_test, callback_data='start_test')]]
+    if code:
+        rows.append([InlineKeyboardButton(text=dict.share_test, switch_inline_query=f'share {code}')])
+    return InlineKeyboardMarkup(inline_keyboard=rows)
+
 ans_enter_method_usr = InlineKeyboardMarkup(inline_keyboard=[
     [InlineKeyboardButton(text=dict.all_at_once_uz, callback_data="all"),
      InlineKeyboardButton(text=dict.one_by_one_uz, callback_data="one")]

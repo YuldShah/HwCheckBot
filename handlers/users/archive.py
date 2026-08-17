@@ -5,7 +5,7 @@ from loader import db, premium_db
 from time import sleep
 from aiogram.fsm.context import FSMContext
 from keyboards.regular import usr_main_key
-from keyboards.inline import (lets_start, ans_enter_method_usr, goto_bot, submit_ans_user,
+from keyboards.inline import (lets_start, lets_start_share, ans_enter_method_usr, goto_bot, submit_ans_user,
                              all_continue_usr, get_missing_exams, get_answering_keys, share_sub_usr,
                              get_folders_keyboard, get_folder_exams, get_premium_locked_exams,
                              get_premium_promo_keyboard)
@@ -460,8 +460,9 @@ async def start_missing_exam(callback: types.CallbackQuery, state: FSMContext):
                 await callback.message.answer_photo(photo=tgfileid, caption=caption)
             elif ty == "document":
                 await callback.message.answer_document(document=tgfileid, caption=caption)
-    res = f"{get_user_text(test[1], test[2], test[3], test[4])}"
-    await callback.message.answer(res, reply_markup=lets_start)
+    test_code = test[11] if len(test) > 11 else None
+    res = f"{get_user_text(test[1], test[2], test[3], test[4], test_code)}"
+    await callback.message.answer(res, reply_markup=lets_start_share(test_code))
     # Transition state identical to regular HW
     await callback.message.delete()
     await state.set_state(missing_hw_states.details)

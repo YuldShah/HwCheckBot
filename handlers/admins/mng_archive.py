@@ -104,13 +104,14 @@ async def manage_test(callback: types.CallbackQuery, state: FSMContext):
         folder=test[8], 
         hide=test[9], 
         random=test[10], 
+        code=test[11] if len(test) > 11 else None,
         correct=donel, 
         types=typesl, 
         attaches=attaches
     )
     
     res = f"{await get_text(state)}\n\n{get_ans_text(donel, typesl)}\n\nYou may edit the test, change its folder or share it:"
-    await callback.message.edit_text(res, reply_markup=details_test(test[10], folder, test_id))
+    await callback.message.edit_text(res, reply_markup=details_test(test[10], folder, test_id, test[11] if len(test) > 11 else None))
     await state.set_state(arch_states.emenu)
 
 @arch.callback_query(F.data == "folder", arch_states.emenu)
