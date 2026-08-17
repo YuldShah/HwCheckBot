@@ -199,7 +199,7 @@ async def notify_admins_submission(user, exam, correct, answers, submitted_at, s
             f'🕒 {stamp} (UTC+5)',
         ]
         text = '\n'.join(lines)
-        kb = submission_admin_kb(sub_id, sub_code)
+        kb = submission_admin_kb(sub_id, sub_code, getattr(user, 'id', None))
         for adm in config.ADMINS:
             try:
                 await bot.send_message(adm, text, reply_markup=kb, disable_web_page_preview=True)

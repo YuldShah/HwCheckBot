@@ -267,7 +267,7 @@ async def view_submission_details(callback: types.CallbackQuery, state: FSMConte
     
     # Get submission details with deadline
     submission = db.fetchone("""
-        SELECT s.idx, u.fullname, u.username, e.title, s.date, s.answers, e.correct, e.sdate
+        SELECT s.idx, s.userid, u.fullname, u.username, e.title, s.date, s.answers, e.correct, e.sdate
         FROM submissions s
         JOIN users u ON s.userid = u.userid
         JOIN exams e ON s.exid = e.idx
@@ -278,7 +278,7 @@ async def view_submission_details(callback: types.CallbackQuery, state: FSMConte
         await callback.answer("Submission not found.")
         return
     
-    sub_id, fullname, username, title, date, answers_json, correct_json, deadline = submission
+    sub_id, sub_userid, fullname, username, title, date, answers_json, correct_json, deadline = submission
     
     # Convert dates to UTC+5
     local_date = format_datetime(date)
@@ -303,7 +303,7 @@ async def view_submission_details(callback: types.CallbackQuery, state: FSMConte
                 f"📚 <b>Test:</b> {html.bold(title or 'Unknown')}\n"
                 f"🕒 <b>Date:</b> {local_date}\n\n"
                 f"⚠️ This submission has no answer data or correct answer data.",
-                reply_markup=submission_detail_back_kb(standalone)
+                reply_markup=submission_detail_back_kb(standalone, sub_userid)
             )
             return
             
@@ -328,7 +328,7 @@ async def view_submission_details(callback: types.CallbackQuery, state: FSMConte
                 f"📚 <b>Test:</b> {html.bold(title or 'Unknown')}\n"
                 f"🕒 <b>Date:</b> {local_date}\n\n"
                 f"⚠️ This submission has empty answer data or correct answer data.",
-                reply_markup=submission_detail_back_kb(standalone)
+                reply_markup=submission_detail_back_kb(standalone, sub_userid)
             )
             return
         
@@ -360,7 +360,7 @@ async def view_submission_details(callback: types.CallbackQuery, state: FSMConte
                 f"📚 <b>Test:</b> {html.bold(title or 'Unknown')}\n"
                 f"🕒 <b>Date:</b> {local_date}\n\n"
                 f"⚠️ Cannot display details: incompatible data formats.",
-                reply_markup=submission_detail_back_kb(standalone)
+                reply_markup=submission_detail_back_kb(standalone, sub_userid)
             )
             return
         
@@ -405,7 +405,7 @@ async def view_submission_details(callback: types.CallbackQuery, state: FSMConte
                 details_text += f"{i+1}. {html.code(str(answer))} {match}\n"
         
         # Create back button
-        markup = submission_detail_back_kb(standalone)
+        markup = submission_detail_back_kb(standalone, sub_userid)
         
         # Save current state data to restore it when going back
         await state.update_data(viewing_details=True)
@@ -420,7 +420,7 @@ async def view_submission_details(callback: types.CallbackQuery, state: FSMConte
             f"📝 <b>Submission Details</b>\n\n"
             f"❌ Error processing submission details: {str(e)}\n\n"
             f"This may be due to invalid data format in the database.",
-            reply_markup=submission_detail_back_kb(standalone)
+            reply_markup=submission_detail_back_kb(standalone, sub_userid)
         )
     
     await callback.answer()

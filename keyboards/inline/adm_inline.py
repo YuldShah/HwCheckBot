@@ -406,26 +406,37 @@ def submission_details_kb(submissions, page, total_pages):
     
     return InlineKeyboardMarkup(inline_keyboard=keyboard)
 
-def submission_detail_back_kb(standalone=False):
-    """Back button for the submission details view.
+def open_user_button(user_id):
+    """URL button that opens a direct chat with the student."""
+    if not user_id:
+        return None
+    return InlineKeyboardButton(text="👤 Open user", url=f"tg://openmessage?user_id={user_id}")
+
+def submission_detail_back_kb(standalone=False, user_id=None):
+    """Buttons under a submission details view.
 
     standalone=True when opened straight from an admin notification: there is
-    no stats list to return to, and the stateful back_to_submissions handlers
-    would not match, so the tap would be silently ignored.
+    no stats list to go back to, so a dismiss button is shown instead of Back
+    (the stateful back_to_submissions handlers would not match).
     """
+    rows = []
+    ou = open_user_button(user_id)
+    if ou:
+        rows.append([ou])
     if standalone:
-        return InlineKeyboardMarkup(inline_keyboard=[
-            [InlineKeyboardButton(text="❌ Close", callback_data="close_sub_details")]
-        ])
-    return InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text=dict.back, callback_data="back_to_submissions")]
-    ])
+        rows.append([InlineKeyboardButton(text="❌ Close", callback_data="close_sub_details")])
+    else:
+        rows.append([InlineKeyboardButton(text=dict.back, callback_data="back_to_submissions")])
+    return InlineKeyboardMarkup(inline_keyboard=rows)
 
-def submission_admin_kb(sub_id=None, sub_code=None):
+def submission_admin_kb(sub_id=None, sub_code=None, user_id=None):
     """Buttons on the admin new-submission notification."""
     rows = []
     if sub_id:
         rows.append([InlineKeyboardButton(text="📊 Detailed results", callback_data=f"view_details_{sub_id}")])
     if sub_code:
         rows.append([InlineKeyboardButton(text="📤 Share result", switch_inline_query=f"sub_{sub_code}")])
+    ou = open_user_button(user_id)
+    if ou:
+        rows.append([ou])
     return InlineKeyboardMarkup(inline_keyboard=rows) if rows else None
