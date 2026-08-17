@@ -2,6 +2,8 @@ from aiogram import html
 from aiogram.fsm.context import FSMContext
 from loader import bot
 from data import config
+import logging
+from datetime import timezone, timedelta
 
 async def checksub(userid, chid):
     try:
@@ -145,3 +147,50 @@ def gen_test_code(db, length=TEST_CODE_LENGTH, attempts=200):
         if not db.fetchone("SELECT idx FROM exams WHERE code = %s", (code,)):
             return code
     return gen_test_code(db, length + 1, attempts)
+
+def score_submission(correct, answers):
+    """Count correct answers. A key may be a list when several answers are accepted."""
+    cnt = 0
+    for c, a in zip(correct, answers):
+        if isinstance(c, list):
+            if a in c:
+                cnt += 1
+        elif c == a:
+            cnt += 1
+    return cnt
+
+async def notify_admins_submission(user, exam, correct, answers, submitted_at):
+    """Tell every admin about a submission.
+
+    Never raises: a failed notification must not break the user's submit.
+    """
+    try:
+        total = len(correct) or 1
+        cnt = score_submission(correct, answers)
+        pct = cnt / total * 100
+        sat = int(round((cnt / total * 600 + 200) / 10)) * 10
+        when = submitted_at
+        if when is not None and when.tzinfo is not None:
+            when = when.astimezone(timezone(timedelta(hours=5)))
+        stamp = when.strftime('%H:%M - %d.%m.%Y') if when else '-'
+        uname = f'@{user.username}' if user.username else '-'
+        code = exam[11] if len(exam) > 11 and exam[11] else '-'
+        lines = [
+            f"📥 {html.bold('Yangi topshiriq')}",
+            '',
+            f'👤 {html.link(user.full_name, f"tg://user?id={user.id}")} ({uname})',
+            f'🆔 {html.code(user.id)}',
+            f'📝 {html.bold(exam[1])}',
+            f'🔑 {html.code(code)}',
+            f"✅ To'g'ri: {html.bold(f'{cnt}/{total}')} ({pct:.1f}%)",
+            f'📑 SAT: {html.bold(sat)}',
+            f'🕐 {stamp} (UTC+5)',
+        ]
+        text = '\n'.join(lines)
+        for adm in config.ADMINS:
+            try:
+                await bot.send_message(adm, text, disable_web_page_preview=True)
+            except Exception:
+                logging.error(f'submission notify failed for admin {adm}', exc_info=True)
+    except Exception:
+        logging.error('notify_admins_submission failed', exc_info=True)

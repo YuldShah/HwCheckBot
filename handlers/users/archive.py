@@ -10,7 +10,7 @@ from keyboards.inline import (lets_start, lets_start_share, ans_enter_method_usr
                              get_folders_keyboard, get_folder_exams)
 from datetime import datetime, timezone, timedelta
 from states import missing_hw_states
-from utils.yau import get_user_text, get_user_ans_text, get_correct_text, gen_code
+from utils.yau import get_user_text, get_user_ans_text, get_correct_text, gen_code, notify_admins_submission
 from aiogram.exceptions import TelegramBadRequest
 
 usrarch = Router()
@@ -547,6 +547,7 @@ async def confirm_submit(callback: types.CallbackQuery, state: FSMContext):
     answers = data.get("donel")
     code = gen_code(10)
     db.store_submission(callback.from_user.id, exam_id, answers, code, submission_time)
+    await notify_admins_submission(callback.from_user, test, correct, answers, submission_time)
     await callback.answer("Muvaffaqiyatli jo'natildi.")
     await callback.message.edit_text(
         f"Vazifaga javoblaringiz muvaffaqiyatli topshirildi.\n\nNatijalaringiz:\n{get_correct_text(correct, answers)}",
