@@ -20,6 +20,14 @@ async def start(message: types.Message, state: FSMContext):
     if message.text.find("myres")!=-1:
         await results(message, state)
         return
+    payload = ""
+    if message.text and message.text.startswith("/start"):
+        parts = message.text.split(maxsplit=1)
+        payload = parts[1].strip() if len(parts) > 1 else ""
+    if payload:
+        from .check_hw import resolve_and_start_code
+        if await resolve_and_start_code(message, payload, message.from_user.id, state):
+            return
     await message.answer_sticker("CAACAgIAAxkBAAIBt2emDv__wEe3FxrexsQkuXhfqM63AAJAAQACVp29CmzpW0AsSdYlNgQ")
     await message.answer(f"👋 Salom, {html.bold(message.from_user.mention_html())}! Botga xush kelibsiz!", reply_markup=user_markup)
 

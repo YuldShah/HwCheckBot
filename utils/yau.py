@@ -23,6 +23,7 @@ async def get_text(state: FSMContext):
     # duration=data.get("duration")
     res = ""
     res += f"{html.italic('Title:')} {title}\n" if title else ""
+    res += f"{html.italic('Code:')} {html.code(data.get('code'))}\n" if data.get('code') else ""
     res += f"{html.italic('Description:')} {html.expandable_blockquote(about)}\n" if about else ""
     res += f"{html.italic('Instructions:')} {html.expandable_blockquote(instructions)}\n" if instructions else ""
     res += f"{html.italic('Attachments:')} {html.bold(f'{len(data.get("attaches"))}')}\n" if data.get("attaches") else ""
@@ -51,9 +52,10 @@ def get_ans_text(donel, typesl):
     res = f"✅ Done: {cnt}/{numq}\n\n#No. Ans | Type\n" + res
     return html.expandable_blockquote(res)
 
-def get_user_text(title, about, instructions, numquest):
+def get_user_text(title, about, instructions, numquest, code=None):
     res = ""
     res += f"{html.italic('Nomi')}: {html.bold(title)}\n" if title else ""
+    res += f"{html.italic('Kodi')}: {html.code(code)}\n" if code else ""
     res += f"{html.italic('Izoh')}: {html.expandable_blockquote(about)}\n" if about else ""
     res += f"{html.italic("Yo'llanma")}: {html.expandable_blockquote(instructions)}\n" if instructions else ""
     res += f"{html.italic('Savollar soni')}: {html.bold(numquest)}\n" if numquest else ""
@@ -126,3 +128,20 @@ def gen_code(length):
     letters = string.ascii_letters
     digits = string.digits
     return ''.join(random.choice(letters + digits) for i in range(length))
+
+# Test share codes: uppercase + digits minus look-alikes (I/1, O/0).
+TEST_CODE_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"
+TEST_CODE_LENGTH = 4
+
+def normalize_test_code(raw):
+    if not raw:
+        return ""
+    return "".join(ch for ch in str(raw).upper() if ch in TEST_CODE_ALPHABET)
+
+def gen_test_code(db, length=TEST_CODE_LENGTH, attempts=200):
+    import random
+    for _ in range(attempts):
+        code = ''.join(random.choice(TEST_CODE_ALPHABET) for _ in range(length))
+        if not db.fetchone("SELECT idx FROM exams WHERE code = %s", (code,)):
+            return code
+    return gen_test_code(db, length + 1, attempts)

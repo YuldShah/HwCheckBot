@@ -2,15 +2,15 @@ from aiogram import types, Router, F, html
 from data import config, dict
 from keyboards.inline import access_menu, post_chan, confirm_inl_key, share_sub_usr
 from keyboards.regular import main_key, back_key, usr_main_key
-from filters import IsUser, IsUserCallback, IsRegistered, IsSubscriber, CbData
+from filters import IsUser, IsUserCallback, IsRegistered, IsSubscriber, CbData, InlineDataStartsWith
 from aiogram.fsm.context import FSMContext
-from states import check_hw_states
+from states import check_hw_states, code_states
 import json
 from time import sleep
 from datetime import datetime, timezone, timedelta
 from loader import db
-from utils.yau import get_correct_text, get_user_ans_text, get_user_text, gen_code
-from keyboards.inline import usr_inline, adm_inline, lets_start, get_answering_keys, ans_enter_method_usr, submit_ans_user, all_continue_usr
+from utils.yau import get_correct_text, get_user_ans_text, get_user_text, gen_code, normalize_test_code, TEST_CODE_LENGTH
+from keyboards.inline import usr_inline, adm_inline, lets_start, lets_start_share, get_answering_keys, ans_enter_method_usr, submit_ans_user, all_continue_usr
 from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup
 
 chhw = Router()
@@ -80,8 +80,9 @@ async def process_exam(message_or_query, exam, state: FSMContext):
                 await message_or_query.answer_photo(photo=tgfileid, caption=caption)
             elif ty == "document":
                 await message_or_query.answer_document(document=tgfileid, caption=caption)
-    res = f"{get_user_text(exam[1], exam[2], exam[3], exam[4])}"
-    await message_or_query.answer(res, reply_markup=lets_start)
+    exam_code = exam[11] if len(exam) > 11 else None
+    res = f"{get_user_text(exam[1], exam[2], exam[3], exam[4], exam_code)}"
+    await message_or_query.answer(res, reply_markup=lets_start_share(exam_code))
     await state.set_state(check_hw_states.details)
 
 @chhw.callback_query(F.data.startswith("exam_"))
@@ -99,6 +100,69 @@ async def choose_exam(callback: types.CallbackQuery, state: FSMContext):
         return
     await callback.message.delete_reply_markup()
     await process_exam(callback.message, exam, state)
+
+@chhw.inline_query(InlineDataStartsWith('share'))
+async def share_test_inline(inline: types.InlineQuery):
+    """Build a shareable card for a test code, with a deeplink button."""
+    code = normalize_test_code(inline.query.replace('share', '', 1))
+    exam = db.fetchone('SELECT * FROM exams WHERE code = %s', (code,))
+    if not exam:
+        await inline.answer([], cache_time=1, is_personal=True)
+        return
+    url = f'https://t.me/{config.bot_info.username}?start={code}'
+    res = types.InlineQueryResultArticle(
+        id=f'share_{code}',
+        title=exam[1],
+        description=f'Kod: {code} · {exam[4]} ta savol',
+        input_message_content=types.InputTextMessageContent(
+            message_text=f"📝 {html.bold(exam[1])}\n🔑 Kod: {html.code(code)}\n📊 Savollar soni: {html.bold(exam[4])}\n\nTestni boshlash uchun quyidagi tugmani bosing 👇"
+        ),
+        reply_markup=InlineKeyboardMarkup(inline_keyboard=[[
+            InlineKeyboardButton(text='🚀 Testni boshlash', url=url)
+        ]])
+    )
+    await inline.answer([res], cache_time=1, is_personal=True)
+
+async def resolve_and_start_code(message, raw_code, user_id, state: FSMContext):
+    """Open a test from its share code, applying the SAME access rules as the
+    normal menu (deadline, already-submitted). A code is a shortcut, not a bypass.
+    """
+    code = normalize_test_code(raw_code)
+    if not code:
+        await message.answer(f"❗️ Kod noto'g'ri. Kod {html.bold(TEST_CODE_LENGTH)} ta belgidan iborat.", reply_markup=usr_main_key)
+        return False
+    exam = db.fetchone("SELECT * FROM exams WHERE code = %s", (code,))
+    if not exam:
+        await message.answer(f"❗️ {html.code(code)} kodi bo'yicha test topilmadi.", reply_markup=usr_main_key)
+        return False
+    now = datetime.now(timezone.utc)
+    deadline = exam[6]
+    if deadline and deadline.tzinfo is None:
+        deadline = deadline.replace(tzinfo=timezone.utc)
+    if deadline and now > deadline:
+        await message.answer(f"⏳ {html.bold(exam[1])} testining muddati tugagan.", reply_markup=usr_main_key)
+        return False
+    submission = db.fetchone("SELECT * FROM submissions WHERE userid = %s AND exid = %s", (str(user_id), exam[0]))
+    if submission and not exam[7]:
+        await message.answer(f"✅ Siz {html.bold(exam[1])} testini allaqachon topshirgansiz.", reply_markup=usr_main_key)
+        return False
+    await state.clear()
+    await process_exam(message, exam, state)
+    return True
+
+@chhw.message(F.text == dict.enter_code)
+async def ask_for_code(message: types.Message, state: FSMContext):
+    await state.set_state(code_states.waiting)
+    await message.answer(f"🔑 Test kodini yuboring ({html.bold(TEST_CODE_LENGTH)} ta belgi):", reply_markup=usr_main_key)
+
+@chhw.message(code_states.waiting)
+async def receive_code(message: types.Message, state: FSMContext):
+    if message.text in (dict.bosh_menu, dict.do_todays_hw, dict.results, dict.help_txt, dict.archive):
+        await state.clear()
+        return
+    ok = await resolve_and_start_code(message, message.text, message.from_user.id, state)
+    if not ok:
+        await state.set_state(code_states.waiting)
 
 @chhw.callback_query(CbData("start_test"), check_hw_states.details)
 async def start_test(query: types.CallbackQuery, state: FSMContext):

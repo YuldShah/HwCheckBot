@@ -271,15 +271,15 @@ def edit_test_menu(visibility, resub):
     ]
     return InlineKeyboardMarkup(inline_keyboard=btns)
 
-def details_test(code, folder, exid):
+def details_test(code, folder, exid, share_code=None):
+    row2 = [InlineKeyboardButton(text=dict.edit, callback_data=f"edit_{exid}")]
+    if share_code:
+        row2.append(InlineKeyboardButton(text=dict.share_test, switch_inline_query=f"share {share_code}"))
     btns = [
         [
             InlineKeyboardButton(text=dict.folder+folder if folder else dict.folder_not, callback_data="folder")
         ],
-        [
-            InlineKeyboardButton(text=dict.edit, callback_data=f"edit_{exid}")
-            # InlineKeyboardButton(text=dict.share, switch_inline_query=f"ex_{code}")
-        ],
+        row2,
         [
             InlineKeyboardButton(text=dict.back, callback_data="back")
         ]

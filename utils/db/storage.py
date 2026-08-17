@@ -91,6 +91,7 @@ class DatabaseManager:
                 folder INTEGER DEFAULT 0, 
                 hide INTEGER DEFAULT 0, 
                 random TEXT
+                ,code TEXT
             )""",
             """CREATE TABLE IF NOT EXISTS submissions (
                 idx SERIAL PRIMARY KEY, 
@@ -111,6 +112,30 @@ class DatabaseManager:
         ]
         for query in queries:
             self.query(query)
+        self.migrate()
+
+    def migrate(self):
+        """Idempotent schema upgrades for pre-existing databases."""
+        self.query("ALTER TABLE exams ADD COLUMN IF NOT EXISTS code TEXT")
+        self.query("CREATE UNIQUE INDEX IF NOT EXISTS exams_code_uniq ON exams (code) WHERE code IS NOT NULL")
+        self.backfill_exam_codes()
+
+    def backfill_exam_codes(self):
+        """Give pre-existing exams a code so old tests are shareable too."""
+        try:
+            from utils.yau import gen_test_code
+        except Exception:
+            logging.error("backfill_exam_codes: import failed", exc_info=True)
+            return
+        rows = self.fetchall("SELECT idx FROM exams WHERE code IS NULL OR code = ''")
+        if not rows:
+            return
+        for row in rows:
+            try:
+                self.query("UPDATE exams SET code = %s WHERE idx = %s", (gen_test_code(self), row[0]))
+            except Exception:
+                logging.error(f"backfill failed for exam {row[0]}", exc_info=True)
+        logging.info(f"backfilled codes for {len(rows)} exam(s)")
 
     def query(self, arg, values=None):
         """Execute a query that does not return results."""

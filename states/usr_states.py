@@ -17,3 +17,6 @@ class missing_hw_states(StatesGroup):
     way = State()
     answer = State()
     confirm = State()
+
+class code_states(StatesGroup):
+    waiting = State()
